@@ -1,0 +1,41 @@
+\section{Light field geometry and light transport}
+
+We consider 4D light fields -- two spatial dimensions and two angular
+dimensions -- using the two-plane convention for the angular dimensions:
+$\LF\GP{s, t, u, v}$ represents the intensity of light hitting the 
+light field's plane at position $\GP{s,t}$ and along the angle indicated
+by $\GP{u,v}$.  We discretize each light field into $N$ pixels and $K$ 
+angles using a basis expansion:
+\begin{align}
+    \LF\GP{s,t,u,v}
+    &=
+    \sum_{k=1}^K b^k_u\GP{u} b^k_v\GP{v} 
+    \sum_{i=1}^N b^i_s\GP{s} b^i_t\GP{t}
+    \ell_{ki},
+\end{align}
+with spatial basis functions $b^i_s$ and $b^i_t$, angular basis 
+functions $b^k_u$ and $b^k_v$, and expansion coefficients 
+$\bl = \GB{\ell_{ki}}$.  Following convention, we use rectangular
+pixels for the spatial basis functions, \eg{}
+\begin{align}
+    b^i_s\GP{s}
+    &=
+    b\GP{\frac{s - s_i}{\Delta_s}};
+    \nonumber \\
+    b\GP{x}
+    &=
+    \begin{cases}
+        1, & \GM{x} < \frac{1}{2}; \\
+        0, & \text{else.}
+    \end{cases}
+\end{align}
+To simplify the computational process of transporting a light field from
+one plane to another, through masks and lenses, we discretize the angular
+coordinates such that each angle (corresponding to a single value of $k$)
+can be transported independently.
+
+To make this work, we designate a special plane the {\it optical root}/\ of
+the discretization.  The angular coordinate of light fields in the system are
+discretized according either {\it where}/\ or {\it at what angle}/\ they cross
+the optical root.  
+

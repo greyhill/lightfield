@@ -1,6 +1,6 @@
 .PHONY: clean
 
-general.pdf: general.tex
+general.pdf: general.tex light,field,geometry.tex
 	latexmk -pdf general
 
 clean:
