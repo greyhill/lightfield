@@ -7,9 +7,10 @@ light field's plane at position $\GP{s,t}$ and along the angle indicated
 by $\GP{u,v}$.  We discretize each light field into $N$ pixels and $K$ 
 angles using a basis expansion:
 \begin{align}
-    \LF\GP{s,t,u,v}
+    \label{eqn,basis}
+    \LF\GP{s,t,u,v; \bl}
     &=
-    \sum_{k=1}^K b^k_u\GP{u} b^k_v\GP{v} 
+    \sum_{k=1}^K b^k_u\GP{s, u} b^k_v\GP{t, v} 
     \sum_{i=1}^N b^i_s\GP{s} b^i_t\GP{t}
     \ell_{ki},
 \end{align}
@@ -28,14 +29,168 @@ pixels for the spatial basis functions, \eg{}
         1, & \GM{x} < \frac{1}{2}; \\
         0, & \text{else.}
     \end{cases}
+    \label{eqn,box}
 \end{align}
 To simplify the computational process of transporting a light field from
 one plane to another, through masks and lenses, we discretize the angular
 coordinates such that each angle (corresponding to a single value of $k$)
 can be transported independently.
 
-To make this work, we designate a special plane the {\it optical root}/\ of
+\subsection{Angular discretization and the optical plane}
+
+To make this work, we designate a special plane the {\it angular plane} of
 the discretization.  The angular coordinate of light fields in the system are
-discretized according either {\it where}/\ or {\it at what angle}/\ they cross
-the optical root.  
+discretized according either {\it where} or {\it at what angle} they cross
+the angular plane.  A common choice for modelling light transport inside a 
+camera is to place the angular plane along the plane of the main lens, but we
+will use other discretizations when modeling light fields external to the
+camera.
+
+In this work, we consider the case where the angular plane is discretized along
+a lattice of $K$ points, however, our approach can be extended to other
+discretizations. Let $\GC{\GP{u_k, v_k}}$ be $K$ locations on the angular plane
+drawn from a lattice with sampling rate $\Delta_u$ in the $s/u$ direction and
+$\Delta_v$ in the $t/v$ direction.  Finally, let $\bR$ be the affine coordinate
+transformation from the light field $\LF$ to the angular plane.  
+
+An common choice uses Dirac $\delta$ functions and discretizes the light field
+by the location at which rays hit the optical plane, \eg
+\begin{align}
+    b^k_u\GP{s, u}
+    &=
+    \delta\GP{\frac{\bR_s\GP{s,u} - u_k}{\Delta_u}}.
+\end{align}
+If the angular plane is placed at the main lens, this approach essentially
+represents the camera as a superposition of $K$ pinhole cameras, with the
+pinholes apertures placed at the locations $\GC{\GP{u_k, v_k}}$.  A more
+physically accurate model uses rectangular regions of the angular plane, \eg
+\begin{align}
+    b^k_u\GP{s, u}
+    &=
+    b\GP{\frac{\bR_s\GP{s,u} - u_k}{\Delta_u}},
+\end{align}
+using the box function~\eref{eqn,box}.  With the angular plane on the main
+lens, this models the camera as a superposition of cameras with rectangular
+apertures on the main lens.  In both the pinhole and rectangular aperture
+cases, finer discretizations of the main lens/optical plane yield better
+approximations of the often nonseparable main lens blur.
+
+When modelling the light field of an object, it may be more natural to discretize
+angle in a way that is intrinsic to the object rather than the camera.  This
+may make it easier to use the compose the object's light field in \eg VR 
+applications.  In these cases, we place the optical plane along a face of the
+object's bounding box and discretize by the {\it angle} at which rays pass
+through that plane instead of the location, \eg
+\begin{align}
+    b^k_u\GP{s,u}
+    &=
+    \delta\GP{\frac{\bR_u\GP{s,u} - u_k}{\Delta_u}}.
+\end{align}
+This representation is similar to the angular discretization of the Radon
+transform.  Naturally, one can use either the Dirac $\delta$ or box function
+(or any other orthogonal family) for the basis function.
+
+\subsection{Light field linear algebra}
+
+Let $\GP{\bl^p, \bR^p}$ and $\GP{\bl^q, \bR^q}$ be the coefficients of two
+light fields using the same angular discretization and the coordinate
+transforms from each light field to the optical plane.  Assume that light
+from the plane $p$ is transported to the plane $q$; \ie{} $p$ is closer to the
+scene and $q$ is closer to the detector.  We assume that the basis coefficients
+on plane $p$, $\bl^p$, are known and we want to find the coefficients of the
+light field on the plane $q$, $\bl^q$.  To accomplish this, we solve the 
+approximation problem using the $L_2$ norm:
+\begin{align}
+    \bl^q 
+    &=
+    \argmin_{\bl}
+    \GN{%
+        \LF^q\GP{s,t,u,v; \bl}
+        -
+        \LF^p\GP{\bR^{pq}\GP{s,t,u,v}; \bl^p}
+    },
+    \label{eqn,xport}
+\end{align}
+where $\bR^{pq} = \GP{\bR^p}^{-1}\GP{\bR^q}$ is the affine coordinate
+transformation from the plane $q$ to the plane $p$.  Due to the basis 
+expansion~\eref{eqn,basis}, $\LF^q$ and $\LF^p$ lie on a finite-dimensional
+subspace of $L_2$ and the solution to~\eref{eqn,xport} can be expressed as a 
+linear operation on the coefficients $\bl^p$:
+\begin{align}
+    \bl^q
+    &=
+    \GB{\bD^q}^{-1} \bB^{qp} \bl^p,
+\end{align}
+and the entries of $\bD$ and $\bB^{pq}$ come from the inner products on
+$L_2$.  Due to the $(s,u)/(t,v)$ separability of the 
+expansion~\eref{eqn,basis}, these expressions are also separable in the
+$(s,u)/(t,v)$ dimensions:
+\begin{align}
+    \GB{\bD^q}_{ik, ik}
+    &=
+    \GN{%
+        b^k_u\GP{s,u} b^i_s\GP{s}
+    }^2
+    \times
+    \GN{%
+        b^k_v\GP{t,v} b^i_t\GP{t}
+    }^2,
+    \nonumber \\
+    \GB{\bB^{qp}}_{ik_1, jk_2}
+    &=
+    \GA{%
+        b^i_s\GP{s} b^{k_1}_u\GP{s,u}, 
+        b^j_s\GP{\bR^{pq}_{su}\GP{s,u}} b^{k_2}_u\GP{\bR^{pq}_{su}\GP{s,u}}
+    }
+    \times
+    \GA{%
+        b^i_t\GP{t} b^{k_1}_v\GP{t,v},
+        b^j_t\GP{\bR^{pq}_{tv}\GP{t,v}} b^{k_2}_v\GP{\bR^{pq}_{tv}\GP{t,v}} 
+    }.
+    \label{eqn,iprod}
+\end{align}
+Note that the angular functions $b^{k_1}_u \circ \bR^{pq}_{su}$ and $b^{k_2}_u$
+are governed by the same discretization on the optical plane:
+\begin{align}
+    b^{k}_u\GP{\bR^{pq}_{su}\GP{s,u}}
+    &=
+    f_u\GP{\frac{\bR^p_{su*}\GP{\bR^{pq}_{su}\GP{s,u}} - u_{k}}{\Delta_u}} 
+    \nonumber \\
+    &=
+    f_u\GP{\frac{\bR^{q}_{su*}\GP{s,u} - u_{k}}{\Delta_u}} 
+    \nonumber \\
+    &=
+    b^{k}_u\GP{s,u},
+    \label{eqn,same,angle}
+\end{align}
+where $f_u$ is the chosen angular basis function (typically either 
+$\delta$ or the box function $b$) and $\bR_{su*}$ extracts either the
+spatial ($s$) or angular ($u$) coordinate, depending on the optical
+plane's discretization.  Consequently, assuming the discretization of the
+optical plane is nonoverlapping,
+\begin{align}
+    k_1 \ne k_2 \Rightarrow \bB^{qp}_{ik_1, jk_2} = 0,
+    \label{eqn,xport,block}
+\end{align}
+and $\bB^{qp}$ is block-diagonal with $K$ blocks: $\bB^{qp} = \diag_{k}
+\bB^{qpk}$.  Practically, this means that the $k$th light field angle can be
+transported through the system independently of the other $K-1$ angles. If each
+of the light fields is high resolution ($N$ large), or if the angular plane
+discretization is fine ($K$ large), this can lead to significant memory savings.
+
+\subsection{Explicit transport expressions}
+
+In this section, we provide expressions for 
+
+\subsection{Light field rebinning}
+
+So far we have considered light transport between two light fields sharing the
+same optical plane and discretization.  However, it is sometimes helpful to
+relate light fields with different angular discretizations, \eg to simulate a
+different lens aperture or to combine light fields from two different cameras.
+In this section we consider light transport between two light fields {\it on
+the same plane} in space but {\it with different angular discretizations}.
+Although we lose the convenient block structure from light transport using the
+same discretization~\eref{eqn,xport,block}, the resulting expressions are 
+still computationally efficient.
 
