@@ -1,0 +1,59 @@
+\begin{table}
+    \centering
+    \begin{tabular}{lll}
+        \toprule
+        {\bf Angular function} & {\bf Expression} & {\bf Parameters} \\
+        \midrule 
+        Dirac $\delta$ 
+        &
+        $\GB{\bB^{qpk}}_{ij} = h^{qp} \int_{s \in \mathcal{S}_j} \text{rect}\GP{s; \tau_0, \tau_1} \dv{s}$
+        &
+        $\alpha = R^{qp}_{ss} - \frac{R^p_{*s} R^{qp}_{su}}{R^p_{*u}}$
+        \\ & & 
+        $\beta = \frac{R^{qp}_{su}\GP{u_k - R^p_*}}{R^p_{*u}}$
+        \\ & &
+        $\btau = \frac{1}{\alpha}\GP{s_i \pm \frac{\Delta_s^q}{2} - \beta}$
+        \\ & &
+        $h^{qp} = \GM{\frac{\Delta_u}{R^p_{*u}}}$
+        \\
+        &
+        $\GB{\bD^q}_{ik, ik} = \GM{%
+            \frac{\Delta_u}{R^q_{*u}}
+        }
+        \Delta_s^q$
+        \\
+        \midrule
+        Box function $b$
+        &
+        $\GB{\bB^{qpk}}_{ij} = h^{qp} \int_{s \in \mathcal{S}_j} \text{trap}\GP{s; \tau_0, \ldots, \tau_3} \dv{s}$
+        &
+        $\alpha = R^{qp}_{ss} - \frac{R^{qp}_{su} R^{qp}_{*s}}{R^p_{*u}}$ 
+        \\ & &
+        $\beta = \frac{R^{qp}_{su}}{R^p_{*u}}$
+        \\ & &
+        $\gamma = R^{qp}_s - \frac{R^{qp}_{su} R^p_*}{R^p_{*u}}$
+        \\ & &
+        $\btau = \frac{1}{\alpha}\GP{s_i \pm \frac{\Delta_s^q}{2} - \beta\GP{u_k \mp \frac{\Delta_u}{2}} - \gamma}$
+        \\ & &
+        $h^{qp} = \text{min}\GC{%
+            \frac{\Delta_u}{\GM{R^p_{*u}}},
+            \frac{\Delta^q_s}{\GM{R^{qp}_{su}}}
+        }$
+        \\
+        &
+        $\GB{\bD^q}_{ik, ik} = 2 M h$
+        &
+        $M = \text{max}\GC{%
+            \frac{\Delta_u}{2 \GM{R^q_{*u}}},
+            \frac{\Delta_s^q \GM{R^q_{*s}}}{2 \GM{R^q_{*u}}}
+        }$
+        \\ & &
+        $h = \text{min}\GC{%
+            \Delta_s, 
+            \frac{\Delta_u}{\GM{R^q_{*s}}}
+        }$
+        \\ \bottomrule 
+    \end{tabular}
+    \caption{Expressions to compute entries of light transport matrices}
+    \label{tab,xport}
+\end{table}

@@ -92,6 +92,8 @@ transform.  Naturally, one can use either the Dirac $\delta$ or box function
 
 \subsection{Light field linear algebra}
 
+TODO: Change parameterization for good row access.
+
 Let $\GP{\bl^p, \bR^p}$ and $\GP{\bl^q, \bR^q}$ be the coefficients of two
 light fields using the same angular discretization and the coordinate
 transforms from each light field to the optical plane.  Assume that light
@@ -178,9 +180,30 @@ transported through the system independently of the other $K-1$ angles. If each
 of the light fields is high resolution ($N$ large), or if the angular plane
 discretization is fine ($K$ large), this can lead to significant memory savings.
 
-\subsection{Explicit transport expressions}
+Table~\ref{tab,xport} lists expressions for the norms and inner products
+in~\eref{eqn,iprod}.  The internal integrals, over either rectangular or 
+trapezoid functions,
+\begin{align}
+    \text{rect}\GP{s; \tau_0, \tau_1}
+    &=
+    \begin{cases}
+        1, & \tau_0 \le s < \tau_1; \\
+        0, & \text{else,}
+    \end{cases}
+    \nonumber \\
+    \text{trap}\GP{s; \tau_0, \tau_1, \tau_2, \tau_3}
+    &=
+    \begin{cases}
+        \frac{s - \tau_0}{\tau_1 - \tau_0}, & \tau_0 \le s < \tau_1; \\
+        1, & \tau_1 \le s < \tau_2; \\
+        \frac{\tau_3 - s}{\tau_3 - \tau_2}, & \tau_2 \le s < \tau_3; \\
+        0, & \text{else,}
+    \end{cases}
+    \label{eqn,rect,trap}
+\end{align}
+can be either pre-computed or efficiently computed on the fly.
 
-In this section, we provide expressions for 
+\input{tab,xport}
 
 \subsection{Light field rebinning}
 
