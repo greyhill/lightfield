@@ -6,3 +6,6 @@
 *.fls
 *.log
 venv/
+*.o
+*.so
+*.pyc
