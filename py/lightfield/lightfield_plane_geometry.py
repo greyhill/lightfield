@@ -1,5 +1,6 @@
 import numpy as np
 import lightfield_base
+import ctypes as ct
 lib = lightfield_base.lib
 
 lib.LFPlaneGeometry_ws.restype = ct.c_float

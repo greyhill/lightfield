@@ -6,11 +6,12 @@ CC=gcc
 CFLAGS=-g3 -Wall -Wextra -std=c99 -O2 -fPIC -Iinclude
 OFILES=src/lightfield_optics.o \
 	   src/lightfield_angular_plane.o \
-	   src/lightfield_plane_geometry.o 
+	   src/lightfield_plane_geometry.o \
+	   src/lightfield_transport.o
 
-.PHONY: tex clean
+.PHONY: tex clean install_lib install_python
 
-all: liblightfield.so tex install_lib
+all: liblightfield.so tex install_lib install_python
 
 install_lib: liblightfield.so
 	mkdir -p ${PREFIX}/lib
@@ -23,6 +24,9 @@ liblightfield.so: ${OFILES}
 
 tex:
 	$(MAKE) -C tex
+
+install_python:
+	pip install --upgrade py/
 
 clean:
 	$(MAKE) -C tex clean
