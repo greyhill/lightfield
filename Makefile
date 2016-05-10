@@ -7,6 +7,7 @@ CFLAGS=-g3 -Wall -Wextra -std=c99 -O2 -fPIC -Iinclude
 OFILES=src/lightfield_optics.o \
 	   src/lightfield_angular_plane.o \
 	   src/lightfield_plane_geometry.o \
+	   src/lightfield_lixel.o \
 	   src/lightfield_transport.o
 
 .PHONY: tex clean install_lib install_python

@@ -9,3 +9,6 @@ venv/
 *.o
 *.so
 *.pyc
+rs/target/
+*.lock
+.ipynb_checkpoints/

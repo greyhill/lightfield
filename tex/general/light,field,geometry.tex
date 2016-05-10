@@ -122,6 +122,7 @@ linear operation on the coefficients $\bl^p$:
     \bl^q
     &=
     \GB{\bD^q}^{-1} \bB^{qp} \bl^p,
+    \label{eqn,xport,soln}
 \end{align}
 and the entries of $\bD$ and $\bB^{pq}$ come from the inner products on
 $L_2$.  Due to the $(s,u)/(t,v)$ separability of the 
@@ -216,4 +217,10 @@ the same plane} in space but {\it with different angular discretizations}.
 Although we lose the convenient block structure from light transport using the
 same discretization~\eref{eqn,xport,block}, the resulting expressions are 
 still computationally efficient.
+
+Consider two angular planes $p$ and $q$, and a third spatial plane $r$.  We to
+rebin the light field at $r$ with angular discretization defined on $p$ to a
+light field at the same plane $r$ but with angular discretization $q$. As with
+transport~\eref{eqn,xport}, rebinning is expressed as an optimization problem
+and has (symbolically) the same solution~\eref{eqn,xport,soln}.
 

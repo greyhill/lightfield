@@ -19,6 +19,9 @@
 // Plane geometry
 #include "lightfield_plane_geometry.h"
 
+// Light field pixels
+#include "lightfield_lixel.h"
+
 // Light field transport
 #include "lightfield_transport.h"
 

@@ -1,0 +1,11 @@
+[package]
+
+name = 'lightfield'
+version = '0.0.1'
+authors = ['Madison McGaffin <greyhill@gmail.com>']
+
+[lib]
+name = 'lightfield'
+path = 'src/lib.rs'
+crate-type = ['rlib', 'dylib']
+
