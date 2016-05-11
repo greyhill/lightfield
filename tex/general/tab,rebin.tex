@@ -1,0 +1,47 @@
+\begin{table}
+    \centering
+    \begin{tabular}{llll}
+        \toprule
+        {\bf Source $p$} & {\bf Destination $q$} & {\bf Expression} & {\bf Parameters} \\
+        \midrule
+        Dirac $\delta$/angular 
+        &
+        pillbox/spatial
+        &
+        $
+        \GB{\bE^{iqp}}_{lk}
+        =
+        h \times \text{trap}\GP{u_k; \btau}
+        $
+        &
+        $\alpha = M^{qp}_{su} - \frac{T_{su}^p M^{qp}_{ss}}{T^p_{ss}}$
+        \\ & & &
+        $\beta = \frac{M^{qp}_{ss}}{T_{ss}^p}$
+        \\ & & &
+        $\gamma = M^{qp}_s - \frac{T_s^pM^{qp}_{ss}}{T_ss^p}$
+        \\ & & &
+        $\btau = \frac{1}{\alpha}\GP{u_l \pm \frac{\Delta_u^q}{2} 
+                - \beta\GP{s_i \mp \frac{\Delta_s}{2}} - \gamma}$
+        \\ & & &
+        $h = \Delta^p_u \times \text{min}\GC{\frac{\Delta_s}{T_{ss}^p}, \frac{\Delta^q_u}{M^{qp}_{ss}}}$
+        \\
+        \midrule
+        pillbox/spatial
+        &
+        Dirac $\delta$/angular
+        &
+        $\GB{\bE^{iqp}}_{lk} = h \int_{u \in \mathcal{U}_k} \text{rect}\GP{u; \btau} \dv{u}$
+        &
+        $\alpha = T_{su}^p - \frac{M_{uu}^{qp}T_{ss}^p}{M^{qp}_{us}}$
+        \\ & & &
+        $\beta = T_s^p + \frac{T_{ss}^p\GP{u_l - M^{qp}_u}}{M^{qp}_{us}}$
+        \\ & & &
+        $\btau = \frac{1}{\alpha}\GP{s_i \pm \frac{\Delta_s}{2} - \beta}$
+        \\ & & &
+        $h = \frac{\Delta^q_u}{\GM{M^{qp}_{us}}}$
+        \\
+        \bottomrule
+    \end{tabular}
+    \caption{Expressions for rebinning from plane $p$ to plane $q$.}
+    \label{tab,rebin}
+\end{table}

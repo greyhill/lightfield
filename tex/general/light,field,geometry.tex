@@ -222,5 +222,47 @@ Consider two angular planes $p$ and $q$, and a third spatial plane $r$.  We to
 rebin the light field at $r$ with angular discretization defined on $p$ to a
 light field at the same plane $r$ but with angular discretization $q$. As with
 transport~\eref{eqn,xport}, rebinning is expressed as an optimization problem
-and has (symbolically) the same solution~\eref{eqn,xport,soln}.
+and has (symbolically) the same solution:
+\begin{align}
+    \bl^q &= \GB{\bD^q}^{-1} \bE^{qp} \bl^p.
+\end{align}
+The diagonal matrix $\bD^q$ is identical to the one for light transport;
+Table~\ref{tab,xport} gives expressions for its entries.  The matrix $\bE^{qp}$
+is not block diagonal (unlike $\bB^{qp}$) because $p$ and $q$ do not share the
+same angular discretization.  Because $p$ and $q$ share a spatial
+discretization, Table~\ref{tab,rebin} gives the entries of $\bE^{qp}$ in terms
+of $k$ and $l$, the angular bins of the $p$ and $q$, respectively.  We only
+give the expressions for rebinning between a ``pillbox/spatial'' angular
+discretization and a ``Dirac $\delta$/angular'' angular discretization, but
+other combinations can be computed.
+
+\input{tab,rebin}
+
+\subsection{Slanted-plane transport}
+
+If we need to transport light from one plane to another non-parallel plane,
+the expressions in the previous section are no longer helpful.  Slanted-plane
+transport is not an affine coordinate transformation and cannot be described
+using the tools in Section~\ref{sec,geom}.  In this section we consider a
+special case: performing slanted-plane transport from $p$ to $q$ when
+\begin{itemize}
+    \item $p$ is tilted with respect to $q$ in only one of the $s$ or $t$ directions,
+    \item both $p$ and $q$ use a ``Dirac $\delta$/angular'' angular discretization, and
+    \item there are no optical elements between $p$ and $q$.
+\end{itemize}
+If these conditions are met, we recover computationally efficient expressions
+for transport from $p$ to $q$.
+
+\subsection{Adjoint operations}
+
+This section gives expressions for the forward transport and rebinning of light
+fields, \eg from plane $p$ to plane $q$.  Additionally, iterative methods use
+require the adjoint of these operations to compute \eg{} cost function gradients.
+It is convenient to compute rows of the transport and rebinning operations 
+from the expressions in Tables~\ref{tab,xport} and~\ref{tab,rebin}.  One could
+use the same expressions to compute adjoints, but this may make the adjoint
+operations more difficult to parallelize.
+
+Instead, we implement the adjoint of $p \rightarrow q$ transport as a scaled
+transport from $q \rightarrow p$.
 
