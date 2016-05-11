@@ -1,4 +1,3 @@
-use light_field_geometry::*;
 use context::*;
 
 /// Abstraction for a type that processes light fields
