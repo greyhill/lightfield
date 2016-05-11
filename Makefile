@@ -14,7 +14,9 @@ OFILES=src/lightfield_optics.o \
 
 .PHONY: tex clean install_lib install_python
 
-all: liblightfield.so tex install_lib install_python
+all: liblightfield.so tex 
+
+install: install_lib install_python
 
 install_lib: liblightfield.so
 	mkdir -p ${PREFIX}/lib
