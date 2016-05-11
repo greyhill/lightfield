@@ -4,7 +4,7 @@ void LFAngularPlane_init(struct LFAngularPlane* plane) {
     plane->du = NAN;
     plane->dv = NAN;
     plane->type = LF_PLANE_UNINIT;
-    plane->mode = (enum LFAngularPlaneMode)LF_PLANE_UNINIT;
+    plane->coordinate = (enum LFAngularPlaneCoordinate)LF_PLANE_UNINIT;
     plane->num_points = 0;
     plane->u_points = NULL;
     plane->v_points = NULL;
@@ -15,7 +15,7 @@ bool LFAngularPlane_setup(struct LFAngularPlane* plane,
                           float du,
                           float dv,
                           enum LFAngularPlaneType type,
-                          enum LFAngularPlaneMode mode,
+                          enum LFAngularPlaneCoordinate coordinate,
                           const size_t num_points,
                           const float* u_points,
                           const float* v_points,
@@ -25,7 +25,7 @@ bool LFAngularPlane_setup(struct LFAngularPlane* plane,
     plane->du = du;
     plane->dv = dv;
     plane->type = type;
-    plane->mode = mode;
+    plane->coordinate = coordinate;
     plane->num_points = num_points;
 
     if(plane->u_points) free(plane->u_points);
@@ -55,7 +55,7 @@ void LFAngularPlane_del(struct LFAngularPlane* plane) {
     plane->du = NAN;
     plane->dv = NAN;
     plane->type = LF_PLANE_UNINIT;
-    plane->mode = (enum LFAngularPlaneMode)LF_PLANE_UNINIT;
+    plane->coordinate = (enum LFAngularPlaneCoordinate)LF_PLANE_UNINIT;
     plane->num_points = 0;
     if(plane->u_points) free(plane->u_points);
     plane->u_points = NULL;

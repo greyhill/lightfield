@@ -4,16 +4,16 @@ enum LFAngularPlaneType {
     LF_PLANE_BOX = 2,
 };
 
-enum LFAngularPlaneMode {
-    LF_PLANE_SPATIAL = 1,
-    LF_PLANE_ANGULAR = 2,
+enum LFAngularPlaneCoordinate {
+    LF_PLANE_SPATIAL = 4,
+    LF_PLANE_ANGULAR = 8,
 };
 
 struct LFAngularPlane {
     float du;
     float dv;
     enum LFAngularPlaneType type;
-    enum LFAngularPlaneMode mode;
+    enum LFAngularPlaneCoordinate coordinate;
 
     // Owned points
     size_t num_points;
@@ -27,7 +27,7 @@ extern bool LFAngularPlane_setup(struct LFAngularPlane* plane,
                                  const float du,
                                  const float dv,
                                  enum LFAngularPlaneType type,
-                                 enum LFAngularPlaneMode mode,
+                                 enum LFAngularPlaneCoordinate coordinate,
                                  const size_t num_points,
                                  const float* u_points,
                                  const float* v_points,
