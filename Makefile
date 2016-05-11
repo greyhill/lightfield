@@ -2,7 +2,9 @@ ifndef PREFIX
 	PREFIX=${HOME}
 endif
 
-CC=gcc
+ifndef CC
+	CC=gcc
+endif
 CFLAGS=-g3 -Wall -Wextra -std=c99 -O2 -fPIC -Iinclude
 OFILES=src/lightfield_optics.o \
 	   src/lightfield_angular_plane.o \
