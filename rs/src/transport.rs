@@ -1,19 +1,16 @@
-pub use light_field_geometry::*;
+use light_field_geometry::*;
+use context::*;
 
-/// Plane-to-plane light field transport
-#[derive(Debug)]
-pub struct Transport {
-    src: LightFieldGeometry,
-    dst: LightFieldGeometry,
-}
+/// Abstraction for a type that processes light fields
+pub trait Transport<C: Context> {
+    fn forw_angle(self: &Self, 
+                  context: &mut C,
+                  input: &C::Vector,
+                  output: &mut C::Vector) -> Result<(), C::Error>;
 
-impl Transport {
-    pub fn new(src: LightFieldGeometry,
-               dst: LightFieldGeometry) -> Self {
-        Transport{
-            src: src,
-            dst: dst,
-        }
-    }
+    fn back_angle(self: &Self,
+                  context: &mut C,
+                  input: &C::Vector,
+                  output: &mut C::Vector) -> Result<(), C::Error>;
 }
 
