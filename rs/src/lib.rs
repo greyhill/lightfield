@@ -5,11 +5,11 @@ mod light_field_geometry;
 mod float_util;
 
 mod context;
-mod transport;
+mod stage;
 
 pub use optics::{Optics1d, Optics2d};
 pub use plane_geometry::PlaneGeometry;
 pub use angular_plane::{AngularBasis, AngularCoordinate, AngularPlane};
 pub use light_field_geometry::LightFieldGeometry;
 pub use context::Context;
-pub use transport::Transport;
+pub use stage::Stage;

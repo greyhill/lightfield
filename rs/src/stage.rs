@@ -2,7 +2,7 @@ use light_field_geometry::*;
 use context::*;
 
 /// Abstraction for a type that processes light fields
-pub trait Transport<C: Context> {
+pub trait Stage<C: Context> {
     fn forw_angle(self: &Self, 
                   context: &mut C,
                   input: &C::Vector,
