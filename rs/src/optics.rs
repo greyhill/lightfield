@@ -172,5 +172,21 @@ impl Optics2d {
     pub fn vv(self: &Self) -> f32 {
         self.y.aa
     }
+
+    pub fn s(self: &Self) -> f32 {
+        self.x.cp
+    }
+
+    pub fn t(self: &Self) -> f32 {
+        self.y.cp
+    }
+
+    pub fn u(self: &Self) -> f32 {
+        self.x.ca
+    }
+
+    pub fn v(self: &Self) -> f32 {
+        self.y.ca
+    }
 }
 
