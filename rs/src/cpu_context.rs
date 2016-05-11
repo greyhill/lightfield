@@ -1,8 +1,10 @@
+extern crate scoped_pool;
+use self::scoped_pool::Pool;
+
 use context::*;
 
-pub struct CpuContext {
-    num_threads: usize,
-}
+/// Context for multi-threaded computation
+pub type CpuContext = Pool;
 
 impl Context for CpuContext {
     type Scalar = f32;

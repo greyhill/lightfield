@@ -60,7 +60,14 @@ impl Optics1d {
 
     /// Perform this optical transformation after the given one
     pub fn compose(self: &Self, rhs: &Self) -> Self {
-        unimplemented!()
+        Optics1d {
+            pp: self.pp * rhs.pp + self.pa * rhs.ap,
+            pa: self.pp * rhs.pa + self.pa * rhs.aa,
+            ap: self.ap * rhs.pp + self.aa * rhs.ap,
+            aa: self.ap * rhs.ap + self.aa * rhs.aa,
+            cp: self.cp + self.pp * rhs.cp + self.pa * rhs.ca,
+            ca: self.ca + self.ap * rhs.cp + self.aa * rhs.ca,
+        }
     }
 
     /// Perform this optical transformation after the given one
@@ -132,6 +139,38 @@ impl Optics2d {
     /// Perform this optical transformation before the given one
     pub fn then(self: &Self, lhs: &Self) -> Self {
         lhs.compose(self)
+    }
+
+    pub fn ss(self: &Self) -> f32 {
+        self.x.pp
+    }
+
+    pub fn su(self: &Self) -> f32 {
+        self.x.pa
+    }
+
+    pub fn us(self: &Self) -> f32 {
+        self.x.ap
+    }
+
+    pub fn uu(self: &Self) -> f32 {
+        self.x.aa
+    }
+
+    pub fn tt(self: &Self) -> f32 {
+        self.y.pp
+    }
+
+    pub fn tv(self: &Self) -> f32 {
+        self.y.pa
+    }
+
+    pub fn vt(self: &Self) -> f32 {
+        self.y.ap
+    }
+
+    pub fn vv(self: &Self) -> f32 {
+        self.y.aa
     }
 }
 

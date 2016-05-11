@@ -9,3 +9,6 @@ name = 'lightfield'
 path = 'src/lib.rs'
 crate-type = ['rlib', 'dylib']
 
+[dependencies.scoped-pool]
+version = '0.1.9'
+

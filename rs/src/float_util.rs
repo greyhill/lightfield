@@ -13,3 +13,7 @@ pub fn fmax(x: f32, y: f32) -> f32 {
         y
     }
 }
+
+pub fn fclamp(minval: f32, maxval: f32, x: f32) -> f32 {
+    fmax(fmin(maxval, x), minval)
+}
