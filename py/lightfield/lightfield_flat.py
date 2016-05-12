@@ -8,9 +8,10 @@ class FlatGeometry(ct.Structure):
             ('n', Vec3),
             ('s', Vec3),
             ('t', Vec3),
+            ('c', Vec3),
             ('plane_geom', PlaneGeometry) ]
     def __init__(self,
-            n, s, t,
+            n, s, t, c,
             plane_geom):
         self.n = n
         self.s = s
