@@ -10,6 +10,9 @@
 // Error checking
 #include "lightfield_error.h"
 
+// Thin lens
+#include "lightfield_lens.h"
+
 // Affine optics
 #include "lightfield_optics.h"
 
