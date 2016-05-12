@@ -6,6 +6,5 @@ struct LFFlatGeometry {
     struct LFVec3 t;
     // origin/center of the light field
     struct LFVec3 c;
-    struct LFPlaneGeometry plane_geom;
 };
 

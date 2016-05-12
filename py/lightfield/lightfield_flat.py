@@ -8,33 +8,10 @@ class FlatGeometry(ct.Structure):
             ('n', Vec3),
             ('s', Vec3),
             ('t', Vec3),
-            ('c', Vec3),
-            ('plane_geom', PlaneGeometry) ]
+            ('c', Vec3) ]
     def __init__(self,
-            n, s, t, c,
-            plane_geom):
+            n, s, t, c):
         self.n = n
         self.s = s
         self.t = t
-        self.plane_geom = plane_geom
-
-    @property
-    def ns(self):
-        return self.plane_geom.ns
-
-    @property
-    def nt(self):
-        return self.plane_geom.nt
-
-    @property
-    def shape(self):
-        return (self.ns, self.nt)
-
-    @property
-    def zeros(self):
-        return np.zeros(self.shape, dtype='float32', order='f')
-
-    @property
-    def ones(self):
-        return np.ones(self.shape, dtype='float32', order='f')
 

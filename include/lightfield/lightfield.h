@@ -6,6 +6,9 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+#include <assert.h>
+
+#include "CL/cl.h"
 
 // Error checking
 #include "lightfield_error.h"
@@ -28,9 +31,12 @@
 // Light field transport
 #include "lightfield_transport.h"
 
-// Geometrical vectors
+// Geometric vectors
 #include "lightfield_vec3.h"
 
-// Flat objects
+// Planes in space
 #include "lightfield_flat.h"
+
+// OpenCL utilities
+#include "lightfield_cl.h"
 
