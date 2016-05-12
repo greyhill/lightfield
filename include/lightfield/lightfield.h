@@ -28,3 +28,9 @@
 // Light field transport
 #include "lightfield_transport.h"
 
+// Geometrical vectors
+#include "lightfield_vec3.h"
+
+// Flat objects
+#include "lightfield_flat.h"
+
