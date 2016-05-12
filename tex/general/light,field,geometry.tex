@@ -238,20 +238,20 @@ other combinations can be computed.
 
 \input{tab,rebin}
 
-\subsection{Slanted-plane transport}
+%   \subsection{Slanted-plane transport}
 
-If we need to transport light from one plane to another non-parallel plane,
-the expressions in the previous section are no longer helpful.  Slanted-plane
-transport is not an affine coordinate transformation and cannot be described
-using the tools in Section~\ref{sec,geom}.  In this section we consider a
-special case: performing slanted-plane transport from $p$ to $q$ when
-\begin{itemize}
-    \item $p$ is tilted with respect to $q$ in only one of the $s$ or $t$ directions,
-    \item both $p$ and $q$ use a ``Dirac $\delta$/angular'' angular discretization, and
-    \item there are no optical elements between $p$ and $q$.
-\end{itemize}
-If these conditions are met, we recover computationally efficient expressions
-for transport from $p$ to $q$.
+%   If we need to transport light from one plane to another non-parallel plane,
+%   the expressions in the previous section are no longer helpful.  Slanted-plane
+%   transport is not an affine coordinate transformation and cannot be described
+%   using the tools in Section~\ref{sec,geom}.  In this section we consider a
+%   special case: performing slanted-plane transport from $p$ to $q$ when
+%   \begin{itemize}
+%       \item $p$ is tilted with respect to $q$ in only one of the $s$ or $t$ directions,
+%       \item both $p$ and $q$ use a ``Dirac $\delta$/angular'' angular discretization, and
+%       \item there are no optical elements between $p$ and $q$.
+%   \end{itemize}
+%   If these conditions are met, we recover computationally efficient expressions
+%   for transport from $p$ to $q$.
 
 \subsection{Adjoint operations}
 
@@ -263,6 +263,6 @@ from the expressions in Tables~\ref{tab,xport} and~\ref{tab,rebin}.  One could
 use the same expressions to compute adjoints, but this may make the adjoint
 operations more difficult to parallelize.
 
-Instead, we implement the adjoint of $p \rightarrow q$ transport as a scaled
+Instead we implement the adjoint of $p \rightarrow q$ transport as a scaled
 transport from $q \rightarrow p$.
 
