@@ -17,15 +17,22 @@ ifeq ($(UNAME), Linux)
 endif
 
 CFLAGS=-g3 -Wall -Wextra -std=c99 -O2 -fPIC -Iinclude
-OFILES=src/lightfield_optics.o \
+OFILES=opencl/dirac_transport.clo \
+	   opencl/pillbox_transport.clo \
+	   \
+	   src/lightfield_optics.o \
 	   src/lightfield_angular_plane.o \
 	   src/lightfield_plane_geometry.o \
 	   src/lightfield_lixel.o \
+	   src/lightfield_cl.o \
 	   src/lightfield_transport.o \
-	   src/lightfield_renderer.o \
-	   src/lightfield_cl.o
 
 .PHONY: tex clean install_lib install_python
+
+.SUFFIXES: .opencl .clo
+
+.opencl.clo:
+	xxd -i $^ | gcc -c -xc -fPIC -o $@ -
 
 all: liblightfield.so tex 
 

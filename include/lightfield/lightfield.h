@@ -28,9 +28,6 @@
 // Light field pixels
 #include "lightfield_lixel.h"
 
-// Light field transport
-#include "lightfield_transport.h"
-
 // Geometric vectors
 #include "lightfield_vec3.h"
 
@@ -39,4 +36,10 @@
 
 // OpenCL utilities
 #include "lightfield_cl.h"
+
+// Light transport
+#include "lightfield_transport.h"
+
+// Simple camera
+#include "lightfield_camera.h"
 

@@ -12,3 +12,4 @@ venv/
 rs/target/
 *.lock
 .ipynb_checkpoints/
+*.clo

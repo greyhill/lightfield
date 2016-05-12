@@ -17,5 +17,8 @@
 #define LF_ERROR_BLOCK \
     if(0) { \
         err: \
+        if(cl_err != CL_SUCCESS) { \
+            fprintf(stderr, "CL error %d occurred at %s:%d\n", cl_err, __FILE__, __LINE__); \
+        } \
         ok = false; \
     }

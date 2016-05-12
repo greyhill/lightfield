@@ -8,3 +8,11 @@ if libpath is None:
     libpath = os.path.join(os.path.expanduser('~'), 'lib', 'liblightfield.so')
 lib = ct.CDLL(libpath)
 
+def simple_init():
+    '''Do a simple OpenCL initialization
+    
+    '''
+    lib.LFCL_simple_init.restype = ct.c_bool
+    if not lib.LFCL_simple_init():
+        raise RuntimeError('Error initializing OpenCL subsystem')
+

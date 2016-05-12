@@ -2,7 +2,6 @@ import numpy as np
 import ctypes as ct
 import lightfield_base
 lib = lightfield_base.lib
-from lightfield_transport import Transport
 
 lib.LFPlaneGeometry_ws.restype = ct.c_float
 lib.LFPlaneGeometry_wt.restype = ct.c_float
@@ -43,7 +42,4 @@ class LightFieldGeometry(object):
     @property
     def ones(self):
         return np.ones(self.shape, dtype='float32', order='f')
-
-    def transport_to(self, other):
-        return Transport(self, other)
 
