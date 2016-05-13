@@ -144,18 +144,42 @@ bool LFTransport_compute_dirac(struct LFTransport* x,
     const float coord_scale_t = 1.0 / a_t;
     float tau0_t;
     float tau1_t;
-    const float scale_t;
+    const float scale_t = h_t;
+    const float dst_ds = x->dst_plane->ds;
+    const float dst_dt = x->dst_plane->dt;
+    const float dst_ws = LFPlaneGeometry_ws(x->dst_plane);
+    const float dst_wt = LFPlaneGeometry_wt(x->dst_plane);
+
+    tau0_t = (x->dst_plane->ds/2.f - b_s);
+    tau1_t = (-x->dst_plane->ds/2.f - b_s);
+    if(tau0_t > tau1_t) {
+        const float t = tau0_t;
+        tau0_t = tau1_t;
+        tau1_t = t;
+    }
 
     const float coord_scale_s = 1.0 / a_s;
     float tau0_s;
     float tau1_s;
-    const float scale_s;
+    const float scale_s = h_s;
+    const float src_ds = x->src_plane->ds;
+    const float src_dt = x->src_plane->dt;
+    const float src_ws = LFPlaneGeometry_ws(x->src_plane);
+    const float src_wt = LFPlaneGeometry_wt(x->src_plane);
+
+    tau0_s = (x->dst_plane->dt/2.f - b_t);
+    tau1_s = (-x->dst_plane->dt/2.f - b_t);
+    if(tau0_t > tau1_t) {
+        const float t = tau0_t;
+        tau0_t = tau1_t;
+        tau1_t = t;
+    }
 
     size_t global_size_t[2] = { src_s1 - src_s0, dst_t1 - dst_t0 };
     const size_t local_size_t[2] = { 32, 8 };
     LFCL_fix_size(2, local_size_t, global_size_t);
 
-    size_t global_size_s[2] = { dst_t1 - dst_t0, dst_s0 - dst_s0 };
+    size_t global_size_s[2] = { dst_t1 - dst_t0, dst_s1 - dst_s0 };
     const size_t local_size_s[2] = { 32, 8 };
     LFCL_fix_size(2, local_size_s, global_size_s);
 
@@ -165,21 +189,37 @@ bool LFTransport_compute_dirac(struct LFTransport* x,
     LF_CL_ARG(filter_t, 0, src_ns);
     LF_CL_ARG(filter_t, 1, src_s0);
     LF_CL_ARG(filter_t, 2, src_s1);
+
     LF_CL_ARG(filter_t, 3, src_nt);
     LF_CL_ARG(filter_t, 4, src_t0);
     LF_CL_ARG(filter_t, 5, src_t1);
-    LF_CL_ARG(filter_t, 6, dst_ns);
-    LF_CL_ARG(filter_t, 7, dst_s0);
-    LF_CL_ARG(filter_t, 8, dst_s1);
-    LF_CL_ARG(filter_t, 9, dst_nt);
-    LF_CL_ARG(filter_t, 10, dst_t0);
-    LF_CL_ARG(filter_t, 11, dst_t1);
-    LF_CL_ARG(filter_t, 12, coord_scale_t);
-    LF_CL_ARG(filter_t, 13, tau0_t);
-    LF_CL_ARG(filter_t, 14, tau1_t);
-    LF_CL_ARG(filter_t, 15, scale_t);
-    LF_CL_ARG(filter_t, 16, src);
-    LF_CL_ARG(filter_t, 17, tmp);
+
+    LF_CL_ARG(filter_t, 6, src_ds);
+    LF_CL_ARG(filter_t, 7, src_ws);
+
+    LF_CL_ARG(filter_t, 8, src_dt);
+    LF_CL_ARG(filter_t, 9, src_wt);
+
+    LF_CL_ARG(filter_t, 10, dst_ns);
+    LF_CL_ARG(filter_t, 11, dst_s0);
+    LF_CL_ARG(filter_t, 12, dst_s1);
+
+    LF_CL_ARG(filter_t, 13, dst_nt);
+    LF_CL_ARG(filter_t, 14, dst_t0);
+    LF_CL_ARG(filter_t, 15, dst_t1);
+
+    LF_CL_ARG(filter_t, 16, dst_ds);
+    LF_CL_ARG(filter_t, 17, dst_ws);
+
+    LF_CL_ARG(filter_t, 18, dst_dt);
+    LF_CL_ARG(filter_t, 19, dst_wt);
+
+    LF_CL_ARG(filter_t, 20, coord_scale_t);
+    LF_CL_ARG(filter_t, 21, tau0_t);
+    LF_CL_ARG(filter_t, 22, tau1_t);
+    LF_CL_ARG(filter_t, 23, scale_t);
+    LF_CL_ARG(filter_t, 24, src);
+    LF_CL_ARG(filter_t, 25, tmp);
 
     cl_err = clEnqueueNDRangeKernel(q, filter_t, 2,
             NULL, global_size_t, local_size_t,
@@ -190,25 +230,40 @@ bool LFTransport_compute_dirac(struct LFTransport* x,
     cl_kernel filter_s = LFCL_dirac_transport_filter_s();
     LF_TRY(filter_s != NULL);
 
-    LF_TRY(filter_t != NULL);
     LF_CL_ARG(filter_s, 0, src_ns);
     LF_CL_ARG(filter_s, 1, src_s0);
     LF_CL_ARG(filter_s, 2, src_s1);
+
     LF_CL_ARG(filter_s, 3, src_nt);
     LF_CL_ARG(filter_s, 4, src_t0);
     LF_CL_ARG(filter_s, 5, src_t1);
-    LF_CL_ARG(filter_s, 6, dst_ns);
-    LF_CL_ARG(filter_s, 7, dst_s0);
-    LF_CL_ARG(filter_s, 8, dst_s1);
-    LF_CL_ARG(filter_s, 9, dst_nt);
-    LF_CL_ARG(filter_s, 10, dst_t0);
-    LF_CL_ARG(filter_s, 11, dst_t1);
-    LF_CL_ARG(filter_s, 12, coord_scale_s);
-    LF_CL_ARG(filter_s, 13, tau0_s);
-    LF_CL_ARG(filter_s, 14, tau1_s);
-    LF_CL_ARG(filter_s, 15, scale_s);
-    LF_CL_ARG(filter_s, 16, tmp);
-    LF_CL_ARG(filter_s, 17, dst);
+
+    LF_CL_ARG(filter_s, 6, src_ds);
+    LF_CL_ARG(filter_s, 7, src_ws);
+
+    LF_CL_ARG(filter_s, 8, src_dt);
+    LF_CL_ARG(filter_s, 9, src_wt);
+
+    LF_CL_ARG(filter_s, 10, dst_ns);
+    LF_CL_ARG(filter_s, 11, dst_s0);
+    LF_CL_ARG(filter_s, 12, dst_s1);
+
+    LF_CL_ARG(filter_s, 13, dst_nt);
+    LF_CL_ARG(filter_s, 14, dst_t0);
+    LF_CL_ARG(filter_s, 15, dst_t1);
+
+    LF_CL_ARG(filter_s, 16, dst_ds);
+    LF_CL_ARG(filter_s, 17, dst_ws);
+
+    LF_CL_ARG(filter_s, 18, dst_dt);
+    LF_CL_ARG(filter_s, 19, dst_wt);
+
+    LF_CL_ARG(filter_s, 20, coord_scale_s);
+    LF_CL_ARG(filter_s, 21, tau0_s);
+    LF_CL_ARG(filter_s, 22, tau1_s);
+    LF_CL_ARG(filter_s, 23, scale_s);
+    LF_CL_ARG(filter_s, 24, tmp);
+    LF_CL_ARG(filter_s, 25, dst);
 
     cl_err = clEnqueueNDRangeKernel(q, filter_s, 2,
             NULL, global_size_s, local_size_s,
