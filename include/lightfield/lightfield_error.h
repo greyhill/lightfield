@@ -22,3 +22,7 @@
         } \
         ok = false; \
     }
+
+#define LF_CL_ARG(kernel, num, value) \
+    cl_err = clSetKernelArg((kernel), (num), sizeof((value)), &(value)); \
+    LF_CHECK_CL;

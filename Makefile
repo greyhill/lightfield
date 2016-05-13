@@ -25,16 +25,17 @@ OFILES=opencl/dirac_transport.clo \
 	   src/lightfield_plane_geometry.o \
 	   src/lightfield_lixel.o \
 	   src/lightfield_cl.o \
-	   src/lightfield_transport.o \
+	   src/lightfield_transport.o
 
 .PHONY: tex clean install_lib install_python
-
 .SUFFIXES: .opencl .clo
 
 .opencl.clo:
 	xxd -i $^ | gcc -c -xc -fPIC -o $@ -
 
-all: liblightfield.so tex 
+all: lib tex 
+
+lib: liblightfield.so
 
 install: install_lib install_python
 

@@ -5,6 +5,9 @@ static cl_command_queue lfcl_command_queue = NULL;
 static cl_device_id lfcl_device = NULL;
 
 static cl_program dirac_transport_program = NULL;
+static cl_kernel dirac_transport_filter_t = NULL;
+static cl_kernel dirac_transport_filter_s = NULL;
+
 static cl_program pillbox_transport_program = NULL;
 
 static bool LFCL_build_programs();
@@ -121,12 +124,21 @@ extern unsigned char opencl_dirac_transport_opencl[];
 bool LFCL_build_dirac_transport() {
     LF_ERROR_START;
 
+    // build program
     size_t source_len = opencl_dirac_transport_opencl_len;
     const char* source = (const char*)opencl_dirac_transport_opencl;
     dirac_transport_program = clCreateProgramWithSource(lfcl_context,
             1, &source, &source_len, &cl_err);
     LF_CHECK_CL;
     LF_TRY(LFCL_compile(dirac_transport_program));
+
+    // create kernels
+    dirac_transport_filter_t = clCreateKernel(dirac_transport_program,
+            "filter_t", &cl_err);
+    LF_CHECK_CL;
+    dirac_transport_filter_s = clCreateKernel(dirac_transport_program,
+            "filter_s", &cl_err);
+    LF_CHECK_CL;
 
     LF_ERROR_BLOCK;
     return ok;
@@ -135,6 +147,9 @@ bool LFCL_build_dirac_transport() {
 extern int opencl_pillbox_transport_opencl_len;
 extern unsigned char opencl_pillbox_transport_opencl[];
 bool LFCL_build_pillbox_transport() {
+    // TODO
+    return true;
+
     LF_ERROR_START;
 
     size_t source_len = opencl_pillbox_transport_opencl_len;
@@ -146,5 +161,13 @@ bool LFCL_build_pillbox_transport() {
 
     LF_ERROR_BLOCK;
     return ok;
+}
+
+cl_kernel LFCL_dirac_transport_filter_t() {
+    return dirac_transport_filter_t;
+}
+
+cl_kernel LFCL_dirac_transport_filter_s() {
+    return dirac_transport_filter_t;
 }
 
