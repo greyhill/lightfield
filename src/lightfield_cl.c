@@ -77,6 +77,17 @@ cl_command_queue LFCL_get_queue() {
     return lfcl_command_queue;
 }
 
+void LFCL_fix_size(size_t dim, const size_t* local_size, size_t* global_size) {
+    for(size_t i=0; i<dim; ++i) {
+        size_t gi = global_size[i];
+        size_t li = local_size[i];
+        if(gi % li != 0) {
+            gi = (gi / li + 1)*li;
+            global_size[i] = gi;
+        }
+    }
+}
+
 bool LFCL_build_programs() {
     LF_ERROR_START;
 

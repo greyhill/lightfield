@@ -141,21 +141,23 @@ bool LFTransport_compute_dirac(struct LFTransport* x,
     const int dst_t0 = 0;
     const int dst_t1 = dst_nt;
 
-    const float coord_scale_t;
-    const float tau0_t;
-    const float tau1_t;
+    const float coord_scale_t = 1.0 / a_t;
+    float tau0_t;
+    float tau1_t;
     const float scale_t;
 
-    const float coord_scale_s;
-    const float tau0_s;
-    const float tau1_s;
+    const float coord_scale_s = 1.0 / a_s;
+    float tau0_s;
+    float tau1_s;
     const float scale_s;
 
-    const size_t global_size_t[3];
-    const size_t local_size_t[3];
+    size_t global_size_t[2] = { src_s1 - src_s0, dst_t1 - dst_t0 };
+    const size_t local_size_t[2] = { 32, 8 };
+    LFCL_fix_size(2, local_size_t, global_size_t);
 
-    const size_t global_size_s[3];
-    const size_t local_size_s[3];
+    size_t global_size_s[2] = { dst_t1 - dst_t0, dst_s0 - dst_s0 };
+    const size_t local_size_s[2] = { 32, 8 };
+    LFCL_fix_size(2, local_size_s, global_size_s);
 
     // Filter t
     cl_kernel filter_t = LFCL_dirac_transport_filter_t();
