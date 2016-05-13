@@ -9,7 +9,7 @@ venv/
 *.o
 *.so
 *.pyc
-rs/target/
+target/
 *.lock
 .ipynb_checkpoints/
 *.clo
