@@ -11,7 +11,7 @@ pub struct Environment {
 impl Environment {
     /// Create an Environment with the first platform available
     /// 
-    /// Only uses GPU devices by default
+    /// Only uses GPU devices by default.
     pub fn new_easy() -> Result<Environment, Error> {
         let platforms = try!(Platform::platforms());
         let devices = try!(platforms[0].devices());
@@ -42,5 +42,6 @@ impl Environment {
 #[test]
 fn test_new_easy() {
     let env = Environment::new_easy().unwrap();
+    assert!(env.devices.len() > 0);
 }
 
