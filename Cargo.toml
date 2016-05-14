@@ -11,3 +11,12 @@ crate-type = ['rlib']
 [dependencies.num]
 version = '0.1.32'
 
+[dependencies.rand]
+version = '0.3.14'
+
+[dependencies.toml]
+version = '0.1.29'
+
+[dependencies.nalgebra]
+version = '0.8.2'
+

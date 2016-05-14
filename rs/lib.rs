@@ -1,4 +1,18 @@
-//! `lightfield` is software for computational photography and image processing.
+//! `lightfield` is software for computational photography and light
+//! field processing.
 
 mod optics;
-pub use optics::Optics;
+pub use optics::*;
+
+mod detector;
+pub use detector::*;
+
+mod lens;
+pub use lens::*;
+
+mod isometry;
+pub use isometry::*;
+
+mod camera;
+pub use camera::*;
+
