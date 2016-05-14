@@ -1,5 +1,6 @@
 extern crate num;
 extern crate toml;
+use serialize::*;
 use self::num::{Float, FromPrimitive, ToPrimitive};
 use self::toml::*;
 use lens::*;
@@ -13,8 +14,8 @@ pub struct Camera<F: Float> {
     pub distance_detector_lens: F,
 }
 
-impl<F: Float + FromPrimitive + ToPrimitive> Camera<F> {
-    pub fn from_map(map: &Table) -> Option<Self> {
+impl<F: Float + FromPrimitive + ToPrimitive> Serialize for Camera<F> {
+    fn from_map(map: &Table) -> Option<Self> {
         let lens = map.get("lens");
         let detector = map.get("detector");
         let distance_detector_lens = map.get("distance_detector_lens");
@@ -36,7 +37,7 @@ impl<F: Float + FromPrimitive + ToPrimitive> Camera<F> {
         }
     }
 
-    pub fn into_map(self: &Self) -> Table {
+    fn into_map(self: &Self) -> Table {
         let mut tr = Table::new();
         tr.insert("lens".to_string(), Value::Table(self.lens.into_map()));
         tr.insert("detector".to_string(), Value::Table(self.detector.into_map()));

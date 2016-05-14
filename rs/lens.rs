@@ -1,5 +1,6 @@
 extern crate num;
 extern crate toml;
+use serialize::*;
 use optics::*;
 use self::num::{Float, FromPrimitive, ToPrimitive};
 use self::toml::*;
@@ -23,8 +24,8 @@ impl<F: Float> Lens<F> {
     }
 }
 
-impl<F: Float + FromPrimitive + ToPrimitive> Lens<F> {
-    pub fn from_map(map: &Table) -> Option<Self> {
+impl<F: Float + FromPrimitive + ToPrimitive> Serialize for Lens<F> {
+    fn from_map(map: &Table) -> Option<Self> {
         let center_s = map.get("center_s");
         let center_t = map.get("center_t");
         let radius_s = map.get("radius_s");
@@ -50,7 +51,7 @@ impl<F: Float + FromPrimitive + ToPrimitive> Lens<F> {
         }
     }
 
-    pub fn into_map(self: &Self) -> Table {
+    fn into_map(self: &Self) -> Table {
         let mut tr = Table::new();
         tr.insert("center_s".to_string(), Value::Float(F::to_f64(&self.center_s).unwrap()));
         tr.insert("center_t".to_string(), Value::Float(F::to_f64(&self.center_t).unwrap()));

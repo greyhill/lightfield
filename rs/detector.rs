@@ -1,5 +1,6 @@
 extern crate num;
 extern crate toml;
+use serialize::*;
 use self::num::{Float, FromPrimitive, ToPrimitive};
 use self::toml::*;
 
@@ -14,8 +15,8 @@ pub struct Detector<F: Float> {
     pub offset_t: F,
 }
 
-impl<F: Float + FromPrimitive + ToPrimitive> Detector<F> {
-    pub fn from_map(map: &Table) -> Option<Self> {
+impl<F: Float + FromPrimitive + ToPrimitive> Serialize for Detector<F> {
+    fn from_map(map: &Table) -> Option<Self> {
         let ns = map.get("ns");
         let nt = map.get("nt");
         let ds = map.get("ds");
@@ -41,7 +42,7 @@ impl<F: Float + FromPrimitive + ToPrimitive> Detector<F> {
         }
     }
 
-    pub fn into_map(self: &Self) -> Table {
+    fn into_map(self: &Self) -> Table {
         let mut tr = Table::new();
         tr.insert("ns".to_string(), Value::Integer(self.ns as i64));
         tr.insert("nt".to_string(), Value::Integer(self.nt as i64));
