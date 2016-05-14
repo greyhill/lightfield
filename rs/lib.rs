@@ -19,6 +19,9 @@ pub use isometry::*;
 mod camera;
 pub use camera::*;
 
-//mod translucent_volume;
-//pub use translucent_volume::*;
+mod image_geom;
+pub use image_geom::*;
+
+mod env;
+pub use env::*;
 
