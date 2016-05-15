@@ -4,6 +4,9 @@ use serialize::*;
 use optics::*;
 use self::num::{Float, FromPrimitive, ToPrimitive};
 use self::toml::*;
+use image_geom::*;
+use occluder::*;
+use bounding_geometry::*;
 
 /// Ideal thin lens
 #[derive(Clone, Debug)]
@@ -16,11 +19,36 @@ pub struct Lens<F: Float> {
     pub focal_length_t: F,
 }
 
-impl<F: Float> Lens<F> {
+impl<F: Float + FromPrimitive> Lens<F> {
     /// Returns the optical transformation from this lens
     pub fn optics(self: &Self) -> Optics<F> {
         Optics::anisotropic_lens(&self.center_s, &self.center_t,
                                  &self.focal_length_s, &self.focal_length_t)
+    }
+}
+
+impl<F: Float + FromPrimitive> BoundingGeometry<F> for Lens<F> {
+    fn bounding_geometry(self: &Self, ns: usize, nt: usize) -> ImageGeometry<F> {
+        let ds = F::from_f32(2f32).unwrap() * self.radius_s / F::from_usize(ns).unwrap();
+        let dt = F::from_f32(2f32).unwrap() * self.radius_t / F::from_usize(nt).unwrap();
+        let offset_s = -self.center_s / ds;
+        let offset_t = -self.center_t / dt;
+        ImageGeometry{
+            ns: ns,
+            nt: nt,
+            ds: ds,
+            dt: dt,
+            offset_s: offset_s,
+            offset_t: offset_t,
+        }
+    }
+}
+
+impl<F: Float + FromPrimitive> Occluder<F> for Lens<F> {
+    fn occludes(self: &Self, s: F, t: F) -> bool {
+        let ds = ((s - self.center_s) / self.radius_s).powi(2);
+        let dt = ((t - self.center_t) / self.radius_t).powi(2);
+        ds + dt >= F::one()
     }
 }
 

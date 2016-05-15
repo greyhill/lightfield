@@ -22,6 +22,15 @@ pub use camera::*;
 mod image_geom;
 pub use image_geom::*;
 
+mod bounding_geometry;
+pub use bounding_geometry::*;
+
+mod occluder;
+pub use occluder::*;
+
+mod angular_plane;
+pub use angular_plane::*;
+
 mod env;
 pub use env::*;
 
@@ -30,4 +39,7 @@ pub use cl_traits::*;
 
 mod rotate;
 pub use rotate::*;
+
+mod transport;
+pub use transport::*;
 

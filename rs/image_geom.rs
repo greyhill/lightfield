@@ -21,6 +21,22 @@ impl<F: Float + FromPrimitive> ImageGeometry<F> {
     pub fn wt(self: &Self) -> F {
         (F::from_usize(self.nt).unwrap() - F::one())/F::from_f32(2f32).unwrap() + self.offset_t
     }
+
+    /// Returns pixel spatial bounds (s0, s1, t0, t1)
+    pub fn pixel_bounds(self: &Self, is: usize, it: usize) -> (F, F, F, F) {
+        let s = (F::from_usize(is).unwrap() - self.ws())*self.ds;
+        let t = (F::from_usize(it).unwrap() - self.wt())*self.dt;
+        let ds2 = self.ds / F::from_f32(2f32).unwrap();
+        let dt2 = self.dt / F::from_f32(2f32).unwrap();
+        (s - ds2, s + ds2, t - dt2, t + dt2)
+    }
+
+    /// Returns the spatial center of a pixel
+    pub fn pixel_center(self: &Self, is: usize, it: usize) -> (F, F) {
+        let s = (F::from_usize(is).unwrap() - self.ws())*self.ds;
+        let t = (F::from_usize(it).unwrap() - self.wt())*self.dt;
+        (s, t)
+    }
 }
 
 impl ClHeader for ImageGeometry<f32> {
