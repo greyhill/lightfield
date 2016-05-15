@@ -1,6 +1,9 @@
 extern crate num;
 extern crate rand;
-use self::num::Float;
+extern crate toml;
+use self::toml::*;
+use self::num::{Float, FromPrimitive, ToPrimitive};
+use serialize::*;
 
 /// Affine optical transformation for light transport
 #[derive(Clone, Debug)]
@@ -187,6 +190,79 @@ impl<F: Float> Optics<F> {
     }
 }
 
+impl<F: Float + FromPrimitive + ToPrimitive> Serialize for Optics<F> {
+    fn from_map(map: &Table) -> Option<Self> {
+        let ss = map.get("ss");
+        let su = map.get("su");
+        let us = map.get("us");
+        let uu = map.get("uu");
+
+        let tt = map.get("tt");
+        let tv = map.get("tv");
+        let vt = map.get("vt");
+        let vv = map.get("vv");
+
+        let s = map.get("s");
+        let t = map.get("t");
+        let u = map.get("u");
+        let v = map.get("v");
+
+        match (ss, su, us, uu,
+               tt, tv, vt, vv,
+               s, t, u, v) {
+            (Some(&Value::Float(ss)),
+             Some(&Value::Float(su)),
+             Some(&Value::Float(us)),
+             Some(&Value::Float(uu)),
+             
+             Some(&Value::Float(tt)),
+             Some(&Value::Float(tv)),
+             Some(&Value::Float(vt)),
+             Some(&Value::Float(vv)),
+
+             Some(&Value::Float(s)),
+             Some(&Value::Float(t)),
+             Some(&Value::Float(u)),
+             Some(&Value::Float(v))) => Some(Optics{
+                ss: F::from_f64(ss).unwrap(),
+                su: F::from_f64(su).unwrap(),
+                us: F::from_f64(us).unwrap(),
+                uu: F::from_f64(uu).unwrap(),
+
+                tt: F::from_f64(tt).unwrap(),
+                tv: F::from_f64(tv).unwrap(),
+                vt: F::from_f64(vt).unwrap(),
+                vv: F::from_f64(vv).unwrap(),
+
+                s: F::from_f64(s).unwrap(),
+                t: F::from_f64(t).unwrap(),
+                u: F::from_f64(u).unwrap(),
+                v: F::from_f64(v).unwrap(),
+            }),
+            _ => None,
+        }
+    }
+
+    fn into_map(self: &Self) -> Table {
+        let mut tr = Table::new();
+        tr.insert("ss".to_string(), Value::Float(F::to_f64(&self.ss).unwrap()));
+        tr.insert("su".to_string(), Value::Float(F::to_f64(&self.su).unwrap()));
+        tr.insert("us".to_string(), Value::Float(F::to_f64(&self.us).unwrap()));
+        tr.insert("uu".to_string(), Value::Float(F::to_f64(&self.uu).unwrap()));
+
+        tr.insert("tt".to_string(), Value::Float(F::to_f64(&self.tt).unwrap()));
+        tr.insert("tv".to_string(), Value::Float(F::to_f64(&self.tv).unwrap()));
+        tr.insert("vt".to_string(), Value::Float(F::to_f64(&self.vt).unwrap()));
+        tr.insert("vv".to_string(), Value::Float(F::to_f64(&self.vv).unwrap()));
+
+        tr.insert("s".to_string(), Value::Float(F::to_f64(&self.s).unwrap()));
+        tr.insert("t".to_string(), Value::Float(F::to_f64(&self.t).unwrap()));
+        tr.insert("u".to_string(), Value::Float(F::to_f64(&self.u).unwrap()));
+        tr.insert("v".to_string(), Value::Float(F::to_f64(&self.v).unwrap()));
+        tr
+    }
+}
+
 #[test]
 fn test_cam() {
     use self::rand::*;
@@ -260,5 +336,47 @@ fn test_ulens() {
     assert!((xix.vv - 1f64).abs() < 1e-8);
     assert!((xix.t - 0f64).abs() < 1e-8);
     assert!((xix.v - 0f64).abs() < 1e-8);
+}
+
+#[test]
+fn test_optics_serialize() {
+    use self::rand::*;
+
+    let d_det_array = thread_rng().next_f64().abs();
+    let d_array_lens = thread_rng().next_f64().abs();
+    let d_lens_scene = thread_rng().next_f64().abs();
+
+    let cu_s = thread_rng().next_f64();
+    let cu_t = thread_rng().next_f64();
+    let fu_s = thread_rng().next_f64().abs();
+    let fu_t = thread_rng().next_f64().abs();
+
+    let c_s = thread_rng().next_f64();
+    let c_t = thread_rng().next_f64();
+    let f_s = thread_rng().next_f64().abs();
+    let f_t = thread_rng().next_f64().abs();
+
+    let x = Optics::translation(&d_det_array)
+                .then(&Optics::anisotropic_lens(&cu_s, &cu_t, &fu_s, &fu_t))
+                .then(&Optics::translation(&d_array_lens))
+                .then(&Optics::anisotropic_lens(&c_s, &c_t, &f_s, &f_t))
+                .then(&Optics::translation(&d_lens_scene));
+
+    let y: Optics<f64> = Optics::from_map(&x.into_map()).unwrap();
+
+    assert_eq!(x.ss, y.ss);
+    assert_eq!(x.su, y.su);
+    assert_eq!(x.us, y.us);
+    assert_eq!(x.uu, y.uu);
+
+    assert_eq!(x.tt, y.tt);
+    assert_eq!(x.tv, y.tv);
+    assert_eq!(x.vt, y.vt);
+    assert_eq!(x.vv, y.vv);
+
+    assert_eq!(x.s, y.s);
+    assert_eq!(x.t, y.t);
+    assert_eq!(x.u, y.u);
+    assert_eq!(x.v, y.v);
 }
 
