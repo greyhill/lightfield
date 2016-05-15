@@ -37,9 +37,6 @@ pub use env::*;
 mod cl_traits;
 pub use cl_traits::*;
 
-mod rotate;
-pub use rotate::*;
-
 mod transport;
 pub use transport::*;
 
