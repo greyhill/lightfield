@@ -184,7 +184,7 @@ impl<'src, 'dst, F: 'src + 'dst + Float + FromPrimitive + ToPrimitive> Transport
         let c2 = F::from_f32(2f32).unwrap();
 
         let alpha = Rqp.tt - Rp.tt*Rqp.tv/Rp.tv;
-        let beta = Rqp.tv*(t - Rp.t)/Rp.tv;
+        let beta = Rqp.t + Rqp.tv*(t - Rp.t)/Rp.tv;
         let h = (plane.dt / Rp.tv).abs();
 
         let mut tau0 = (-into_geom.dt/c2 - beta)/alpha;
@@ -247,7 +247,7 @@ impl<'src, 'dst, F: 'src + 'dst + Float + FromPrimitive + ToPrimitive> Transport
         let c2 = F::from_f32(2f32).unwrap();
 
         let alpha = Rqp.ss - Rp.ss*Rqp.su/Rp.su;
-        let beta = Rqp.su*(s - Rp.s)/Rp.su;
+        let beta = Rqp.s + Rqp.su*(s - Rp.s)/Rp.su;
         let h = (plane.ds / Rp.su).abs();
 
         let mut tau0 = (-into_geom.ds/c2 - beta)/alpha;
@@ -298,16 +298,154 @@ impl<'src, 'dst, F: 'src + 'dst + Float + FromPrimitive + ToPrimitive> Transport
         self.transport_dirac_s(false, src, ia, &[done_t])
     }
 
+    #[allow(non_snake_case)] // allow us to break style guide to match docs
+    fn transport_pillbox_t(self: &mut Self,
+                    forw: bool,
+                    src: &Mem,
+                    ia: usize, wait_for: &[Event]) -> Result<Event, Error> {
+        let Rqp = if forw {
+            &self.src_to_dst
+        } else {
+            &self.dst_to_src
+        };
+        let Rp = if forw {
+            &self.src.to_plane
+        } else {
+            &self.dst.to_plane
+        };
+        let into_geom = if forw {
+            &self.dst.geom
+        } else {
+            &self.src.geom
+        };
+        let plane = &self.src.plane;
+
+        let t = plane.t[ia];
+        let c2 = F::from_f32(2f32).unwrap();
+
+        let alpha = Rqp.tt - Rqp.tv*Rp.tt/Rp.tv;
+        let beta = Rqp.tv / Rp.tv;
+        let gamma = Rqp.t - Rqp.tv*Rp.t/Rp.tv;
+        let h = (plane.dt / Rp.tv).abs().min((into_geom.dt / Rqp.tv).abs());
+
+        let mut taus = vec![
+            (into_geom.dt/c2 - beta*(t + plane.dt/c2) - gamma)/alpha,
+            (into_geom.dt/c2 - beta*(t - plane.dt/c2) - gamma)/alpha,
+            (-into_geom.dt/c2 - beta*(t + plane.dt/c2) - gamma)/alpha,
+            (-into_geom.dt/c2 - beta*(t - plane.dt/c2) - gamma)/alpha,
+        ];
+        taus.sort_by(|l,r| l.partial_cmp(r).unwrap());
+
+        let mut kernel = self.kernel_t.clone();
+        try!(self.bind_common_args(forw, &mut kernel));
+
+        try!(kernel.bind_scalar(10, &F::to_f32(&(F::one() / alpha)).unwrap()));
+        try!(kernel.bind_scalar(11, &F::to_f32(&taus[0]).unwrap()));
+        try!(kernel.bind_scalar(12, &F::to_f32(&taus[1]).unwrap()));
+        try!(kernel.bind_scalar(13, &F::to_f32(&taus[2]).unwrap()));
+        try!(kernel.bind_scalar(14, &F::to_f32(&taus[3]).unwrap()));
+        try!(kernel.bind_scalar(15, &F::to_f32(&h).unwrap()));
+
+        try!(kernel.bind(16, src));
+        try!(kernel.bind_mut(17, &mut self.tmp_buf));
+
+        let local_size = (32usize, 8usize, 1usize);
+        let global_size = if forw {
+            (self.src_s1 - self.src_s0,
+             self.dst_t1 - self.dst_t0,
+             1)
+        } else {
+            (self.dst_s1 - self.dst_s0,
+             self.src_t1 - self.src_t0,
+             1)
+        };
+
+        self.queue.run_with_events(&mut kernel,
+                                   local_size,
+                                   global_size,
+                                   wait_for)
+    }
+
+    #[allow(non_snake_case)] // allow us to break style guide to match docs
+    fn transport_pillbox_s(self: &mut Self,
+                    forw: bool,
+                    dst: &mut Mem,
+                    ia: usize, wait_for: &[Event]) -> Result<Event, Error> {
+        let Rqp = if forw {
+            &self.src_to_dst
+        } else {
+            &self.dst_to_src
+        };
+        let Rp = if forw {
+            &self.src.to_plane
+        } else {
+            &self.dst.to_plane
+        };
+        let into_geom = if forw {
+            &self.dst.geom
+        } else {
+            &self.src.geom
+        };
+        let plane = &self.src.plane;
+
+        let s = plane.s[ia];
+        let c2 = F::from_f32(2f32).unwrap();
+
+        let alpha = Rqp.ss - Rqp.su*Rp.ss/Rp.su;
+        let beta = Rqp.su / Rp.su;
+        let gamma = Rqp.s - Rqp.su*Rp.s/Rp.su;
+        let h = (plane.ds / Rp.su).abs().min((into_geom.ds / Rqp.su).abs());
+
+        let mut taus = vec![
+            (into_geom.ds/c2 - beta*(s + plane.ds/c2) - gamma)/alpha,
+            (into_geom.ds/c2 - beta*(s - plane.ds/c2) - gamma)/alpha,
+            (-into_geom.ds/c2 - beta*(s + plane.ds/c2) - gamma)/alpha,
+            (-into_geom.ds/c2 - beta*(s - plane.ds/c2) - gamma)/alpha,
+        ];
+        taus.sort_by(|l,r| l.partial_cmp(r).unwrap());
+
+        let mut kernel = self.kernel_s.clone();
+        try!(self.bind_common_args(forw, &mut kernel));
+
+        try!(kernel.bind_scalar(10, &F::to_f32(&(F::one() / alpha)).unwrap()));
+        try!(kernel.bind_scalar(11, &F::to_f32(&taus[0]).unwrap()));
+        try!(kernel.bind_scalar(12, &F::to_f32(&taus[1]).unwrap()));
+        try!(kernel.bind_scalar(13, &F::to_f32(&taus[2]).unwrap()));
+        try!(kernel.bind_scalar(14, &F::to_f32(&taus[3]).unwrap()));
+        try!(kernel.bind_scalar(15, &F::to_f32(&h).unwrap()));
+
+        try!(kernel.bind(16, &self.tmp_buf));
+        try!(kernel.bind_mut(17, dst));
+
+        let local_size = (32usize, 8usize, 1usize);
+        let global_size = if forw {
+            (self.dst_t1 - self.dst_t0,
+             self.dst_s1 - self.dst_s0,
+             1)
+        } else {
+            (self.src_t1 - self.src_t0,
+             self.src_s1 - self.src_s0,
+             1)
+        };
+
+        self.queue.run_with_events(&mut kernel,
+                                   local_size,
+                                   global_size,
+                                   wait_for)
+    }
+
     fn forw_pillbox(self: &mut Self,
                     src: &Mem, dst: &mut Mem,
                     ia: usize, wait_for: &[Event])-> Result<Event, Error> {
-        unimplemented!()
+        let done_t = try!(self.transport_pillbox_t(true, src, ia, wait_for));
+        self.transport_pillbox_s(true, dst, ia, &[done_t])
     }
 
     fn back_pillbox(self: &mut Self,
                     dst: &Mem, src: &mut Mem,
                     ia: usize, wait_for: &[Event]) -> Result<Event, Error> {
-        unimplemented!()
+        let done_t = try!(self.transport_pillbox_t(false, dst, ia, wait_for));
+        self.transport_pillbox_s(false, src, ia, &[done_t])
     }
 
     /// Transport from source to destination, overwriting on the destination plane
@@ -352,11 +490,11 @@ fn test_transport_dirac() {
 
     let src_geom = ImageGeometry{
         ns: 100,
-        nt: 100,
+        nt: 200,
         ds: 1.0,
         dt: 1.1,
         offset_s: 0.5,
-        offset_t: 0.9,
+        offset_t: 2.9,
     };
     let dst_geom = ImageGeometry{
         ns: 1024,
@@ -403,7 +541,9 @@ fn test_transport_dirac() {
     let nrmse = (v1 - v2).abs() / v1.abs().max(v2.abs());
 
     println!("Adjoint NRMSE for Transport-Dirac: {}", nrmse);
-    assert!(nrmse < 1e-5);
+    println!("v'Tu: {}", v1);
+    println!("(T'v)'u: {}", v2);
+    assert!(nrmse < 1e-4);
 }
 
 #[test]
@@ -427,16 +567,16 @@ fn test_transport_pillbox() {
 
     let src_geom = ImageGeometry{
         ns: 100,
-        nt: 100,
+        nt: 200,
         ds: 1.0,
-        dt: 1.1,
+        dt: 2.1,
         offset_s: 0.5,
         offset_t: 0.9,
     };
     let dst_geom = ImageGeometry{
         ns: 1024,
         nt: 2048,
-        ds: 5e-2,
+        ds: 2e-2,
         dt: 3e-2,
         offset_s: -4.0,
         offset_t: 2.1,
@@ -478,6 +618,8 @@ fn test_transport_pillbox() {
     let nrmse = (v1 - v2).abs() / v1.abs().max(v2.abs());
 
     println!("Adjoint NRMSE for Transport-Pillbox: {}", nrmse);
-    assert!(nrmse < 1e-5);
+    println!("v'Tu: {}", v1);
+    println!("(T'v)'u: {}", v2);
+    assert!(nrmse < 1e-4);
 }
 
