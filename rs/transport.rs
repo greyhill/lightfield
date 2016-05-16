@@ -406,3 +406,78 @@ fn test_transport_dirac() {
     assert!(nrmse < 1e-5);
 }
 
+#[test]
+fn test_transport_pillbox() {
+    use env::*;
+    use lens::*;
+    use geom::*;
+
+    let env = Environment::new_easy().unwrap();
+    let queue = &env.queues[0];
+
+    let lens = Lens{
+        center_s: 1f32,
+        center_t: -1.5f32,
+        radius_s: 20f32,
+        radius_t: 15f32,
+        focal_length_s: 30f32,
+        focal_length_t: 35f32,
+    };
+    let plane = lens.as_angular_plane(AngularBasis::Pillbox, 20);
+
+    let src_geom = ImageGeometry{
+        ns: 100,
+        nt: 100,
+        ds: 1.0,
+        dt: 1.1,
+        offset_s: 0.5,
+        offset_t: 0.9,
+    };
+    let dst_geom = ImageGeometry{
+        ns: 1024,
+        nt: 2048,
+        ds: 5e-2,
+        dt: 3e-2,
+        offset_s: -4.0,
+        offset_t: 2.1,
+    };
+
+    let dst = LightFieldGeometry{
+        geom: dst_geom,
+        plane: plane.clone(),
+        to_plane: Optics::translation(&40f32),
+    };
+    let src = LightFieldGeometry{
+        geom: src_geom,
+        plane: plane.clone(),
+        to_plane: lens.optics().then(&Optics::translation(&500f32)).invert(),
+    };
+
+    let mut transport = Transport::new(&src, &dst, None, None, queue.clone()).unwrap();
+
+    let u = src.geom.rands();
+    let v = dst.geom.rands();
+
+    let u_buf = queue.create_buffer_from_slice(&u).unwrap();
+    let v_buf = queue.create_buffer_from_slice(&v).unwrap();
+
+    // Project
+    let mut proj_u_buf = dst.geom.zeros_buf(&queue).unwrap();
+    transport.forw(&u_buf, &mut proj_u_buf, 50, &[]).unwrap().wait().unwrap();
+    let mut proj_u = dst.geom.zeros();
+    queue.read_buffer(&proj_u_buf, &mut proj_u).unwrap();
+
+    // Backproject
+    let mut back_v_buf = src.geom.zeros_buf(&queue).unwrap();
+    transport.back(&v_buf, &mut back_v_buf, 50, &[]).unwrap().wait().unwrap();
+    let mut back_v = src.geom.zeros();
+    queue.read_buffer(&back_v_buf, &mut back_v).unwrap();
+
+    let v1 = proj_u.iter().zip(v.iter()).fold(0f32, |s, (ui, vi)| s + ui*vi);
+    let v2 = back_v.iter().zip(u.iter()).fold(0f32, |s, (vi, ui)| s + ui*vi);
+    let nrmse = (v1 - v2).abs() / v1.abs().max(v2.abs());
+
+    println!("Adjoint NRMSE for Transport-Pillbox: {}", nrmse);
+    assert!(nrmse < 1e-5);
+}
+
