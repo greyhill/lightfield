@@ -1,9 +1,11 @@
 extern crate num;
 extern crate toml;
+extern crate byteorder;
 use serialize::*;
 use cl_traits::*;
 use self::toml::*;
 use self::num::{Float, FromPrimitive, ToPrimitive};
+use self::byteorder::*;
 
 /// Pixel or plane geometry
 #[derive(Clone, Debug)]
@@ -42,18 +44,22 @@ impl<F: Float + FromPrimitive> ImageGeometry<F> {
     }
 }
 
-impl ClHeader for ImageGeometry<f32> {
-    fn header<S: AsRef<str>>(self: &Self, name: S) -> String {
-        format!(include_str!("../cl/image_geom_f32.opencl"),
-                             name = name.as_ref(),
-                             ns = self.ns,
-                             nt = self.nt,
-                             ds = self.ds,
-                             dt = self.dt,
-                             offset_s = self.offset_s,
-                             offset_t = self.offset_t,
-                             ws = self.ws(),
-                             wt = self.wt()).to_string()
+impl<F: Float> ClHeader for ImageGeometry<F> {
+    fn header() -> &'static str {
+        include_str!("../cl/image_geom_f32.opencl")
+    }
+}
+
+impl<F: Float + ToPrimitive + FromPrimitive> ClBuffer for ImageGeometry<F> {
+    fn as_cl_bytes(self: &Self, buf: &mut Vec<u8>) -> () {
+        buf.write_i32::<LittleEndian>(self.ns as i32).unwrap();
+        buf.write_i32::<LittleEndian>(self.nt as i32).unwrap();
+        buf.write_f32::<LittleEndian>(F::to_f32(&self.ds).unwrap()).unwrap();
+        buf.write_f32::<LittleEndian>(F::to_f32(&self.dt).unwrap()).unwrap();
+        buf.write_f32::<LittleEndian>(F::to_f32(&self.offset_s).unwrap()).unwrap();
+        buf.write_f32::<LittleEndian>(F::to_f32(&self.offset_t).unwrap()).unwrap();
+        buf.write_f32::<LittleEndian>(F::to_f32(&self.ws()).unwrap()).unwrap();
+        buf.write_f32::<LittleEndian>(F::to_f32(&self.wt()).unwrap()).unwrap();
     }
 }
 

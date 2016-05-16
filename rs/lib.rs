@@ -31,6 +31,9 @@ pub use occluder::*;
 mod angular_plane;
 pub use angular_plane::*;
 
+mod light_field_geom;
+pub use light_field_geom::*;
+
 mod env;
 pub use env::*;
 

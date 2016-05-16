@@ -20,6 +20,9 @@ version = '0.1.29'
 [dependencies.nalgebra]
 version = '0.8.2'
 
+[dependencies.byteorder]
+version = '0.5.1'
+
 [dependencies.proust]
 git = "https://github.com/greyhill/proust"
 version = "0.0.5"

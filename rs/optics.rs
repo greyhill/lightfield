@@ -1,9 +1,12 @@
 extern crate num;
 extern crate rand;
 extern crate toml;
+extern crate byteorder;
 use self::toml::*;
 use self::num::{Float, FromPrimitive, ToPrimitive};
 use serialize::*;
+use cl_traits::*;
+use self::byteorder::*;
 
 /// Affine optical transformation for light transport
 #[derive(Clone, Debug)]
@@ -260,6 +263,31 @@ impl<F: Float + FromPrimitive + ToPrimitive> Serialize for Optics<F> {
         tr.insert("u".to_string(), Value::Float(F::to_f64(&self.u).unwrap()));
         tr.insert("v".to_string(), Value::Float(F::to_f64(&self.v).unwrap()));
         tr
+    }
+}
+
+impl<F: Float> ClHeader for Optics<F> {
+    fn header() -> &'static str {
+        include_str!("../cl/optics_f32.opencl")
+    }
+}
+
+impl<F: Float + ToPrimitive> ClBuffer for Optics<F> {
+    fn as_cl_bytes(self: &Self, buf: &mut Vec<u8>) -> () {
+        buf.write_f32::<LittleEndian>(F::to_f32(&self.ss).unwrap()).unwrap();
+        buf.write_f32::<LittleEndian>(F::to_f32(&self.su).unwrap()).unwrap();
+        buf.write_f32::<LittleEndian>(F::to_f32(&self.us).unwrap()).unwrap();
+        buf.write_f32::<LittleEndian>(F::to_f32(&self.uu).unwrap()).unwrap();
+
+        buf.write_f32::<LittleEndian>(F::to_f32(&self.tt).unwrap()).unwrap();
+        buf.write_f32::<LittleEndian>(F::to_f32(&self.tv).unwrap()).unwrap();
+        buf.write_f32::<LittleEndian>(F::to_f32(&self.vt).unwrap()).unwrap();
+        buf.write_f32::<LittleEndian>(F::to_f32(&self.vv).unwrap()).unwrap();
+
+        buf.write_f32::<LittleEndian>(F::to_f32(&self.s).unwrap()).unwrap();
+        buf.write_f32::<LittleEndian>(F::to_f32(&self.t).unwrap()).unwrap();
+        buf.write_f32::<LittleEndian>(F::to_f32(&self.u).unwrap()).unwrap();
+        buf.write_f32::<LittleEndian>(F::to_f32(&self.v).unwrap()).unwrap();
     }
 }
 
