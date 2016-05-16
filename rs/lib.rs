@@ -19,6 +19,9 @@ pub use isometry::*;
 mod camera;
 pub use camera::*;
 
+mod geom;
+pub use geom::*;
+
 mod image_geom;
 pub use image_geom::*;
 

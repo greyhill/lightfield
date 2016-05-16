@@ -3,6 +3,7 @@ extern crate toml;
 extern crate byteorder;
 use serialize::*;
 use cl_traits::*;
+use geom::*;
 use self::toml::*;
 use self::num::{Float, FromPrimitive, ToPrimitive};
 use self::byteorder::*;
@@ -41,6 +42,12 @@ impl<F: Float + FromPrimitive> ImageGeometry<F> {
         let s = (F::from_usize(is).unwrap() - self.ws())*self.ds;
         let t = (F::from_usize(it).unwrap() - self.wt())*self.dt;
         (s, t)
+    }
+}
+
+impl<F: Float + FromPrimitive> Geometry<F> for ImageGeometry<F> {
+    fn shape(self: &Self) -> Vec<usize> {
+        vec![self.ns, self.nt]
     }
 }
 
