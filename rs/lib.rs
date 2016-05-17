@@ -37,6 +37,9 @@ pub use angular_plane::*;
 mod light_field_geom;
 pub use light_field_geom::*;
 
+mod light_volume;
+pub use light_volume::*;
+
 mod env;
 pub use env::*;
 
