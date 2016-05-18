@@ -1,10 +1,13 @@
 extern crate num;
 extern crate toml;
 extern crate nalgebra;
+extern crate byteorder;
+use cl_traits::*;
 use serialize::*;
 use self::num::{Float, FromPrimitive, ToPrimitive};
 use self::toml::*;
 use self::nalgebra::{Isometry3, Vector3, Rotation3, Matrix3, BaseFloat};
+use self::byteorder::*;
 
 /// Isometry for placing objects in space
 pub type Isometry<F> = Isometry3<F>;
@@ -14,6 +17,46 @@ pub type Vector<F> = Vector3<F>;
 
 /// Rotation in 3d space
 pub type Rotation<F> = Rotation3<F>;
+
+impl<F> ClHeader for Isometry<F> {
+    fn header() -> &'static str {
+        include_str!("../cl/isometry_f32.opencl")
+    }
+}
+
+impl<F: ToPrimitive> ClBuffer for Isometry<F> {
+    fn as_cl_bytes(self: &Self, buf: &mut Vec<u8>) -> () {
+        // NOTE!
+        // According to the OpenCL spec, float3 types (which is how we
+        // define Isometry in `isometry_f32.opencl`) are stored as 4-element
+        // vectors.  When packing data for OpenCL in this function, we
+        // insert those extra spaces.
+        //
+        // https://www.khronos.org/registry/cl/sdk/1.2/docs/man/xhtml/dataTypes.html
+
+        let rot = &self.rotation.submatrix();
+        buf.write_f32::<LittleEndian>(F::to_f32(&rot.m11).unwrap()).unwrap();
+        buf.write_f32::<LittleEndian>(F::to_f32(&rot.m21).unwrap()).unwrap();
+        buf.write_f32::<LittleEndian>(F::to_f32(&rot.m31).unwrap()).unwrap();
+        buf.write_f32::<LittleEndian>(0f32).unwrap();
+
+        buf.write_f32::<LittleEndian>(F::to_f32(&rot.m12).unwrap()).unwrap();
+        buf.write_f32::<LittleEndian>(F::to_f32(&rot.m22).unwrap()).unwrap();
+        buf.write_f32::<LittleEndian>(F::to_f32(&rot.m32).unwrap()).unwrap();
+        buf.write_f32::<LittleEndian>(0f32).unwrap();
+
+        buf.write_f32::<LittleEndian>(F::to_f32(&rot.m13).unwrap()).unwrap();
+        buf.write_f32::<LittleEndian>(F::to_f32(&rot.m23).unwrap()).unwrap();
+        buf.write_f32::<LittleEndian>(F::to_f32(&rot.m33).unwrap()).unwrap();
+        buf.write_f32::<LittleEndian>(0f32).unwrap();
+
+        let xl = &self.translation;
+        buf.write_f32::<LittleEndian>(F::to_f32(&xl.x).unwrap()).unwrap();
+        buf.write_f32::<LittleEndian>(F::to_f32(&xl.y).unwrap()).unwrap();
+        buf.write_f32::<LittleEndian>(F::to_f32(&xl.z).unwrap()).unwrap();
+        buf.write_f32::<LittleEndian>(0f32).unwrap();
+    }
+}
 
 impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> Serialize for Isometry<F> {
     fn from_map(map: &Table) -> Option<Self> {

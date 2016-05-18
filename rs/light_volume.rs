@@ -157,4 +157,3 @@ fn test_light_volume() {
     assert_eq!(v.offset_z, vv.offset_z);
 }
 
-
