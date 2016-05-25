@@ -43,6 +43,9 @@ pub use light_volume::*;
 mod light_volume_tracer;
 pub use light_volume_tracer::*;
 
+mod resample_volume;
+pub use resample_volume::*;
+
 mod env;
 pub use env::*;
 
