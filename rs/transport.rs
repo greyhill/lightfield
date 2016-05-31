@@ -12,9 +12,9 @@ use std::mem::{size_of, swap};
 use std::cmp::max;
 
 /// Transport between two planes in a light transport stack
-pub struct Transport<'src, 'dst, F: 'src + 'dst + Float> {
-    pub src: &'src LightFieldGeometry<F>,
-    pub dst: &'dst LightFieldGeometry<F>,
+pub struct Transport<F: Float> {
+    pub src: LightFieldGeometry<F>,
+    pub dst: LightFieldGeometry<F>,
 
     src_s0: usize,
     src_s1: usize,
@@ -38,9 +38,9 @@ pub struct Transport<'src, 'dst, F: 'src + 'dst + Float> {
     dst_to_src: Optics<F>,
 }
 
-impl<'src, 'dst, F: 'src + 'dst + Float + FromPrimitive + ToPrimitive> Transport<'src, 'dst, F> {
-    pub fn new(src: &'src LightFieldGeometry<F>, 
-               dst: &'dst LightFieldGeometry<F>,
+impl<F: Float + FromPrimitive + ToPrimitive> Transport<F> {
+    pub fn new(src: LightFieldGeometry<F>, 
+               dst: LightFieldGeometry<F>,
                src_bounds: Option<(usize, usize, usize, usize)>,
                dst_bounds: Option<(usize, usize, usize, usize)>,
                queue: CommandQueue) -> Result<Self, Error> {
@@ -99,9 +99,6 @@ impl<'src, 'dst, F: 'src + 'dst + Float + FromPrimitive + ToPrimitive> Transport
         let dst_geom_buf = try!(dst.geom.as_cl_buffer(&queue));
 
         Ok(Transport{
-            src: src,
-            dst: dst,
-
             src_s0: resolved_src_bounds.0,
             src_s1: resolved_src_bounds.1,
             src_t0: resolved_src_bounds.2,
@@ -123,6 +120,9 @@ impl<'src, 'dst, F: 'src + 'dst + Float + FromPrimitive + ToPrimitive> Transport
 
             src_to_dst: dst.to_plane.invert().compose(&src.to_plane),
             dst_to_src: src.to_plane.invert().compose(&dst.to_plane),
+
+            src: src,
+            dst: dst,
         })
     }
 
@@ -516,7 +516,7 @@ fn test_transport_dirac() {
         to_plane: lens.optics().then(&Optics::translation(&500f32)).invert(),
     };
 
-    let mut transport = Transport::new(&src, &dst, None, None, queue.clone()).unwrap();
+    let mut transport = Transport::new(src.clone(), dst.clone(), None, None, queue.clone()).unwrap();
 
     let u = src.geom.rands();
     let v = dst.geom.rands();
@@ -593,7 +593,7 @@ fn test_transport_pillbox() {
         to_plane: lens.optics().then(&Optics::translation(&500f32)).invert(),
     };
 
-    let mut transport = Transport::new(&src, &dst, None, None, queue.clone()).unwrap();
+    let mut transport = Transport::new(src.clone(), dst.clone(), None, None, queue.clone()).unwrap();
 
     let u = src.geom.rands();
     let v = dst.geom.rands();

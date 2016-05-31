@@ -5,6 +5,7 @@ use angular_plane::*;
 use optics::*;
 
 /// One plane in a light transport stack
+#[derive(Clone, Debug)]
 pub struct LightFieldGeometry<F: Float> {
     pub geom: ImageGeometry<F>,
     pub plane: AngularPlane<F>,
