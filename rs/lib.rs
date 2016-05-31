@@ -40,9 +40,6 @@ pub use light_field_geom::*;
 mod light_volume;
 pub use light_volume::*;
 
-mod light_volume_tracer;
-pub use light_volume_tracer::*;
-
 mod resample_volume;
 pub use resample_volume::*;
 
