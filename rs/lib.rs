@@ -34,6 +34,9 @@ pub use occluder::*;
 mod angular_plane;
 pub use angular_plane::*;
 
+mod spline_kernel;
+pub use spline_kernel::*;
+
 mod light_field_geom;
 pub use light_field_geom::*;
 
