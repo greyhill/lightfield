@@ -7,6 +7,10 @@ use geom::*;
 use self::toml::*;
 use self::num::{Float, FromPrimitive, ToPrimitive};
 use self::byteorder::*;
+use image_geom::*;
+use optics::*;
+use light_field_geom::*;
+use angular_plane::*;
 
 /// Volume of lambertian light emitters
 #[derive(Clone, Debug)]
@@ -34,6 +38,41 @@ impl<F: Float + FromPrimitive> LightVolume<F> {
     pub fn wz(self: &Self) -> F {
         (F::from_usize(self.nz).unwrap() - F::one())/F::from_f32(2f32).unwrap() + self.offset_z
     }
+
+    /// Returns the image geometry for this slice
+    pub fn transaxial_image_geometry(self: &Self) -> ImageGeometry<F> {
+        ImageGeometry{
+            ns: self.nx,
+            nt: self.ny,
+            ds: self.dx,
+            dt: self.dy,
+            offset_s: self.offset_x,
+            offset_t: self.offset_y,
+        }
+    }
+
+    /// Returns the optical transform from a slice to the `z=0` plane in this volume
+    pub fn optics_to_z0(self: &Self, iz: usize) -> Optics<F> {
+        let z = (F::from_usize(iz).unwrap() - self.wz())*self.dz;
+        Optics::translation(&-z)
+    }
+
+    /// Returns a `LightFieldGeometry` for a slice
+    ///
+    /// `iz` is the slice number.  Angles are defined on `plane`, and the
+    /// optical transformation from the `z=0` plane of this volume to the 
+    /// angular plane is given by `to_plane_from_z0`.
+    pub fn slice_light_field_geometry(self: &Self, 
+                                      iz: usize,
+                                      plane: AngularPlane<F>,
+                                      to_plane_from_z0: Optics<F>) -> LightFieldGeometry<F> {
+        LightFieldGeometry{
+            geom: self.transaxial_image_geometry(),
+            plane: plane,
+            to_plane: to_plane_from_z0.compose(&self.optics_to_z0(iz)),
+        }
+    }
+
 }
 
 impl<F: Float + FromPrimitive> Geometry<F> for LightVolume<F> {
