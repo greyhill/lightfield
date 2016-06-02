@@ -10,10 +10,58 @@ kernel void volume_forw_t(
         ImageGeometry dst_geom,
         
         global struct Optics* dst_to_slice,
-        global struct RectSplineKernel* splines_t,
+        global struct RectSplineKernel* splines_t, 
+
+        const int ia, const int na,
+        const float u, const float v,
         
         global const float* volume,
         global float* tmp) {
+    const int src_is = get_global_id(0);
+    const int dst_it = get_global_id(1);
+    const int iz = get_global_id(2);
+
+    local float value_cache[32*8];
+    local int coord_cache[32*8];
+    const int local_id = get_local_id(0) + 32*get_local_id(1);
+    const int local_id_t = get_local_id(1) + 8*get_local_id(0);
+
+    global const float* slice = volume + slice_geom->ns*slice_geom->nt*iz;
+
+    if(src_is >= slice_geom->ns || dst_it >= dst_geom->nt) {
+        value_cache[local_id] = 0.f;
+        coord_cache[local_id] = -1;
+    } else {
+        global struct RectSplineKernel* my_spline = splines_t + na*iz + ia;
+        const float mag = my_spline->magnification;
+        const float base_tau0 = my_spline->tau0;
+        const float base_tau1 = my_spline->tau1;
+        const float h = my_spline->height;
+
+        value_cache[local_id] = transport_t_iprod(src_is,
+                0, 0,
+
+                slice_geom,
+                dst_geom,
+
+                0, slice_geom->ns,
+                0, slice_geom->nt,
+
+                0, dst_geom->ns,
+                0, dst_geom->nt,
+
+                mag, base_tau0, base_tau1, h,
+                slice);
+        coord_cache[local_id] = dst_it + dst_geom->nt*(src_is + slice_geom->ns*iz);
+    }
+
+    // coalesced write after transpose in shared memory
+    barrier(CLK_LOCAL_MEM_FENCE);
+    const int write_coord = coord_cache[local_id_t];
+    const float write_val = value_cache[local_id_t];
+    if(write_coord >= 0) {
+        tmp[write_coord] = write_val;
+    }
 }
 
 kernel void volume_forw_s(
@@ -22,10 +70,61 @@ kernel void volume_forw_s(
         ImageGeometry dst_geom,
         
         global struct Optics* dst_to_slice,
-        global struct RectSplineKernel* spline_s,
+        global struct RectSplineKernel* splines_s,
+
+        const int ia, const int na,
+        const float u, const float v,
         
         global const float* tmp,
         global float* dst) {
+    const int dst_it = get_global_id(0);
+    const int dst_is = get_global_id(1);
+
+    local float value_cache[32*8];
+    local float coord_cache[32*8];
+    const int local_id = get_local_id(0) + 32*get_local_id(1);
+    const int local_id_t = get_local_id(1) + 8*get_local_id(0);
+
+    if(dst_it >= dst_geom->nt || dst_is >= dst_geom->ns) {
+        value_cache[local_id] = 0.f;
+        coord_cache[local_id] = -1;
+    } else {
+        float accum = 0.f;
+
+        for(int iz=0; iz<volume_geom->nz; ++iz) {
+            global struct RectSplineKernel* my_spline = splines_s + na*iz + ia;
+            global const float* slice = tmp + slice_geom->ns*slice_geom->nt*iz;
+            const float mag = my_spline->magnification;
+            const float base_tau0 = my_spline->tau0;
+            const float base_tau1 = my_spline->tau1;
+            const float h = my_spline->height;
+
+            accum += transport_s_iprod(dst_it,
+                    0, 0,
+                    slice_geom,
+                    dst_geom,
+
+                    0, slice_geom->ns,
+                    0, slice_geom->nt,
+
+                    0, dst_geom->ns,
+                    0, dst_geom->nt,
+
+                    mag, base_tau0, base_tau1, h,
+                    slice);
+        }
+
+        coord_cache[local_id] = dst_is + dst_geom->ns * dst_it;
+        value_cache[local_id] = accum;
+    }
+
+    // coalesced write after transpose in shared memory
+    barrier(CLK_LOCAL_MEM_FENCE);
+    const int write_coord = coord_cache[local_id_t];
+    const float write_val = value_cache[local_id_t];
+    if(write_coord >= 0) {
+        dst[write_coord] = write_val;
+    }
 }
 
 kernel void volume_back_t() {
