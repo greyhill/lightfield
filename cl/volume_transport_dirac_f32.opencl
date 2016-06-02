@@ -1,9 +1,11 @@
 // vim: filetype=opencl
 //
 // n.b., this file is customarily built with transport_dirac_f32.opencl,
-// image_geom_f32.opencl, light_volume_f32.opencl, optics_f32.opencl.
+// image_geom_f32.opencl, light_volume_f32.opencl, optics_f32.opencl,
+// spline_kernel_f32.opencl
 
 kernel void volume_forw_t(
+        LightVolume volume_geom,
         ImageGeometry slice_geom,
         ImageGeometry dst_geom,
         
@@ -15,6 +17,7 @@ kernel void volume_forw_t(
 }
 
 kernel void volume_forw_s(
+        LightVolume volume_geom,
         ImageGeometry slice_geom,
         ImageGeometry dst_geom,
         

@@ -262,4 +262,3 @@ float transport_t_iprod(
     return accum * h;
 }
 
-
