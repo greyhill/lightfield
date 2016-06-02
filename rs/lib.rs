@@ -43,6 +43,9 @@ pub use light_field_geom::*;
 mod light_volume;
 pub use light_volume::*;
 
+mod volume_transport;
+pub use volume_transport::*;
+
 mod env;
 pub use env::*;
 

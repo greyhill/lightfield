@@ -44,6 +44,13 @@ impl<F: Float + FromPrimitive> LightFieldGeometry<F> {
         }
     }
 
+    /// Returns an optical transformation from this geometry to another
+    ///
+    /// This assumes both geometies are using the same optical plane.
+    pub fn optics_to(self: &Self, dst: &LightFieldGeometry<F>) -> Optics<F> {
+        dst.to_plane.invert().compose(&self.to_plane)
+    }
+
     /// Returns two `SplineKernel`s describing the rows of a light transport matrix
     ///
     /// The first `SplineKernel` describes the `s` filtering matrix and the second
@@ -51,7 +58,7 @@ impl<F: Float + FromPrimitive> LightFieldGeometry<F> {
     ///
     /// This is mostly a utility function used by other transport objects.
     pub fn transport_to(self: &Self, dst: &LightFieldGeometry<F>, ia: usize) -> (SplineKernel<F>, SplineKernel<F>) {
-        let src_to_dst = dst.to_plane.invert().compose(&self.to_plane);
+        let src_to_dst = self.optics_to(dst);
         match (&self.plane.basis, &dst.plane.basis) {
             (&AngularBasis::Dirac, &AngularBasis::Dirac) => {
                 let xs = self.transport_s_dirac(dst, &src_to_dst, ia);

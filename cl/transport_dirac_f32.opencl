@@ -7,7 +7,33 @@ inline float Rect_integrate(const float tau0, const float tau1,
     return r - l;
 }
 
-kernel void transport_t(
+void do_transport_t(const int, const int,
+        ImageGeometry, ImageGeometry,
+        const int, const int,
+        const int, const int,
+
+        const int, const int,
+        const int, const int,
+
+        const float, const float, const float, const float,
+        global float*,
+        global float*);
+
+void do_transport_s(const int, const int,
+        ImageGeometry, ImageGeometry,
+        const int, const int,
+        const int, const int,
+
+        const int, const int,
+        const int, const int,
+
+        const float, const float, const float, const float,
+        global float*,
+        global float*);
+
+void do_transport_t(
+        const int src_is_offset, const int dst_it_offset,
+
         ImageGeometry src_geom,
         ImageGeometry dst_geom,
 
@@ -20,9 +46,6 @@ kernel void transport_t(
         const float d_scale, const float base_tau0, const float base_tau1, const float h,
         global float* src,
         global float* tmp) {
-    const int src_is_offset = get_global_id(0);
-    const int dst_it_offset = get_global_id(1);
-
     local float value_cache[32*8];
     local int coord_cache[32*8];
     const int local_id = get_local_id(0) + 32*get_local_id(1);
@@ -69,7 +92,8 @@ kernel void transport_t(
     }
 }
 
-kernel void transport_s(
+void do_transport_s(
+        const int dst_it_offset, const int dst_is_offset, // what
         ImageGeometry src_geom,
         ImageGeometry dst_geom,
 
@@ -82,8 +106,6 @@ kernel void transport_s(
         const float d_scale, const float base_tau0, const float base_tau1, const float h,
         global float* tmp,
         global float* dst) {
-    const int dst_it_offset = get_global_id(0);
-    const int dst_is_offset = get_global_id(1);
 
     local float value_cache[32*8];
     local int coord_cache[32*8];
@@ -129,5 +151,69 @@ kernel void transport_s(
     if(write_coord >= 0) {
         dst[write_coord] = write_val;
     }
+}
+
+kernel void transport_s(
+        ImageGeometry src_geom,
+        ImageGeometry dst_geom,
+
+        int src_is0, int src_is1, 
+        int src_it0, int src_it1,
+
+        int dst_is0, int dst_is1,
+        int dst_it0, int dst_it1,
+
+        const float d_scale, const float base_tau0, const float base_tau1, const float h,
+        global float* tmp,
+        global float* dst) {
+    const int dst_it_offset = get_global_id(0);
+    const int dst_is_offset = get_global_id(1);
+
+    do_transport_s(
+            dst_it_offset, dst_is_offset,
+            src_geom,
+            dst_geom,
+
+            src_is0, src_is1,
+            src_it0, src_it1,
+
+            dst_is0, dst_is1,
+            dst_is0, dst_it1,
+
+            d_scale, base_tau0, base_tau1, h,
+            tmp,
+            dst);
+}
+
+kernel void transport_t(
+        ImageGeometry src_geom,
+        ImageGeometry dst_geom,
+
+        const int src_is0, const int src_is1, 
+        const int src_it0, const int src_it1,
+
+        const int dst_is0, const int dst_is1,
+        const int dst_it0, const int dst_it1,
+
+        const float d_scale, const float base_tau0, const float base_tau1, const float h,
+        global float* src,
+        global float* tmp) {
+    const int src_is_offset = get_global_id(0);
+    const int dst_it_offset = get_global_id(1);
+
+    do_transport_t(
+            src_is_offset, dst_it_offset,
+            src_geom, 
+            dst_geom,
+
+            src_is0, src_is1,
+            src_it0, src_it1,
+
+            dst_is0, dst_is1,
+            dst_it0, dst_it1,
+
+            d_scale, base_tau0, base_tau1, h,
+            src,
+            tmp);
 }
 
