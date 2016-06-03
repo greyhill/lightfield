@@ -156,12 +156,91 @@ where F: Float + FromPrimitive {
             back_spline_kernels_t: back_spline_kernels_t,
         })
     }
+
+    fn forw_t(self: &mut Self,
+              vol: &Mem,
+              ia: usize, iz: usize,
+              wait_for: &[Event]) -> Result<Event, Error> {
+        let na = self.dst.plane.s.len();
+        let u = self.dst.plane.s[ia];
+        let v = self.dst.plane.t[ia];
+
+        // bind arguments
+        try!(self.forw_t_kernel.bind(0, &self.volume_geom));
+        try!(self.forw_t_kernel.bind(1, &self.slice_geom));
+        try!(self.forw_t_kernel.bind(2, &self.dst_geom));
+        try!(self.forw_t_kernel.bind(3, &self.dst_to_slice));
+        try!(self.forw_t_kernel.bind(4, &self.forw_spline_kernels_t));
+        try!(self.forw_t_kernel.bind_scalar(5, &(ia as i32)));
+        try!(self.forw_t_kernel.bind_scalar(6, &(na as i32)));
+        try!(self.forw_t_kernel.bind_scalar(7, &F::to_f32(&u).unwrap()));
+        try!(self.forw_t_kernel.bind_scalar(8, &F::to_f32(&v).unwrap()));
+        try!(self.forw_t_kernel.bind_scalar(9, &(iz as i32)));
+        try!(self.forw_t_kernel.bind(10, vol));
+        try!(self.forw_t_kernel.bind_mut(11, &mut self.tmp));
+
+        let local_size = (32, 8, 1);
+        let global_size = (self.geom.nx, self.dst.geom.nt, 1);
+
+        self.queue.run_with_events(&mut self.forw_t_kernel,
+                                   local_size,
+                                   global_size,
+                                   wait_for)
+    }
+
+    fn forw_s(self: &mut Self,
+              dst: &mut Mem,
+              ia: usize, iz: usize,
+              wait_for: &[Event]) -> Result<Event, Error> {
+        let na = self.dst.plane.s.len();
+        let u = self.dst.plane.s[ia];
+        let v = self.dst.plane.t[ia];
+
+        // bind arguments
+        try!(self.forw_s_kernel.bind(0, &self.volume_geom));
+        try!(self.forw_s_kernel.bind(1, &self.slice_geom));
+        try!(self.forw_s_kernel.bind(2, &self.dst_geom));
+        try!(self.forw_s_kernel.bind(3, &self.dst_to_slice));
+        try!(self.forw_s_kernel.bind(4, &self.forw_spline_kernels_s));
+        try!(self.forw_s_kernel.bind_scalar(5, &(ia as i32)));
+        try!(self.forw_s_kernel.bind_scalar(6, &(na as i32)));
+        try!(self.forw_s_kernel.bind_scalar(7, &F::to_f32(&u).unwrap()));
+        try!(self.forw_s_kernel.bind_scalar(8, &F::to_f32(&v).unwrap()));
+        try!(self.forw_s_kernel.bind_scalar(9, &(iz as i32)));
+        try!(self.forw_s_kernel.bind(10, &self.tmp));
+        try!(self.forw_s_kernel.bind_mut(11, dst));
+
+        let local_size = (32, 8, 1);
+        let global_size = (self.dst.geom.nt, self.dst.geom.ns, 1);
+
+        self.queue.run_with_events(&mut self.forw_s_kernel,
+                                   local_size,
+                                   global_size,
+                                   wait_for)
+    }
+
+    pub fn forw(self: &mut Self,
+                vol: &Mem,
+                dst: &mut Mem,
+                ia: usize,
+                wait_for: &[Event]) -> Result<Event, Error> {
+        let mut evt = try!(self.forw_t(vol, ia, 0, wait_for));
+        evt = try!(self.forw_s(dst, ia, 0, &[evt]));
+
+        for iz in 1 .. self.geom.nz {
+            evt = try!(self.forw_t(vol, ia, iz, &[evt]));
+            evt = try!(self.forw_s(dst, ia, iz, &[evt]));
+        }
+
+        Ok(evt)
+    }
 }
 
 #[test]
 fn test_volume_dirac() {
     use env::*;
     use lens::*;
+    use geom::*;
 
     let env = Environment::new_easy().unwrap();
     let queue = &env.queues[0];
@@ -198,13 +277,37 @@ fn test_volume_dirac() {
     };
 
     let dst = LightFieldGeometry{
-        geom: dst_geom,
+        geom: dst_geom.clone(),
         plane: plane.clone(),
         to_plane: Optics::translation(&40f32),
     };
 
     let to_dst = lens.optics().then(&Optics::translation(&500f32)).invert();
 
-    let xport = VolumeTransport::new(vg, dst, to_dst, queue.clone()).unwrap();
+    let mut xport = VolumeTransport::new(vg.clone(), 
+                                         dst, to_dst, queue.clone()).unwrap();
+
+    let x = vg.rands();
+    let y = dst_geom.rands();
+    let mut cx = dst_geom.zeros();
+    let mut cty = vg.zeros();
+
+    let x_buf = queue.create_buffer_from_slice(&x).unwrap();
+    let y_buf = queue.create_buffer_from_slice(&y).unwrap();
+    let mut cx_buf = dst_geom.zeros_buf(&queue).unwrap();
+    let mut cty_buf = vg.zeros_buf(&queue).unwrap();
+
+    xport.forw(&x_buf, &mut cx_buf, 50, &[]).unwrap().wait().unwrap();
+    queue.read_buffer(&cx_buf, &mut cx).unwrap();
+
+    let v1 = cx.iter().zip(cx.iter()).fold(0f32, |s, (ui, vi)| s + ui*vi);
+    let v2 = cty.iter().zip(x.iter()).fold(0f32, |s, (ui, vi)| s + ui*vi);
+    let nrmse = (v1 - v2).abs() / v1.abs().max(v2.abs());
+
+    println!("Adjoint NRMSE for VolumeTransport-Dirac: {}", nrmse);
+    println!("y'Cx = {}", v1);
+    println!("(C'y)'x = {}", v2);
+
+    assert!(nrmse < 1e-4);
 }
 

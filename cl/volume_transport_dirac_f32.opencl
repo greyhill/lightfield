@@ -14,12 +14,12 @@ kernel void volume_forw_t(
 
         const int ia, const int na,
         const float u, const float v,
+        const int iz,
         
         global const float* volume,
         global float* tmp) {
     const int src_is = get_global_id(0);
     const int dst_it = get_global_id(1);
-    const int iz = get_global_id(2);
 
     local float value_cache[32*8];
     local int coord_cache[32*8];
@@ -39,7 +39,7 @@ kernel void volume_forw_t(
         const float h = my_spline->height;
 
         value_cache[local_id] = transport_t_iprod(src_is,
-                0, 0,
+                src_is, dst_it,
 
                 slice_geom,
                 dst_geom,
@@ -52,7 +52,7 @@ kernel void volume_forw_t(
 
                 mag, base_tau0, base_tau1, h,
                 slice);
-        coord_cache[local_id] = dst_it + dst_geom->nt*(src_is + slice_geom->ns*iz);
+        coord_cache[local_id] = dst_it + dst_geom->nt*src_is;
     }
 
     // coalesced write after transpose in shared memory
@@ -74,6 +74,7 @@ kernel void volume_forw_s(
 
         const int ia, const int na,
         const float u, const float v,
+        const int iz,
         
         global const float* tmp,
         global float* dst) {
@@ -91,28 +92,25 @@ kernel void volume_forw_s(
     } else {
         float accum = 0.f;
 
-        for(int iz=0; iz<volume_geom->nz; ++iz) {
-            global struct RectSplineKernel* my_spline = splines_s + na*iz + ia;
-            global const float* slice = tmp + slice_geom->ns*slice_geom->nt*iz;
-            const float mag = my_spline->magnification;
-            const float base_tau0 = my_spline->tau0;
-            const float base_tau1 = my_spline->tau1;
-            const float h = my_spline->height;
+        global struct RectSplineKernel* my_spline = splines_s + na*iz + ia;
+        const float mag = my_spline->magnification;
+        const float base_tau0 = my_spline->tau0;
+        const float base_tau1 = my_spline->tau1;
+        const float h = my_spline->height;
 
-            accum += transport_s_iprod(dst_it,
-                    0, 0,
-                    slice_geom,
-                    dst_geom,
+        accum += transport_s_iprod(dst_it,
+                dst_it, dst_is,
+                slice_geom,
+                dst_geom,
 
-                    0, slice_geom->ns,
-                    0, slice_geom->nt,
+                0, slice_geom->ns,
+                0, slice_geom->nt,
 
-                    0, dst_geom->ns,
-                    0, dst_geom->nt,
+                0, dst_geom->ns,
+                0, dst_geom->nt,
 
-                    mag, base_tau0, base_tau1, h,
-                    slice);
-        }
+                mag, base_tau0, base_tau1, h,
+                tmp);
 
         coord_cache[local_id] = dst_is + dst_geom->ns * dst_it;
         value_cache[local_id] = accum;
@@ -123,7 +121,7 @@ kernel void volume_forw_s(
     const int write_coord = coord_cache[local_id_t];
     const float write_val = value_cache[local_id_t];
     if(write_coord >= 0) {
-        dst[write_coord] = write_val;
+        dst[write_coord] += write_val;
     }
 }
 
