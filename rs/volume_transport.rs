@@ -38,8 +38,9 @@ pub struct VolumeTransport<F: Float> {
     back_spline_kernels_t: Mem, // [SplineKernel]*nz*na
 }
 
+use std::fmt::Debug;
 impl<F> VolumeTransport<F>
-where F: Float + FromPrimitive {
+where F: Float + FromPrimitive + Debug {
     /// Create a new `VolumeTransport`
     ///
     pub fn new(src: LightVolume<F>,
@@ -97,7 +98,7 @@ where F: Float + FromPrimitive {
         // we precompute the footprints for each angle and slice.  this takes
         // 4 or 6 floats per direction (s and t) and slice (nz) for each angle.
         // in total, this takes
-        //      4 * (4 | 6) * Na * Nz * 2
+        //      sizeof(T) * (4 | 6) * Na * Nz * 2
         // bytes, which isn't much for reasonable problem sizes
         let mut forw_spline_kernels_s_buf: Vec<u8> = Vec::new();
         let mut forw_spline_kernels_t_buf: Vec<u8> = Vec::new();
@@ -340,7 +341,7 @@ fn test_volume_dirac() {
     let vg = LightVolume{
         nx: 100,
         ny: 200,
-        nz: 1,
+        nz: 100,
         dx: 1.0,
         dy: 1.1,
         dz: 1.0,
@@ -350,8 +351,8 @@ fn test_volume_dirac() {
     };
 
     let dst_geom = ImageGeometry{
-        ns: 1024,
-        nt: 2048,
+        ns: 512,
+        nt: 768,
         ds: 5e-2,
         dt: 3e-2,
         offset_s: -4.0,
@@ -384,7 +385,7 @@ fn test_volume_dirac() {
     queue.read_buffer(&cx_buf, &mut cx).unwrap();
     queue.read_buffer(&cty_buf, &mut cty).unwrap();
 
-    let v1 = cx.iter().zip(cx.iter()).fold(0f32, |s, (ui, vi)| s + ui*vi);
+    let v1 = cx.iter().zip(y.iter()).fold(0f32, |s, (ui, vi)| s + ui*vi);
     let v2 = cty.iter().zip(x.iter()).fold(0f32, |s, (ui, vi)| s + ui*vi);
     let nrmse = (v1 - v2).abs() / v1.abs().max(v2.abs());
 
@@ -392,6 +393,6 @@ fn test_volume_dirac() {
     println!("y'Cx = {}", v1);
     println!("(C'y)'x = {}", v2);
 
-    assert!(nrmse < 1e-4);
+    assert!(nrmse < 1e-2);
 }
 
