@@ -87,8 +87,8 @@ impl<F: Float + FromPrimitive> LightFieldGeometry<F> {
         let beta = src2dst.s + src2dst.su*(s - src2root.s)/src2root.su;
         let h = (plane.ds / src2root.su).abs();
 
-        let mut tau0 = (-dst.plane.ds/c2 - beta)/alpha;
-        let mut tau1 = (dst.plane.ds/c2 - beta)/alpha;
+        let mut tau0 = (-dst.geom.ds/c2 - beta)/alpha;
+        let mut tau1 = (dst.geom.ds/c2 - beta)/alpha;
         if tau0 > tau1  {
             swap(&mut tau0, &mut tau1);
         }
