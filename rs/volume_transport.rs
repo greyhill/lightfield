@@ -22,6 +22,8 @@ pub struct VolumeTransport<F: Float> {
     queue: CommandQueue,
     forw_t_kernel: Kernel,
     forw_s_kernel: Kernel,
+    back_t_kernel: Kernel,
+    back_s_kernel: Kernel,
 
     tmp: Mem,                   // half-filtered volume
     volume_geom: Mem,           // LightVolumeGeometry
@@ -40,11 +42,9 @@ impl<F> VolumeTransport<F>
 where F: Float + FromPrimitive {
     /// Create a new `VolumeTransport`
     ///
-    /// The `dst` light field geometry is placed at the center (`z=0`) of the 
-    /// volume.
     pub fn new(src: LightVolume<F>,
                dst: LightFieldGeometry<F>,
-               to_dst: Optics<F>,
+               to_plane: Optics<F>,
                queue: CommandQueue) -> Result<Self, Error> {
         // collect opencl sources
         let sources = match &dst.plane.basis {
@@ -79,6 +79,8 @@ where F: Float + FromPrimitive {
         // get opencl kernels
         let forw_t_kernel = try!(program.create_kernel("volume_forw_t"));
         let forw_s_kernel = try!(program.create_kernel("volume_forw_s"));
+        let back_t_kernel = try!(program.create_kernel("volume_back_t"));
+        let back_s_kernel = try!(program.create_kernel("volume_back_s"));
 
         // size of temporary buffers
         let tmp_nx = max(src.nx, dst.geom.ns);
@@ -102,7 +104,7 @@ where F: Float + FromPrimitive {
         let mut back_spline_kernels_s_buf: Vec<u8> = Vec::new();
         let mut back_spline_kernels_t_buf: Vec<u8> = Vec::new();
         for iz in 0 .. src.nz {
-            let slice_lfg = src.slice_light_field_geometry(iz, dst.plane.clone(), to_dst.clone());
+            let slice_lfg = src.slice_light_field_geometry(iz, dst.plane.clone(), to_plane.clone());
             for ia in 0 .. dst.plane.s.len() {
                 let (forw_s, forw_t) = slice_lfg.transport_to(&dst, ia);
                 let (back_s, back_t) = dst.transport_to(&slice_lfg, ia);
@@ -119,7 +121,7 @@ where F: Float + FromPrimitive {
         let mut slice_to_dst_buf: Vec<u8> = Vec::new();
         let mut dst_to_slice_buf: Vec<u8> = Vec::new();
         for iz in 0 .. src.nz {
-            let slice_lfg = src.slice_light_field_geometry(iz, dst.plane.clone(), to_dst.clone());
+            let slice_lfg = src.slice_light_field_geometry(iz, dst.plane.clone(), to_plane.clone());
             let src2dst = slice_lfg.optics_to(&dst);
             let dst2src = src2dst.invert();
 
@@ -142,6 +144,8 @@ where F: Float + FromPrimitive {
             queue: queue,
             forw_t_kernel: forw_t_kernel,
             forw_s_kernel: forw_s_kernel,
+            back_t_kernel: back_t_kernel,
+            back_s_kernel: back_s_kernel,
 
             tmp: tmp,
             volume_geom: volume_geom,
@@ -219,6 +223,68 @@ where F: Float + FromPrimitive {
                                    wait_for)
     }
 
+    fn back_t(self: &mut Self,
+              dst: &Mem,
+              ia: usize, iz: usize,
+              wait_for: &[Event]) -> Result<Event, Error> {
+        let na = self.dst.plane.s.len();
+        let u = self.dst.plane.s[ia];
+        let v = self.dst.plane.t[ia];
+
+        // bind arguments
+        try!(self.back_t_kernel.bind(0, &self.volume_geom));
+        try!(self.back_t_kernel.bind(1, &self.slice_geom));
+        try!(self.back_t_kernel.bind(2, &self.dst_geom));
+        try!(self.back_t_kernel.bind(3, &self.slice_to_dst));
+        try!(self.back_t_kernel.bind(4, &self.back_spline_kernels_t));
+        try!(self.back_t_kernel.bind_scalar(5, &(ia as i32)));
+        try!(self.back_t_kernel.bind_scalar(6, &(na as i32)));
+        try!(self.back_t_kernel.bind_scalar(7, &F::to_f32(&u).unwrap()));
+        try!(self.back_t_kernel.bind_scalar(8, &F::to_f32(&v).unwrap()));
+        try!(self.back_t_kernel.bind_scalar(9, &(iz as i32)));
+        try!(self.back_t_kernel.bind(10, dst));
+        try!(self.back_t_kernel.bind_mut(11, &mut self.tmp));
+
+        let local_size = (32, 8, 1);
+        let global_size = (self.dst.geom.ns, self.geom.ny, 1);
+
+        self.queue.run_with_events(&mut self.back_t_kernel,
+                                   local_size,
+                                   global_size,
+                                   wait_for)
+    }
+
+    fn back_s(self: &mut Self,
+              vol: &mut Mem,
+              ia: usize, iz: usize,
+              wait_for: &[Event]) -> Result<Event, Error> {
+        let na = self.dst.plane.s.len();
+        let u = self.dst.plane.s[ia];
+        let v = self.dst.plane.t[ia];
+
+        // bind arguments
+        try!(self.back_s_kernel.bind(0, &self.volume_geom));
+        try!(self.back_s_kernel.bind(1, &self.slice_geom));
+        try!(self.back_s_kernel.bind(2, &self.dst_geom));
+        try!(self.back_s_kernel.bind(3, &self.slice_to_dst));
+        try!(self.back_s_kernel.bind(4, &self.back_spline_kernels_s));
+        try!(self.back_s_kernel.bind_scalar(5, &(ia as i32)));
+        try!(self.back_s_kernel.bind_scalar(6, &(na as i32)));
+        try!(self.back_s_kernel.bind_scalar(7, &F::to_f32(&u).unwrap()));
+        try!(self.back_s_kernel.bind_scalar(8, &F::to_f32(&v).unwrap()));
+        try!(self.back_s_kernel.bind_scalar(9, &(iz as i32)));
+        try!(self.back_s_kernel.bind(10, &self.tmp));
+        try!(self.back_s_kernel.bind_mut(11, vol));
+
+        let local_size = (32, 8, 1);
+        let global_size = (self.geom.ny, self.geom.nx, 1);
+
+        self.queue.run_with_events(&mut self.back_s_kernel,
+                                   local_size,
+                                   global_size,
+                                   wait_for)
+    }
+
     pub fn forw(self: &mut Self,
                 vol: &Mem,
                 dst: &mut Mem,
@@ -230,6 +296,22 @@ where F: Float + FromPrimitive {
         for iz in 1 .. self.geom.nz {
             evt = try!(self.forw_t(vol, ia, iz, &[evt]));
             evt = try!(self.forw_s(dst, ia, iz, &[evt]));
+        }
+
+        Ok(evt)
+    }
+
+    pub fn back(self: &mut Self,
+                dst: &Mem,
+                vol: &mut Mem,
+                ia: usize,
+                wait_for: &[Event]) -> Result<Event, Error> {
+        let mut evt = try!(self.back_t(dst, ia, 0, wait_for));
+        evt = try!(self.back_s(vol, ia, 0, &[evt]));
+
+        for iz in 1 .. self.geom.nz {
+            evt = try!(self.back_t(dst, ia, iz, &[evt]));
+            evt = try!(self.back_s(vol, ia, iz, &[evt]));
         }
 
         Ok(evt)
@@ -258,13 +340,13 @@ fn test_volume_dirac() {
     let vg = LightVolume{
         nx: 100,
         ny: 200,
-        nz: 300,
-        dx: 3.0,
-        dy: 2.0,
+        nz: 1,
+        dx: 1.0,
+        dy: 1.1,
         dz: 1.0,
-        offset_x: -1.0,
-        offset_y: 2.0,
-        offset_z: -3.0,
+        offset_x: 0.5,
+        offset_y: 2.9,
+        offset_z: 0.0,
     };
 
     let dst_geom = ImageGeometry{
@@ -282,10 +364,10 @@ fn test_volume_dirac() {
         to_plane: Optics::translation(&40f32),
     };
 
-    let to_dst = lens.optics().then(&Optics::translation(&500f32)).invert();
+    let to_plane = lens.optics().then(&Optics::translation(&500f32)).invert();
 
     let mut xport = VolumeTransport::new(vg.clone(), 
-                                         dst, to_dst, queue.clone()).unwrap();
+                                         dst, to_plane, queue.clone()).unwrap();
 
     let x = vg.rands();
     let y = dst_geom.rands();
@@ -298,7 +380,9 @@ fn test_volume_dirac() {
     let mut cty_buf = vg.zeros_buf(&queue).unwrap();
 
     xport.forw(&x_buf, &mut cx_buf, 50, &[]).unwrap().wait().unwrap();
+    xport.back(&y_buf, &mut cty_buf, 50, &[]).unwrap().wait().unwrap();
     queue.read_buffer(&cx_buf, &mut cx).unwrap();
+    queue.read_buffer(&cty_buf, &mut cty).unwrap();
 
     let v1 = cx.iter().zip(cx.iter()).fold(0f32, |s, (ui, vi)| s + ui*vi);
     let v2 = cty.iter().zip(x.iter()).fold(0f32, |s, (ui, vi)| s + ui*vi);
