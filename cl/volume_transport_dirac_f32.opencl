@@ -90,15 +90,13 @@ kernel void volume_forw_s(
         value_cache[local_id] = 0.f;
         coord_cache[local_id] = -1;
     } else {
-        float accum = 0.f;
-
         global struct RectSplineKernel* my_spline = splines_s + na*iz + ia;
         const float mag = my_spline->magnification;
         const float base_tau0 = my_spline->tau0;
         const float base_tau1 = my_spline->tau1;
         const float h = my_spline->height;
 
-        accum += transport_s_iprod(dst_it,
+        value_cache[local_id] = transport_s_iprod(dst_it,
                 dst_it, dst_is,
                 slice_geom,
                 dst_geom,
@@ -111,9 +109,7 @@ kernel void volume_forw_s(
 
                 mag, base_tau0, base_tau1, h,
                 tmp);
-
         coord_cache[local_id] = dst_is + dst_geom->ns * dst_it;
-        value_cache[local_id] = accum;
     }
 
     // coalesced write after transpose in shared memory

@@ -330,7 +330,7 @@ fn test_ulens() {
 
     let d_det_array = thread_rng().next_f64().abs();
     let d_array_lens = thread_rng().next_f64().abs();
-    let d_lens_scene = thread_rng().next_f64().abs();
+    let d_lens_scene = 500f64*thread_rng().next_f64().abs();
 
     let cu_s = thread_rng().next_f64();
     let cu_t = thread_rng().next_f64();

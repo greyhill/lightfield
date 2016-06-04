@@ -178,7 +178,7 @@ float transport_t_iprod(
         accum += w * src[src_is + src_geom->ns*src_it];
     }
 
-    return accum*h;
+    return accum * h;
 }
 
 float transport_s_iprod(
