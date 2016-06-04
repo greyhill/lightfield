@@ -396,3 +396,81 @@ fn test_volume_dirac() {
     assert!(nrmse < 1e-2);
 }
 
+#[test]
+fn test_volume_pillbox() {
+    use env::*;
+    use lens::*;
+    use geom::*;
+
+    let env = Environment::new_easy().unwrap();
+    let queue = &env.queues[0];
+
+   let lens = Lens{
+        center_s: 1f32,
+        center_t: -1.5f32,
+        radius_s: 20f32,
+        radius_t: 15f32,
+        focal_length_s: 30f32,
+        focal_length_t: 35f32,
+    };
+    let plane = lens.as_angular_plane(AngularBasis::Pillbox, 20);
+
+    let vg = LightVolume{
+        nx: 100,
+        ny: 200,
+        nz: 100,
+        dx: 1.0,
+        dy: 1.1,
+        dz: 1.0,
+        offset_x: 0.5,
+        offset_y: 2.9,
+        offset_z: 0.0,
+    };
+
+    let dst_geom = ImageGeometry{
+        ns: 512,
+        nt: 768,
+        ds: 5e-2,
+        dt: 3e-2,
+        offset_s: -4.0,
+        offset_t: 2.1,
+    };
+
+    let dst = LightFieldGeometry{
+        geom: dst_geom.clone(),
+        plane: plane.clone(),
+        to_plane: Optics::translation(&40f32),
+    };
+
+    let to_plane = lens.optics().then(&Optics::translation(&500f32)).invert();
+
+    let mut xport = VolumeTransport::new(vg.clone(), 
+                                         dst, to_plane, queue.clone()).unwrap();
+
+    let x = vg.rands();
+    let y = dst_geom.rands();
+    let mut cx = dst_geom.zeros();
+    let mut cty = vg.zeros();
+
+    let x_buf = queue.create_buffer_from_slice(&x).unwrap();
+    let y_buf = queue.create_buffer_from_slice(&y).unwrap();
+    let mut cx_buf = dst_geom.zeros_buf(&queue).unwrap();
+    let mut cty_buf = vg.zeros_buf(&queue).unwrap();
+
+    xport.forw(&x_buf, &mut cx_buf, 50, &[]).unwrap().wait().unwrap();
+    xport.back(&y_buf, &mut cty_buf, 50, &[]).unwrap().wait().unwrap();
+    queue.read_buffer(&cx_buf, &mut cx).unwrap();
+    queue.read_buffer(&cty_buf, &mut cty).unwrap();
+
+    let v1 = cx.iter().zip(y.iter()).fold(0f32, |s, (ui, vi)| s + ui*vi);
+    let v2 = cty.iter().zip(x.iter()).fold(0f32, |s, (ui, vi)| s + ui*vi);
+    let nrmse = (v1 - v2).abs() / v1.abs().max(v2.abs());
+
+    println!("Adjoint NRMSE for VolumeTransport-Pillbox: {}", nrmse);
+    println!("y'Cx = {}", v1);
+    println!("(C'y)'x = {}", v2);
+
+    assert!(nrmse < 1e-2);
+}
+
+
