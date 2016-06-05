@@ -24,14 +24,16 @@ pub struct VolumeTransport<F: Float> {
     forw_s_kernel: Kernel,
     back_t_kernel: Kernel,
     back_s_kernel: Kernel,
+    scale_kernel: Kernel,
 
     tmp: Mem,                   // half-filtered volume
+    scaled: Mem,                // scaled light field
     volume_geom: Mem,           // LightVolumeGeometry
     dst_geom: Mem,              // ImageGeometry
     slice_geom: Mem,            // ImageGeometry
 
-    slice_to_dst: Mem,          // [Optics]*nz
-    dst_to_slice: Mem,          // [Optics]*nz
+    dst_to_root: Mem,           // Optics
+    dst_to_obj: Mem,            // Optics
     forw_spline_kernels_s: Mem, // [SplineKernel]*nz*na
     forw_spline_kernels_t: Mem, // [SplineKernel]*nz*na
     back_spline_kernels_s: Mem, // [SplineKernel]*nz*na
@@ -82,6 +84,7 @@ where F: Float + FromPrimitive + Debug {
         let forw_s_kernel = try!(program.create_kernel("volume_forw_s"));
         let back_t_kernel = try!(program.create_kernel("volume_back_t"));
         let back_s_kernel = try!(program.create_kernel("volume_back_s"));
+        let scale_kernel = try!(program.create_kernel("volume_scale"));
 
         // size of temporary buffers
         let tmp_nx = max(src.nx, dst.geom.ns);
@@ -92,6 +95,9 @@ where F: Float + FromPrimitive + Debug {
         let volume_geom = try!(src.as_cl_buffer(&queue));
         let dst_geom = try!(dst.geom.as_cl_buffer(&queue));
         let slice_geom = try!(src.transaxial_image_geometry().as_cl_buffer(&queue));
+        let dst_to_root = try!(dst.to_plane.as_cl_buffer(&queue));
+        let dst_to_obj = try!(to_plane.invert().compose(&dst.to_plane).as_cl_buffer(&queue));
+        let scaled = try!(queue.create_buffer(size_of::<F>() * dst.geom.ns * dst.geom.nt));
 
         // slice buffers
         //
@@ -117,22 +123,7 @@ where F: Float + FromPrimitive + Debug {
             }
         }
 
-        // we also precompute the optical transformations between each slice
-        // and the destination, and from the destination to each slice
-        let mut slice_to_dst_buf: Vec<u8> = Vec::new();
-        let mut dst_to_slice_buf: Vec<u8> = Vec::new();
-        for iz in 0 .. src.nz {
-            let slice_lfg = src.slice_light_field_geometry(iz, dst.plane.clone(), to_plane.clone());
-            let src2dst = slice_lfg.optics_to(&dst);
-            let dst2src = src2dst.invert();
-
-            src2dst.as_cl_bytes(&mut slice_to_dst_buf);
-            dst2src.as_cl_bytes(&mut dst_to_slice_buf);
-        }
-
         // load precomputed values onto the GPU
-        let slice_to_dst = try!(queue.create_buffer_from_slice(&slice_to_dst_buf));
-        let dst_to_slice = try!(queue.create_buffer_from_slice(&dst_to_slice_buf));
         let forw_spline_kernels_s = try!(queue.create_buffer_from_slice(&forw_spline_kernels_s_buf));
         let forw_spline_kernels_t = try!(queue.create_buffer_from_slice(&forw_spline_kernels_t_buf));
         let back_spline_kernels_s = try!(queue.create_buffer_from_slice(&back_spline_kernels_s_buf));
@@ -147,14 +138,16 @@ where F: Float + FromPrimitive + Debug {
             forw_s_kernel: forw_s_kernel,
             back_t_kernel: back_t_kernel,
             back_s_kernel: back_s_kernel,
+            scale_kernel: scale_kernel,
 
             tmp: tmp,
             volume_geom: volume_geom,
             dst_geom: dst_geom,
             slice_geom: slice_geom,
+            scaled: scaled,
 
-            slice_to_dst: slice_to_dst,
-            dst_to_slice: dst_to_slice,
+            dst_to_root: dst_to_root,
+            dst_to_obj: dst_to_obj,
             forw_spline_kernels_s: forw_spline_kernels_s,
             forw_spline_kernels_t: forw_spline_kernels_t,
             back_spline_kernels_s: back_spline_kernels_s,
@@ -174,15 +167,14 @@ where F: Float + FromPrimitive + Debug {
         try!(self.forw_t_kernel.bind(0, &self.volume_geom));
         try!(self.forw_t_kernel.bind(1, &self.slice_geom));
         try!(self.forw_t_kernel.bind(2, &self.dst_geom));
-        try!(self.forw_t_kernel.bind(3, &self.dst_to_slice));
-        try!(self.forw_t_kernel.bind(4, &self.forw_spline_kernels_t));
-        try!(self.forw_t_kernel.bind_scalar(5, &(ia as i32)));
-        try!(self.forw_t_kernel.bind_scalar(6, &(na as i32)));
-        try!(self.forw_t_kernel.bind_scalar(7, &F::to_f32(&u).unwrap()));
-        try!(self.forw_t_kernel.bind_scalar(8, &F::to_f32(&v).unwrap()));
-        try!(self.forw_t_kernel.bind_scalar(9, &(iz as i32)));
-        try!(self.forw_t_kernel.bind(10, vol));
-        try!(self.forw_t_kernel.bind_mut(11, &mut self.tmp));
+        try!(self.forw_t_kernel.bind(3, &self.forw_spline_kernels_t));
+        try!(self.forw_t_kernel.bind_scalar(4, &(ia as i32)));
+        try!(self.forw_t_kernel.bind_scalar(5, &(na as i32)));
+        try!(self.forw_t_kernel.bind_scalar(6, &F::to_f32(&u).unwrap()));
+        try!(self.forw_t_kernel.bind_scalar(7, &F::to_f32(&v).unwrap()));
+        try!(self.forw_t_kernel.bind_scalar(8, &(iz as i32)));
+        try!(self.forw_t_kernel.bind(9, vol));
+        try!(self.forw_t_kernel.bind_mut(10, &mut self.tmp));
 
         let local_size = (32, 8, 1);
         let global_size = (self.geom.nx, self.dst.geom.nt, 1);
@@ -200,18 +192,19 @@ where F: Float + FromPrimitive + Debug {
         let na = self.dst.plane.s.len();
         let u = self.dst.plane.s[ia];
         let v = self.dst.plane.t[ia];
+        let scale = self.geom.dz / self.dst.pixel_volume();
 
         // bind arguments
         try!(self.forw_s_kernel.bind(0, &self.volume_geom));
         try!(self.forw_s_kernel.bind(1, &self.slice_geom));
         try!(self.forw_s_kernel.bind(2, &self.dst_geom));
-        try!(self.forw_s_kernel.bind(3, &self.dst_to_slice));
-        try!(self.forw_s_kernel.bind(4, &self.forw_spline_kernels_s));
-        try!(self.forw_s_kernel.bind_scalar(5, &(ia as i32)));
-        try!(self.forw_s_kernel.bind_scalar(6, &(na as i32)));
-        try!(self.forw_s_kernel.bind_scalar(7, &F::to_f32(&u).unwrap()));
-        try!(self.forw_s_kernel.bind_scalar(8, &F::to_f32(&v).unwrap()));
-        try!(self.forw_s_kernel.bind_scalar(9, &(iz as i32)));
+        try!(self.forw_s_kernel.bind(3, &self.forw_spline_kernels_s));
+        try!(self.forw_s_kernel.bind_scalar(4, &(ia as i32)));
+        try!(self.forw_s_kernel.bind_scalar(5, &(na as i32)));
+        try!(self.forw_s_kernel.bind_scalar(6, &F::to_f32(&u).unwrap()));
+        try!(self.forw_s_kernel.bind_scalar(7, &F::to_f32(&v).unwrap()));
+        try!(self.forw_s_kernel.bind_scalar(8, &(iz as i32)));
+        try!(self.forw_s_kernel.bind_scalar(9, &scale));
         try!(self.forw_s_kernel.bind(10, &self.tmp));
         try!(self.forw_s_kernel.bind_mut(11, dst));
 
@@ -231,18 +224,19 @@ where F: Float + FromPrimitive + Debug {
         let na = self.dst.plane.s.len();
         let u = self.dst.plane.s[ia];
         let v = self.dst.plane.t[ia];
+        let scale = self.geom.dz / self.dst.pixel_volume();
 
         // bind arguments
         try!(self.back_t_kernel.bind(0, &self.volume_geom));
         try!(self.back_t_kernel.bind(1, &self.slice_geom));
         try!(self.back_t_kernel.bind(2, &self.dst_geom));
-        try!(self.back_t_kernel.bind(3, &self.slice_to_dst));
-        try!(self.back_t_kernel.bind(4, &self.back_spline_kernels_t));
-        try!(self.back_t_kernel.bind_scalar(5, &(ia as i32)));
-        try!(self.back_t_kernel.bind_scalar(6, &(na as i32)));
-        try!(self.back_t_kernel.bind_scalar(7, &F::to_f32(&u).unwrap()));
-        try!(self.back_t_kernel.bind_scalar(8, &F::to_f32(&v).unwrap()));
-        try!(self.back_t_kernel.bind_scalar(9, &(iz as i32)));
+        try!(self.back_t_kernel.bind(3, &self.back_spline_kernels_t));
+        try!(self.back_t_kernel.bind_scalar(4, &(ia as i32)));
+        try!(self.back_t_kernel.bind_scalar(5, &(na as i32)));
+        try!(self.back_t_kernel.bind_scalar(6, &F::to_f32(&u).unwrap()));
+        try!(self.back_t_kernel.bind_scalar(7, &F::to_f32(&v).unwrap()));
+        try!(self.back_t_kernel.bind_scalar(8, &(iz as i32)));
+        try!(self.back_t_kernel.bind_scalar(9, &scale));
         try!(self.back_t_kernel.bind(10, dst));
         try!(self.back_t_kernel.bind_mut(11, &mut self.tmp));
 
@@ -267,20 +261,45 @@ where F: Float + FromPrimitive + Debug {
         try!(self.back_s_kernel.bind(0, &self.volume_geom));
         try!(self.back_s_kernel.bind(1, &self.slice_geom));
         try!(self.back_s_kernel.bind(2, &self.dst_geom));
-        try!(self.back_s_kernel.bind(3, &self.slice_to_dst));
-        try!(self.back_s_kernel.bind(4, &self.back_spline_kernels_s));
-        try!(self.back_s_kernel.bind_scalar(5, &(ia as i32)));
-        try!(self.back_s_kernel.bind_scalar(6, &(na as i32)));
-        try!(self.back_s_kernel.bind_scalar(7, &F::to_f32(&u).unwrap()));
-        try!(self.back_s_kernel.bind_scalar(8, &F::to_f32(&v).unwrap()));
-        try!(self.back_s_kernel.bind_scalar(9, &(iz as i32)));
-        try!(self.back_s_kernel.bind(10, &self.tmp));
-        try!(self.back_s_kernel.bind_mut(11, vol));
+        try!(self.back_s_kernel.bind(3, &self.back_spline_kernels_s));
+        try!(self.back_s_kernel.bind_scalar(4, &(ia as i32)));
+        try!(self.back_s_kernel.bind_scalar(5, &(na as i32)));
+        try!(self.back_s_kernel.bind_scalar(6, &F::to_f32(&u).unwrap()));
+        try!(self.back_s_kernel.bind_scalar(7, &F::to_f32(&v).unwrap()));
+        try!(self.back_s_kernel.bind_scalar(8, &(iz as i32)));
+        try!(self.back_s_kernel.bind(9, &self.tmp));
+        try!(self.back_s_kernel.bind_mut(10, vol));
 
         let local_size = (32, 8, 1);
         let global_size = (self.geom.ny, self.geom.nx, 1);
 
         self.queue.run_with_events(&mut self.back_s_kernel,
+                                   local_size,
+                                   global_size,
+                                   wait_for)
+    }
+
+    fn scale(self: &mut Self,
+             input: &Mem,
+             output: &mut Mem,
+             ia: usize,
+             wait_for: &[Event]) -> Result<Event, Error> {
+        let s = self.dst.plane.s[ia];
+        let t = self.dst.plane.t[ia];
+
+        // bind arguments
+        try!(self.scale_kernel.bind(0, &self.dst_geom));
+        try!(self.scale_kernel.bind(1, &self.dst_to_root));
+        try!(self.scale_kernel.bind(2, &self.dst_to_obj));
+        try!(self.scale_kernel.bind_scalar(3, &F::to_f32(&s).unwrap()));
+        try!(self.scale_kernel.bind_scalar(4, &F::to_f32(&t).unwrap()));
+        try!(self.scale_kernel.bind(5, input));
+        try!(self.scale_kernel.bind_mut(6, output));
+
+        let local_size = (32, 8, 1);
+        let global_size = (self.dst.geom.ns, self.dst.geom.nt, 1);
+
+        self.queue.run_with_events(&mut self.scale_kernel,
                                    local_size,
                                    global_size,
                                    wait_for)
@@ -299,7 +318,8 @@ where F: Float + FromPrimitive + Debug {
             evt = try!(self.forw_s(dst, ia, iz, &[evt]));
         }
 
-        Ok(evt)
+        let dst_copy = dst.clone();
+        self.scale(&dst_copy, dst, ia, &[evt])
     }
 
     pub fn back(self: &mut Self,
@@ -307,11 +327,11 @@ where F: Float + FromPrimitive + Debug {
                 vol: &mut Mem,
                 ia: usize,
                 wait_for: &[Event]) -> Result<Event, Error> {
-        let mut evt = try!(self.back_t(dst, ia, 0, wait_for));
-        evt = try!(self.back_s(vol, ia, 0, &[evt]));
+        let mut scaled_copy = self.scaled.clone();
+        let mut evt = try!(self.scale(dst, &mut scaled_copy, ia, wait_for));
 
-        for iz in 1 .. self.geom.nz {
-            evt = try!(self.back_t(dst, ia, iz, &[evt]));
+        for iz in 0 .. self.geom.nz {
+            evt = try!(self.back_t(&scaled_copy, ia, iz, &[evt]));
             evt = try!(self.back_s(vol, ia, iz, &[evt]));
         }
 

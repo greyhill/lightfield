@@ -9,7 +9,6 @@ kernel void volume_forw_t(
         ImageGeometry slice_geom,
         ImageGeometry dst_geom,
         
-        global struct Optics* dst_to_slice,
         global struct TrapezoidSplineKernel* splines_t, 
 
         const int ia, const int na,
@@ -71,12 +70,12 @@ kernel void volume_forw_s(
         ImageGeometry slice_geom,
         ImageGeometry dst_geom,
         
-        global struct Optics* dst_to_slice,
         global struct TrapezoidSplineKernel* splines_s,
 
         const int ia, const int na,
         const float u, const float v,
         const int iz,
+        const float scale,
         
         global const float* tmp,
         global float* dst) {
@@ -98,7 +97,7 @@ kernel void volume_forw_s(
         const float base_tau1 = my_spline->tau1;
         const float base_tau2 = my_spline->tau2;
         const float base_tau3 = my_spline->tau3;
-        const float h = my_spline->height;
+        const float h = scale * my_spline->height;
 
         value_cache[local_id] = transport_s_iprod(dst_it,
                 dst_it, dst_is,
@@ -130,12 +129,12 @@ kernel void volume_back_t(
         ImageGeometry slice_geom,
         ImageGeometry dst_geom,
         
-        global struct Optics* slice_to_dst,
         global struct TrapezoidSplineKernel* splines_t,
         
         const int ia, const int na,
         const float u, const float v,
         const int iz,
+        const float scale,
         
         global const float* dst,
         global float* tmp) {
@@ -157,7 +156,7 @@ kernel void volume_back_t(
         const float base_tau1 = my_spline->tau1;
         const float base_tau2 = my_spline->tau2;
         const float base_tau3 = my_spline->tau3;
-        const float h = my_spline->height;
+        const float h = scale * my_spline->height;
 
         value_cache[local_id] = transport_t_iprod(dst_is,
                 dst_is, src_it,
@@ -190,7 +189,6 @@ kernel void volume_back_s(
         ImageGeometry slice_geom,
         ImageGeometry dst_geom,
         
-        global struct Optics* slice_to_dst,
         global struct TrapezoidSplineKernel* splines_s,
         
         const int ia, const int na,

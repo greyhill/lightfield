@@ -9,7 +9,6 @@ kernel void volume_forw_t(
         ImageGeometry slice_geom,
         ImageGeometry dst_geom,
         
-        global struct Optics* dst_to_slice,
         global struct RectSplineKernel* splines_t, 
 
         const int ia, const int na,
@@ -69,12 +68,12 @@ kernel void volume_forw_s(
         ImageGeometry slice_geom,
         ImageGeometry dst_geom,
         
-        global struct Optics* dst_to_slice,
         global struct RectSplineKernel* splines_s,
 
         const int ia, const int na,
         const float u, const float v,
         const int iz,
+        const float scale,
         
         global const float* tmp,
         global float* dst) {
@@ -126,12 +125,12 @@ kernel void volume_back_t(
         ImageGeometry slice_geom,
         ImageGeometry dst_geom,
         
-        global struct Optics* slice_to_dst,
         global struct RectSplineKernel* splines_t,
         
         const int ia, const int na,
         const float u, const float v,
         const int iz,
+        const float scale,
         
         global const float* dst,
         global float* tmp) {
@@ -184,7 +183,6 @@ kernel void volume_back_s(
         ImageGeometry slice_geom,
         ImageGeometry dst_geom,
         
-        global struct Optics* slice_to_dst,
         global struct RectSplineKernel* splines_s,
         
         const int ia, const int na,
