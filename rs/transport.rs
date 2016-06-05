@@ -185,7 +185,7 @@ impl<F: Float + FromPrimitive + ToPrimitive> Transport<F> {
 
         let alpha = Rqp.tt - Rp.tt*Rqp.tv/Rp.tv;
         let beta = Rqp.t + Rqp.tv*(t - Rp.t)/Rp.tv;
-        let h = (plane.dt / Rp.tv).abs();
+        let h = (plane.dt / Rp.tv).abs() / self.dst.pixel_volume();
 
         let mut tau0 = (-into_geom.dt/c2 - beta)/alpha;
         let mut tau1 = (into_geom.dt/c2 - beta)/alpha;
@@ -326,7 +326,7 @@ impl<F: Float + FromPrimitive + ToPrimitive> Transport<F> {
         let alpha = Rqp.tt - Rqp.tv*Rp.tt/Rp.tv;
         let beta = Rqp.tv / Rp.tv;
         let gamma = Rqp.t - Rqp.tv*Rp.t/Rp.tv;
-        let h = (plane.dt / Rp.tv).abs().min((into_geom.dt / Rqp.tv).abs());
+        let h = (plane.dt / Rp.tv).abs().min((into_geom.dt / Rqp.tv).abs()) / self.dst.pixel_volume();
 
         let mut taus = vec![
             (into_geom.dt/c2 - beta*(t + plane.dt/c2) - gamma)/alpha,
