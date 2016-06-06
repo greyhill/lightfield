@@ -46,8 +46,8 @@ pub use light_volume::*;
 mod volume_transport;
 pub use volume_transport::*;
 
-mod phantom;
-pub use phantom::*;
+mod ellipsoid;
+pub use ellipsoid::*;
 
 mod env;
 pub use env::*;
