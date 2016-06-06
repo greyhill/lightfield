@@ -196,7 +196,9 @@ kernel void volume_back_s(
         const int iz,
         
         global const float* tmp,
-        global float* vol) {
+        global float* vol,
+        
+        int overwrite) {
     const int src_it = get_global_id(0);
     const int src_is = get_global_id(1);
 
@@ -242,7 +244,11 @@ kernel void volume_back_s(
     const int write_coord = coord_cache[local_id_t];
     const float write_val = value_cache[local_id_t];
     if(write_coord >= 0) {
-        vol[write_coord] += write_val;
+        if(overwrite) {
+            vol[write_coord] = write_val;
+        } else {
+            vol[write_coord] += write_val;
+        }
     }
 }
 

@@ -19,12 +19,16 @@ pub struct VolumeTransport<F: Float> {
     pub geom: LightVolume<F>,
     pub dst: LightFieldGeometry<F>,
 
+    pub overwrite_forw: bool,
+    pub overwrite_back: bool,
+
     queue: CommandQueue,
     forw_t_kernel: Kernel,
     forw_s_kernel: Kernel,
     back_t_kernel: Kernel,
     back_s_kernel: Kernel,
     scale_kernel: Kernel,
+    zero_kernel: Kernel,
 
     tmp: Mem,                   // half-filtered volume
     scaled: Mem,                // scaled light field
@@ -43,11 +47,19 @@ pub struct VolumeTransport<F: Float> {
 use std::fmt::Debug;
 impl<F> VolumeTransport<F>
 where F: Float + FromPrimitive + Debug {
+    pub fn new_simple(src: LightVolume<F>,
+                      dst: LightFieldGeometry<F>,
+                      to_plane: Optics<F>,
+                      queue: CommandQueue) -> Result<Self, Error> {
+        Self::new(src, dst, to_plane, true, true, queue)
+    }
+
     /// Create a new `VolumeTransport`
-    ///
     pub fn new(src: LightVolume<F>,
                dst: LightFieldGeometry<F>,
                to_plane: Optics<F>,
+               overwrite_forw: bool,
+               overwrite_back: bool,
                queue: CommandQueue) -> Result<Self, Error> {
         // collect opencl sources
         let sources = match &dst.plane.basis {
@@ -85,6 +97,7 @@ where F: Float + FromPrimitive + Debug {
         let back_t_kernel = try!(program.create_kernel("volume_back_t"));
         let back_s_kernel = try!(program.create_kernel("volume_back_s"));
         let scale_kernel = try!(program.create_kernel("volume_scale"));
+        let zero_kernel = try!(program.create_kernel("image_zero"));
 
         // size of temporary buffers
         let tmp_nx = max(src.nx, dst.geom.ns);
@@ -133,12 +146,16 @@ where F: Float + FromPrimitive + Debug {
             geom: src,
             dst: dst,
 
+            overwrite_forw: overwrite_forw,
+            overwrite_back: overwrite_back,
+
             queue: queue,
             forw_t_kernel: forw_t_kernel,
             forw_s_kernel: forw_s_kernel,
             back_t_kernel: back_t_kernel,
             back_s_kernel: back_s_kernel,
             scale_kernel: scale_kernel,
+            zero_kernel: zero_kernel,
 
             tmp: tmp,
             volume_geom: volume_geom,
@@ -162,7 +179,7 @@ where F: Float + FromPrimitive + Debug {
         let na = self.dst.plane.s.len();
         let u = self.dst.plane.s[ia];
         let v = self.dst.plane.t[ia];
-
+        
         // bind arguments
         try!(self.forw_t_kernel.bind(0, &self.volume_geom));
         try!(self.forw_t_kernel.bind(1, &self.slice_geom));
@@ -256,6 +273,11 @@ where F: Float + FromPrimitive + Debug {
         let na = self.dst.plane.s.len();
         let u = self.dst.plane.s[ia];
         let v = self.dst.plane.t[ia];
+        let overwrite_flag = if self.overwrite_back {
+            1u32
+        } else {
+            0u32
+        };
 
         // bind arguments
         try!(self.back_s_kernel.bind(0, &self.volume_geom));
@@ -269,6 +291,7 @@ where F: Float + FromPrimitive + Debug {
         try!(self.back_s_kernel.bind_scalar(8, &(iz as i32)));
         try!(self.back_s_kernel.bind(9, &self.tmp));
         try!(self.back_s_kernel.bind_mut(10, vol));
+        try!(self.back_s_kernel.bind_scalar(11, &overwrite_flag));
 
         let local_size = (32, 8, 1);
         let global_size = (self.geom.ny, self.geom.nx, 1);
@@ -283,9 +306,15 @@ where F: Float + FromPrimitive + Debug {
              input: &Mem,
              output: &mut Mem,
              ia: usize,
-             wait_for: &[Event]) -> Result<Event, Error> {
+             wait_for: &[Event],
+             overwrite: bool) -> Result<Event, Error> {
         let s = self.dst.plane.s[ia];
         let t = self.dst.plane.t[ia];
+        let overwrite_flag = if overwrite {
+            1u32
+        } else {
+            0u32
+        };
 
         // bind arguments
         try!(self.scale_kernel.bind(0, &self.dst_geom));
@@ -295,6 +324,7 @@ where F: Float + FromPrimitive + Debug {
         try!(self.scale_kernel.bind_scalar(4, &F::to_f32(&t).unwrap()));
         try!(self.scale_kernel.bind(5, input));
         try!(self.scale_kernel.bind_mut(6, output));
+        try!(self.scale_kernel.bind_scalar(7, &overwrite_flag));
 
         let local_size = (32, 8, 1);
         let global_size = (self.dst.geom.ns, self.dst.geom.nt, 1);
@@ -305,21 +335,39 @@ where F: Float + FromPrimitive + Debug {
                                    wait_for)
     }
 
+    fn zero(self: &mut Self,
+            img: &mut Mem,
+            wait_for: &[Event]) -> Result<Event, Error> {
+        try!(self.zero_kernel.bind(0, &self.dst_geom));
+        try!(self.zero_kernel.bind_mut(1, img));
+
+        let local_size = (32, 8, 1);
+        let global_size = (self.dst.geom.ns, self.dst.geom.nt, 1);
+
+        self.queue.run_with_events(&mut self.zero_kernel,
+                                   local_size,
+                                   global_size,
+                                   wait_for)
+    }
+
     pub fn forw(self: &mut Self,
                 vol: &Mem,
                 dst: &mut Mem,
                 ia: usize,
                 wait_for: &[Event]) -> Result<Event, Error> {
-        let mut evt = try!(self.forw_t(vol, ia, 0, wait_for));
-        evt = try!(self.forw_s(dst, ia, 0, &[evt]));
+        let mut tmp_buf = self.scaled.clone();
+        let mut evt = try!(self.zero(&mut tmp_buf, wait_for));
+
+        evt = try!(self.forw_t(vol, ia, 0, &[evt]));
+        evt = try!(self.forw_s(&mut tmp_buf, ia, 0, &[evt]));
 
         for iz in 1 .. self.geom.nz {
             evt = try!(self.forw_t(vol, ia, iz, &[evt]));
-            evt = try!(self.forw_s(dst, ia, iz, &[evt]));
+            evt = try!(self.forw_s(&mut tmp_buf, ia, iz, &[evt]));
         }
 
-        let dst_copy = dst.clone();
-        self.scale(&dst_copy, dst, ia, &[evt])
+        let overwrite_forw = self.overwrite_forw;
+        self.scale(&tmp_buf, dst, ia, &[evt], overwrite_forw)
     }
 
     pub fn back(self: &mut Self,
@@ -328,7 +376,7 @@ where F: Float + FromPrimitive + Debug {
                 ia: usize,
                 wait_for: &[Event]) -> Result<Event, Error> {
         let mut scaled_copy = self.scaled.clone();
-        let mut evt = try!(self.scale(dst, &mut scaled_copy, ia, wait_for));
+        let mut evt = try!(self.scale(dst, &mut scaled_copy, ia, wait_for, true));
 
         for iz in 0 .. self.geom.nz {
             evt = try!(self.back_t(&scaled_copy, ia, iz, &[evt]));
@@ -387,8 +435,8 @@ fn test_volume_dirac() {
 
     let to_plane = lens.optics().then(&Optics::translation(&500f32)).invert();
 
-    let mut xport = VolumeTransport::new(vg.clone(), 
-                                         dst, to_plane, queue.clone()).unwrap();
+    let mut xport = VolumeTransport::new_simple(vg.clone(), 
+                                                dst, to_plane, queue.clone()).unwrap();
 
     let x = vg.rands();
     let y = dst_geom.rands();
@@ -464,8 +512,8 @@ fn test_volume_pillbox() {
 
     let to_plane = lens.optics().then(&Optics::translation(&500f32)).invert();
 
-    let mut xport = VolumeTransport::new(vg.clone(), 
-                                         dst, to_plane, queue.clone()).unwrap();
+    let mut xport = VolumeTransport::new_simple(vg.clone(), 
+                                                dst, to_plane, queue.clone()).unwrap();
 
     let x = vg.rands();
     let y = dst_geom.rands();
@@ -492,5 +540,4 @@ fn test_volume_pillbox() {
 
     assert!(nrmse < 1e-2);
 }
-
 

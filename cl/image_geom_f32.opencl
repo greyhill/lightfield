@@ -28,3 +28,16 @@ inline float ImageGeometry_t2it(ImageGeometry self, float t) {
     return t/self->dt + self->wt + 0.5f;
 }
 
+kernel void image_zero(
+        ImageGeometry geom,
+        global float* img) {
+    int is = get_global_id(0);
+    int it = get_global_id(1);
+
+    if(is >= geom->ns || it >= geom->nt) {
+        return;
+    }
+
+    img[is + geom->ns*it] = 0.f;
+}
+
