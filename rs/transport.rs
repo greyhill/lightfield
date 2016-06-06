@@ -22,6 +22,8 @@ pub struct Transport<F: Float> {
     pub conservative_forw: bool,
     pub conservative_back: bool,
 
+    pub onto_detector: bool,
+
     src_s0: usize,
     src_s1: usize,
     src_t0: usize,
@@ -48,7 +50,7 @@ impl<F: Float + FromPrimitive + ToPrimitive> Transport<F> {
     pub fn new_simple(src: LightFieldGeometry<F>,
                       dst: LightFieldGeometry<F>,
                       queue: CommandQueue) -> Result<Self, Error> {
-        Self::new(src, dst, None, None, true, true, false, false, queue)
+        Self::new(src, dst, None, None, true, true, false, false, false, queue)
     }
 
     pub fn new(src: LightFieldGeometry<F>, 
@@ -59,6 +61,7 @@ impl<F: Float + FromPrimitive + ToPrimitive> Transport<F> {
                overwrite_back: bool,
                conservative_forw: bool,
                conservative_back: bool,
+               onto_detector: bool,
                queue: CommandQueue) -> Result<Self, Error> {
         // collect opencl sources
         let sources = match (&src.plane.basis, &dst.plane.basis) {
@@ -120,6 +123,8 @@ impl<F: Float + FromPrimitive + ToPrimitive> Transport<F> {
 
             conservative_forw: conservative_forw,
             conservative_back: conservative_back,
+
+            onto_detector: onto_detector,
 
             src_s0: resolved_src_bounds.0,
             src_s1: resolved_src_bounds.1,
@@ -207,7 +212,10 @@ impl<F: Float + FromPrimitive + ToPrimitive> Transport<F> {
 
         let alpha = Rqp.tt - Rp.tt*Rqp.tv/Rp.tv;
         let beta = Rqp.t + Rqp.tv*(t - Rp.t)/Rp.tv;
-        let h = (plane.dt / Rp.tv).abs() / self.dst.pixel_volume();
+        let mut h = (plane.dt / Rp.tv).abs();
+        if !self.onto_detector {
+            h = h / self.dst.pixel_volume();
+        }
 
         let mut tau0 = (-into_geom.dt/c2 - beta)/alpha;
         let mut tau1 = (into_geom.dt/c2 - beta)/alpha;
@@ -363,7 +371,10 @@ impl<F: Float + FromPrimitive + ToPrimitive> Transport<F> {
         let alpha = Rqp.tt - Rqp.tv*Rp.tt/Rp.tv;
         let beta = Rqp.tv / Rp.tv;
         let gamma = Rqp.t - Rqp.tv*Rp.t/Rp.tv;
-        let h = (plane.dt / Rp.tv).abs().min((into_geom.dt / Rqp.tv).abs()) / self.dst.pixel_volume();
+        let mut h = (plane.dt / Rp.tv).abs().min((into_geom.dt / Rqp.tv).abs());
+        if !self.onto_detector {
+            h = h / self.dst.pixel_volume();
+        }
 
         let mut taus = vec![
             (into_geom.dt/c2 - beta*(t + plane.dt/c2) - gamma)/alpha,

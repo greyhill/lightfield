@@ -21,6 +21,7 @@ pub struct VolumeTransport<F: Float> {
 
     pub overwrite_forw: bool,
     pub overwrite_back: bool,
+    pub onto_detector: bool,
 
     queue: CommandQueue,
     forw_t_kernel: Kernel,
@@ -51,7 +52,7 @@ where F: Float + FromPrimitive + Debug {
                       dst: LightFieldGeometry<F>,
                       to_plane: Optics<F>,
                       queue: CommandQueue) -> Result<Self, Error> {
-        Self::new(src, dst, to_plane, true, true, queue)
+        Self::new(src, dst, to_plane, true, true, false, queue)
     }
 
     /// Create a new `VolumeTransport`
@@ -60,6 +61,7 @@ where F: Float + FromPrimitive + Debug {
                to_plane: Optics<F>,
                overwrite_forw: bool,
                overwrite_back: bool,
+               onto_detector: bool,
                queue: CommandQueue) -> Result<Self, Error> {
         // collect opencl sources
         let sources = match &dst.plane.basis {
@@ -148,6 +150,7 @@ where F: Float + FromPrimitive + Debug {
 
             overwrite_forw: overwrite_forw,
             overwrite_back: overwrite_back,
+            onto_detector: onto_detector,
 
             queue: queue,
             forw_t_kernel: forw_t_kernel,
@@ -209,7 +212,11 @@ where F: Float + FromPrimitive + Debug {
         let na = self.dst.plane.s.len();
         let u = self.dst.plane.s[ia];
         let v = self.dst.plane.t[ia];
-        let scale = self.geom.dz / self.dst.pixel_volume();
+        let scale = if self.onto_detector {
+            self.geom.dz
+        } else {
+            self.geom.dz / self.dst.pixel_volume()
+        };
 
         // bind arguments
         try!(self.forw_s_kernel.bind(0, &self.volume_geom));
@@ -241,7 +248,11 @@ where F: Float + FromPrimitive + Debug {
         let na = self.dst.plane.s.len();
         let u = self.dst.plane.s[ia];
         let v = self.dst.plane.t[ia];
-        let scale = self.geom.dz / self.dst.pixel_volume();
+        let scale = if self.onto_detector {
+            self.geom.dz
+        } else {
+            self.geom.dz / self.dst.pixel_volume()
+        };
 
         // bind arguments
         try!(self.back_t_kernel.bind(0, &self.volume_geom));
@@ -522,8 +533,8 @@ fn test_volume_pillbox() {
 
     let x_buf = queue.create_buffer_from_slice(&x).unwrap();
     let y_buf = queue.create_buffer_from_slice(&y).unwrap();
-    let mut cx_buf = dst_geom.zeros_buf(&queue).unwrap();
-    let mut cty_buf = vg.zeros_buf(&queue).unwrap();
+    let mut cx_buf = dst_geom.rands_buf(&queue).unwrap();
+    let mut cty_buf = vg.rands_buf(&queue).unwrap();
 
     xport.forw(&x_buf, &mut cx_buf, 50, &[]).unwrap().wait().unwrap();
     xport.back(&y_buf, &mut cty_buf, 50, &[]).unwrap().wait().unwrap();
