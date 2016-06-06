@@ -46,6 +46,9 @@ pub use light_volume::*;
 mod volume_transport;
 pub use volume_transport::*;
 
+mod phantom;
+pub use phantom::*;
+
 mod env;
 pub use env::*;
 
