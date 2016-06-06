@@ -49,6 +49,9 @@ pub use volume_transport::*;
 mod ellipsoid;
 pub use ellipsoid::*;
 
+mod phantom;
+pub use phantom::*;
+
 mod env;
 pub use env::*;
 

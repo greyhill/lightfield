@@ -19,6 +19,18 @@ struct LightVolume {
 };
 typedef constant struct LightVolume* LightVolume;
 
+inline float LightVolume_ix2x(LightVolume self, const int ix) {
+    return (ix - self->wx)*self->dx;
+}
+
+inline float LightVolume_iy2y(LightVolume self, const int iy) {
+    return (iy - self->wy)*self->dy;
+}
+
+inline float LightVolume_iz2z(LightVolume self, const int iz) {
+    return (iz - self->wz)*self->dz;
+}
+
 kernel void volume_zero(
         LightVolume geom,
         global float* vol) {
