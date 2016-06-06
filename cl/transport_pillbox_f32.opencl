@@ -127,7 +127,10 @@ kernel void transport_s(
         const float h,
 
         global float* tmp,
-        global float* dst) {
+        global float* dst,
+        
+        int conservative,
+        int overwrite) {
     const int dst_it_offset = get_global_id(0);
     const int dst_is_offset = get_global_id(1);
 
@@ -169,7 +172,13 @@ kernel void transport_s(
     const int write_coord = coord_cache[local_id_t];
     const float write_val = value_cache[local_id_t];
     if(write_coord >= 0) {
-        dst[write_coord] = write_val;
+        if(!conservative || (write_val != 0.f)) {
+            if(overwrite) {
+                dst[write_coord] = write_val;
+            } else {
+                dst[write_coord] += write_val;
+            }
+        }
     }
 }
 

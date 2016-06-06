@@ -16,6 +16,12 @@ pub struct Transport<F: Float> {
     pub src: LightFieldGeometry<F>,
     pub dst: LightFieldGeometry<F>,
 
+    pub overwrite_forw: bool,
+    pub overwrite_back: bool,
+
+    pub conservative_forw: bool,
+    pub conservative_back: bool,
+
     src_s0: usize,
     src_s1: usize,
     src_t0: usize,
@@ -39,10 +45,20 @@ pub struct Transport<F: Float> {
 }
 
 impl<F: Float + FromPrimitive + ToPrimitive> Transport<F> {
+    pub fn new_simple(src: LightFieldGeometry<F>,
+                      dst: LightFieldGeometry<F>,
+                      queue: CommandQueue) -> Result<Self, Error> {
+        Self::new(src, dst, None, None, true, true, false, false, queue)
+    }
+
     pub fn new(src: LightFieldGeometry<F>, 
                dst: LightFieldGeometry<F>,
                src_bounds: Option<(usize, usize, usize, usize)>,
                dst_bounds: Option<(usize, usize, usize, usize)>,
+               overwrite_forw: bool,
+               overwrite_back: bool,
+               conservative_forw: bool,
+               conservative_back: bool,
                queue: CommandQueue) -> Result<Self, Error> {
         // collect opencl sources
         let sources = match (&src.plane.basis, &dst.plane.basis) {
@@ -99,6 +115,12 @@ impl<F: Float + FromPrimitive + ToPrimitive> Transport<F> {
         let dst_geom_buf = try!(dst.geom.as_cl_buffer(&queue));
 
         Ok(Transport{
+            overwrite_forw: overwrite_forw,
+            overwrite_back: overwrite_back,
+
+            conservative_forw: conservative_forw,
+            conservative_back: conservative_back,
+
             src_s0: resolved_src_bounds.0,
             src_s1: resolved_src_bounds.1,
             src_t0: resolved_src_bounds.2,
@@ -241,6 +263,18 @@ impl<F: Float + FromPrimitive + ToPrimitive> Transport<F> {
         } else {
             &self.src.geom
         };
+        let conservative_flag = match (forw, self.conservative_forw, self.conservative_back) {
+            (true, true, _) => 1u32,
+            (true, false, _) => 0u32,
+            (false, _, true) => 1u32,
+            (false, _, false) => 0u32,
+        };
+        let overwrite_flag = match(forw, self.overwrite_forw, self.overwrite_back) {
+            (true, true, _) => 1u32,
+            (true, false, _) => 0u32,
+            (false, _, true) => 1u32,
+            (false, _, false) => 0u32,
+        };
         let plane = &self.src.plane;
 
         let s = plane.s[ia];
@@ -266,6 +300,9 @@ impl<F: Float + FromPrimitive + ToPrimitive> Transport<F> {
 
         try!(kernel.bind(14, &self.tmp_buf));
         try!(kernel.bind_mut(15, dst));
+
+        try!(kernel.bind_scalar(16, &conservative_flag));
+        try!(kernel.bind_scalar(17, &overwrite_flag));
 
         let local_size = (32usize, 8usize, 1usize);
         let global_size = if forw {
@@ -386,6 +423,18 @@ impl<F: Float + FromPrimitive + ToPrimitive> Transport<F> {
         } else {
             &self.src.geom
         };
+        let conservative_flag = match (forw, self.conservative_forw, self.conservative_back) {
+            (true, true, _) => 1u32,
+            (true, false, _) => 0u32,
+            (false, _, true) => 1u32,
+            (false, _, false) => 0u32,
+        };
+        let overwrite_flag = match(forw, self.overwrite_forw, self.overwrite_back) {
+            (true, true, _) => 1u32,
+            (true, false, _) => 0u32,
+            (false, _, true) => 1u32,
+            (false, _, false) => 0u32,
+        };
         let plane = &self.src.plane;
 
         let s = plane.s[ia];
@@ -416,6 +465,9 @@ impl<F: Float + FromPrimitive + ToPrimitive> Transport<F> {
 
         try!(kernel.bind(16, &self.tmp_buf));
         try!(kernel.bind_mut(17, dst));
+
+        try!(kernel.bind_scalar(18, &conservative_flag));
+        try!(kernel.bind_scalar(19, &overwrite_flag));
 
         let local_size = (32usize, 8usize, 1usize);
         let global_size = if forw {
@@ -516,7 +568,7 @@ fn test_transport_dirac() {
         to_plane: lens.optics().then(&Optics::translation(&500f32)).invert(),
     };
 
-    let mut transport = Transport::new(src.clone(), dst.clone(), None, None, queue.clone()).unwrap();
+    let mut transport = Transport::new_simple(src.clone(), dst.clone(), queue.clone()).unwrap();
 
     let u = src.geom.rands();
     let v = dst.geom.rands();
@@ -593,7 +645,7 @@ fn test_transport_pillbox() {
         to_plane: lens.optics().then(&Optics::translation(&500f32)).invert(),
     };
 
-    let mut transport = Transport::new(src.clone(), dst.clone(), None, None, queue.clone()).unwrap();
+    let mut transport = Transport::new_simple(src.clone(), dst.clone(), queue.clone()).unwrap();
 
     let u = src.geom.rands();
     let v = dst.geom.rands();
