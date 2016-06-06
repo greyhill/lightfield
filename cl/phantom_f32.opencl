@@ -23,7 +23,7 @@ kernel void render_ellipsoid(
         const float xx = x + geom->dx*iix/(num_samples_per_dim - 1.f);
         for(int iiy=0; iiy<num_samples_per_dim; ++iiy) {
             const float yy = y + geom->dy*iiy/(num_samples_per_dim - 1.f);
-            for(int iiz=0; iiz<num_samples_per_dim; ++iiy) {
+            for(int iiz=0; iiz<num_samples_per_dim; ++iiz) {
                 const float zz = z + geom->dz*iiz/(num_samples_per_dim - 1.f);
                 accum += Ellipsoid_eval(ell, xx, yy, zz);
             }

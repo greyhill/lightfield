@@ -100,7 +100,16 @@ fn test_phantom_renderer() {
         offset_z: 3.0,
     };
 
-    let mut v = vg.zeros_buf(&queue).unwrap();
-    let renderer = PhantomRenderer::new(vg, queue.clone()).unwrap();
+    let mut v_buf = vg.zeros_buf(&queue).unwrap();
+    let mut renderer = PhantomRenderer::new(vg.clone(), queue.clone()).unwrap();
+    let ell = Ellipsoid::sphere(2f32, 3f32, 4f32, 20f32, 1f32);
+
+    renderer.render_ellipsoid(&mut v_buf, &ell, &[]).unwrap().wait().unwrap();
+
+    let mut v = vg.zeros();
+    queue.read_buffer(&v_buf, &mut v).unwrap();
+
+    let max_val = v.iter().fold(0f32, |l, &x| if x > l { x } else { l });
+    assert_eq!(max_val, 1f32);
 }
 

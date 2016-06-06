@@ -32,6 +32,32 @@ pub struct Ellipsoid<F: Float> {
     pub value: F,
 }
 
+impl<F: Float> Ellipsoid<F> {
+    pub fn sphere(x: F, y: F, z: F, radius: F, value: F) -> Self {
+        Ellipsoid{
+            xx: F::one(),
+            xy: F::zero(),
+            xz: F::zero(),
+            xr: radius.clone(),
+            xc: x,
+
+            yx: F::zero(),
+            yy: F::one(),
+            yz: F::zero(),
+            yr: radius.clone(),
+            yc: y,
+
+            zx: F::zero(),
+            zy: F::zero(),
+            zz: F::one(),
+            zr: radius.clone(),
+            zc: z,
+
+            value: value,
+        }
+    }
+}
+
 impl<F: Float + FromPrimitive + ToPrimitive> Serialize for Ellipsoid<F> {
     fn from_map(map: &Table) -> Option<Self> {
         let xx = map.get("xx");
