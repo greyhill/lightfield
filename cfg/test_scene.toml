@@ -1,0 +1,17 @@
+[object]
+data = "../test_volume.fld"
+config = "test_volume.toml"
+
+[[camera]]
+name = "focal0"
+config = "cameras/test_focal.toml"
+position = { x = 0.0, y = 0.0, z = -500.0 }
+
+[[camera]]
+name = "focal1"
+config = "cameras/test_focal.toml"
+[camera.position]
+x = 50.0
+y = 60.0
+z = 12.0
+

@@ -1,0 +1,17 @@
+distance_detector_lens = 32.0
+
+[lens]
+center_s = 3.0
+center_t = -5.2
+radius_s = 4.0
+radius_t = 5.2
+focal_length_s = 12.0
+focal_length_t = 24.0
+
+[detector]
+ns = 1024
+nt = 1024
+ds = 1.0
+dt = 1.0
+offset_s = 0.0
+offset_t = 0.0

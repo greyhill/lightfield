@@ -1,0 +1,9 @@
+nx = 512
+ny = 512
+nz = 512
+dx = 1.0
+dy = 1.0
+dz = 1.0
+offset_x = 0.0
+offset_y = 0.0
+offset_z = 0.0

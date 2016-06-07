@@ -23,7 +23,14 @@ version = '0.8.2'
 [dependencies.byteorder]
 version = '0.5.1'
 
+[dependencies.getopts]
+version = '0.2.14'
+
 [dependencies.proust]
 git = "https://github.com/greyhill/proust"
 version = "0.0.5"
+
+[[bin]]
+name = "render_volume"
+path = "rs/bin/render_volume.rs"
 

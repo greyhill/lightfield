@@ -61,3 +61,6 @@ pub use cl_traits::*;
 mod transport;
 pub use transport::*;
 
+mod scene;
+pub use scene::*;
+
