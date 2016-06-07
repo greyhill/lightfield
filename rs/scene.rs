@@ -259,7 +259,7 @@ impl<F: Float + FromPrimitive> Scene<F> {
 fn test_scene() {
     let scene = Scene::<f32>::read("cfg/test_scene.toml").unwrap();
     
-    // PatBbuf doesn't canonicalize automatically
+    // PathBuf doesn't canonicalize automatically
     //assert_eq!(scene.object.data_path, Some(PathBuf::from("test_volume.fld")));
 
     assert_eq!(scene.cameras[0].name, "focal0");
