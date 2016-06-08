@@ -70,3 +70,6 @@ pub use transport::*;
 mod scene;
 pub use scene::*;
 
+mod imager;
+pub use imager::*;
+
