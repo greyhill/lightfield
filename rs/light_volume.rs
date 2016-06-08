@@ -1,6 +1,7 @@
 extern crate num;
 extern crate toml;
 extern crate byteorder;
+extern crate avsfld;
 use serialize::*;
 use cl_traits::*;
 use geom::*;
@@ -11,6 +12,8 @@ use image_geom::*;
 use optics::*;
 use light_field_geom::*;
 use angular_plane::*;
+use std::path::Path;
+use std::fs::File;
 
 /// Volume of lambertian light emitters
 #[derive(Clone, Debug)]
@@ -78,6 +81,31 @@ impl<F: Float + FromPrimitive> LightVolume<F> {
 impl<F: Float + FromPrimitive> Geometry<F> for LightVolume<F> {
     fn shape(self: &Self) -> Vec<usize> {
         vec![self.nx, self.ny, self.nz]
+    }
+
+    fn save<P: AsRef<Path>>(self: &Self, buf: &[F], path: P) -> Result<(), ()> {
+        let mut file = if let Ok(f) = File::create(path) {
+            f
+        } else {
+            return Err(());
+        };
+        let sizes = [self.nx, self.ny, self.nz];
+        match self::avsfld::AVSFile::write(&mut file, &sizes, buf) {
+            Ok(()) => Ok(()),
+            Err(_) => Err(()),
+        }
+    }
+
+    fn load<P: AsRef<Path>>(self: &Self, path: P) -> Result<Vec<F>, ()> {
+        let mut file = if let Ok(f) = self::avsfld::AVSFile::open(&path) {
+            f
+        } else {
+            return Err(())
+        };
+        match file.read() {
+            Ok(tr) => Ok(tr),
+            Err(_) => Err(()),
+        }
     }
 }
 

@@ -7,6 +7,7 @@ use geom::*;
 use self::toml::*;
 use self::num::{Float, FromPrimitive, ToPrimitive};
 use self::byteorder::*;
+use std::path::Path;
 
 /// Pixel or plane geometry
 #[derive(Clone, Debug)]
@@ -48,6 +49,14 @@ impl<F: Float + FromPrimitive> ImageGeometry<F> {
 impl<F: Float + FromPrimitive> Geometry<F> for ImageGeometry<F> {
     fn shape(self: &Self) -> Vec<usize> {
         vec![self.ns, self.nt]
+    }
+
+    fn save<P: AsRef<Path>>(self: &Self, buf: &[F], path: P) -> Result<(), ()> {
+        unimplemented!()
+    }
+
+    fn load<P: AsRef<Path>>(self: &Self, path: P) -> Result<Vec<F>, ()> {
+        unimplemented!()
     }
 }
 

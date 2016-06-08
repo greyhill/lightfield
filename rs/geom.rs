@@ -4,6 +4,7 @@ extern crate proust;
 use self::num::{Float, FromPrimitive};
 use self::proust::*;
 use self::rand::{thread_rng, Rng};
+use std::path::Path;
 
 fn reduce_shape(shape: &[usize]) -> usize {
     let mut tr = 1;
@@ -54,4 +55,10 @@ pub trait Geometry<F: Float + FromPrimitive> {
     fn rands_buf(self: &Self, queue: &CommandQueue) -> Result<Mem, Error> {
         queue.create_buffer_from_slice(&self.rands())
     }
+
+    /// Save a buffer to a path
+    fn save<P: AsRef<Path>>(self: &Self, buf: &[F], path: P) -> Result<(), ()>;
+
+    /// Load a buffer from a path
+    fn load<P: AsRef<Path>>(self: &Self, path: P) -> Result<Vec<F>, ()>;
 }
