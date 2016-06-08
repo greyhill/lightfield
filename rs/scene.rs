@@ -20,7 +20,7 @@ fn path_from<P: AsRef<Path>, M: AsRef<Path>>(root_path: P, more: M) -> PathBuf {
     tr
 }
 
-fn table_from_file<P: AsRef<Path>>(path: P) -> Option<Table> {
+pub fn table_from_file<P: AsRef<Path>>(path: P) -> Option<Table> {
     // open given path
     let mut file = match File::open(&path) {
         Ok(file) => file,
