@@ -73,3 +73,6 @@ pub use scene::*;
 mod imager;
 pub use imager::*;
 
+mod single_lens_imager;
+pub use single_lens_imager::*;
+

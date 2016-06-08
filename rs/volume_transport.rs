@@ -45,9 +45,8 @@ pub struct VolumeTransport<F: Float> {
     back_spline_kernels_t: Mem, // [SplineKernel]*nz*na
 }
 
-use std::fmt::Debug;
 impl<F> VolumeTransport<F>
-where F: Float + FromPrimitive + Debug {
+where F: Float + FromPrimitive {
     pub fn new_simple(src: LightVolume<F>,
                       dst: LightFieldGeometry<F>,
                       to_plane: Optics<F>,

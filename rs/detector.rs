@@ -3,6 +3,7 @@ extern crate toml;
 use serialize::*;
 use self::num::{Float, FromPrimitive, ToPrimitive};
 use self::toml::*;
+use image_geom::*;
 
 /// Photodetector
 #[derive(Clone, Debug)]
@@ -13,6 +14,19 @@ pub struct Detector<F: Float> {
     pub dt: F,
     pub offset_s: F,
     pub offset_t: F,
+}
+
+impl<F: Float> Detector<F> {
+    pub fn image_geometry(self: &Self) -> ImageGeometry<F> {
+        ImageGeometry{
+            ns: self.ns,
+            nt: self.nt,
+            ds: self.ds,
+            dt: self.dt,
+            offset_s: self.offset_s,
+            offset_t: self.offset_t,
+        }
+    }
 }
 
 impl<F: Float + FromPrimitive + ToPrimitive> Serialize for Detector<F> {
