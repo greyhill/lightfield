@@ -31,6 +31,6 @@ git = "https://github.com/greyhill/proust"
 version = "0.0.5"
 
 [[bin]]
-name = "render_volume"
-path = "rs/bin/render_volume.rs"
+name = "render_phantom"
+path = "rs/bin/render_phantom.rs"
 
