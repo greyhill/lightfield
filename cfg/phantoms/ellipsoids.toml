@@ -1,0 +1,100 @@
+[[ellipsoids]]
+# First ellipse, pointed "down" along y
+
+xx = 1.0
+xy = 0.0
+xz = 0.0
+
+yx = 0.0
+yy = 1.0
+yz = 0.0
+
+zx = 0.0
+zy = 0.0
+zz = 1.0
+
+xc = 0.0
+yc = 25.0
+zc = 0.0
+
+xr = 10.0
+yr = 25.0
+zr = 10.0
+
+value = 10.0
+
+[[ellipsoids]]
+# Second ellipse, in the y/z plane, pointed in -z
+
+xx = 1.0
+xy = 0.0
+xz = 0.0
+
+yx = 0.0
+yy = 0.707
+yz = 0.707
+
+zx = 0.0
+zy = -0.707
+zz = 0.707
+
+xc = 0.0
+yc = -25.0
+zc = 0.0
+
+xr = 10.0
+yr = 25.0
+zr = 10.0
+
+value = 10.0
+
+[[ellipsoids]]
+# Third ellipse (part 2 of 3-prong)
+
+xx = 0.866
+xy = -0.354
+xz = 0.354
+
+yx = 0.0
+yy = 0.707
+yz = 0.707
+
+zx = -0.5
+zy = -0.612
+zz = 0.612
+
+xc = 25.0
+yc = 0.0
+zc = 0.0
+
+xr = 25.0
+yr = 10.0
+zr = 10.0
+
+value = 10.0
+
+[[ellipsoids]]
+# Fourth ellipse (part 3 of 3-prong)
+
+xx = -0.866
+xy = -0.354
+xz = 0.354
+
+yx = 0.0
+yy = 0.707
+yz = 0.707
+
+zx = -0.5
+zy = 0.612
+zz = -0.612
+
+xc = 25.0
+yc = 0.0
+zc = 0.0
+
+xr = 25.0
+yr = 10.0
+zr = 10.0
+
+value = 10.0
+
