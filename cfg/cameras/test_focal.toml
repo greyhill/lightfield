@@ -10,8 +10,8 @@ focal_length_t = 24.0
 
 [detector]
 ns = 1024
-nt = 1024
+nt = 2048
 ds = 1.0
-dt = 1.0
+dt = 2.0
 offset_s = 0.0
-offset_t = 0.0
+offset_t = 1.0

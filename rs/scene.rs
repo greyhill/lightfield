@@ -2,14 +2,15 @@ extern crate num;
 extern crate toml;
 extern crate nalgebra as na;
 use self::toml::*;
-use serialize::*;
 use std::path::*;
-use self::num::Float;
 use isometry::*;
 use self::na::{Rotation3, Vector3};
 use std::fs::File;
 use std::io::Read;
-use self::num::{FromPrimitive};
+use self::num::{Float, ToPrimitive, FromPrimitive};
+use object::*;
+use camera::*;
+use serialize::*;
 
 fn path_from<P: AsRef<Path>, M: AsRef<Path>>(root_path: P, more: M) -> PathBuf {
     let mut tr = PathBuf::from(root_path.as_ref());
@@ -60,7 +61,11 @@ pub struct SceneCamera<F: Float> {
     pub rotation: Option<Rotation3<F>>,
 }
 
-impl<F: Float + FromPrimitive> SceneCamera<F> {
+impl<F: Float + FromPrimitive + ToPrimitive> SceneCamera<F> {
+    pub fn get_config(self: &Self) -> Option<CameraConfig<F>> {
+        CameraConfig::from_map(&self.config)
+    }
+
     fn from_toml<P: AsRef<Path>>(root_path: P, table: &Table) -> Option<Self> {
         let name = if let Some(&Value::String(ref name)) = table.get("name") {
             name.to_owned()
@@ -134,6 +139,10 @@ pub struct SceneObject {
 }
 
 impl SceneObject {
+    pub fn get_config<F: Float + FromPrimitive + ToPrimitive>(self: &Self) -> Option<ObjectConfig<F>> {
+        ObjectConfig::from_map(&self.config)
+    }
+
     fn from_toml<P: AsRef<Path>>(root_path: P, table: &Table) -> Option<Self> {
         let config = match table.get("config") {
             Some(&Value::String(ref path_ext)) => {
@@ -272,5 +281,16 @@ fn test_scene() {
     assert_eq!(scene.cameras[1].position.x, 50.0);
     assert_eq!(scene.cameras[1].position.y, 60.0);
     assert_eq!(scene.cameras[1].position.z, 12.0);
+
+    if let Some(CameraConfig::SingleLensCamera(slc)) = scene.cameras[0].get_config() {
+        assert_eq!(slc.detector.ns, 1024);
+        assert_eq!(slc.detector.nt, 2048);
+        assert_eq!(slc.detector.ds, 1.0);
+        assert_eq!(slc.detector.dt, 2.0);
+        assert_eq!(slc.detector.offset_s, 0.0);
+        assert_eq!(slc.detector.offset_t, 1.0);
+    } else {
+        assert!(false);
+    }
 }
 
