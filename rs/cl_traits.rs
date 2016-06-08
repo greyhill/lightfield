@@ -20,3 +20,11 @@ pub trait ClBuffer {
     }
 }
 
+impl<T> ClBuffer for Vec<T> where T: ClBuffer {
+    fn as_cl_bytes(self: &Self, buf: &mut Vec<u8>) -> () {
+        for it in self.iter() {
+            it.as_cl_bytes(buf);
+        }
+    }
+}
+
