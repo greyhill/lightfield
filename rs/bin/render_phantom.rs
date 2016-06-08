@@ -56,6 +56,8 @@ fn main() {
             .expect("Error reading phantom configuration")
         ).expect("Error parsing phantom configuration");
 
+    println!("Ellipses: {:?}", ellipses);
+
     // create environment
     let env = lf::Environment::new_easy().expect("Error creating OpenCL environment");
     let queue = &env.queues[0];

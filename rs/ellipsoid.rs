@@ -149,19 +149,19 @@ impl<F: Float + ToPrimitive> ClBuffer for Ellipsoid<F> {
     fn as_cl_bytes(self: &Self, buf: &mut Vec<u8>) -> () {
         buf.write_f32::<LittleEndian>(F::to_f32(&self.xx).unwrap()).unwrap();
         buf.write_f32::<LittleEndian>(F::to_f32(&self.xy).unwrap()).unwrap();
-        buf.write_f32::<LittleEndian>(F::to_f32(&self.xy).unwrap()).unwrap();
+        buf.write_f32::<LittleEndian>(F::to_f32(&self.xz).unwrap()).unwrap();
         buf.write_f32::<LittleEndian>(F::to_f32(&self.xr).unwrap()).unwrap();
         buf.write_f32::<LittleEndian>(F::to_f32(&self.xc).unwrap()).unwrap();
 
         buf.write_f32::<LittleEndian>(F::to_f32(&self.yx).unwrap()).unwrap();
         buf.write_f32::<LittleEndian>(F::to_f32(&self.yy).unwrap()).unwrap();
-        buf.write_f32::<LittleEndian>(F::to_f32(&self.yy).unwrap()).unwrap();
+        buf.write_f32::<LittleEndian>(F::to_f32(&self.yz).unwrap()).unwrap();
         buf.write_f32::<LittleEndian>(F::to_f32(&self.yr).unwrap()).unwrap();
         buf.write_f32::<LittleEndian>(F::to_f32(&self.yc).unwrap()).unwrap();
 
         buf.write_f32::<LittleEndian>(F::to_f32(&self.zx).unwrap()).unwrap();
         buf.write_f32::<LittleEndian>(F::to_f32(&self.zy).unwrap()).unwrap();
-        buf.write_f32::<LittleEndian>(F::to_f32(&self.zy).unwrap()).unwrap();
+        buf.write_f32::<LittleEndian>(F::to_f32(&self.zz).unwrap()).unwrap();
         buf.write_f32::<LittleEndian>(F::to_f32(&self.zr).unwrap()).unwrap();
         buf.write_f32::<LittleEndian>(F::to_f32(&self.zc).unwrap()).unwrap();
 
