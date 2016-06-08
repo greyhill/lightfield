@@ -9,7 +9,7 @@ use cl_traits::*;
 use self::byteorder::*;
 
 /// Ellipsoidal phantom
-#[derive(Copy, Clone)]
+#[derive(Clone, Debug)]
 pub struct Ellipsoid<F: Float> {
     pub xx: F,
     pub xy: F,
@@ -166,6 +166,35 @@ impl<F: Float + ToPrimitive> ClBuffer for Ellipsoid<F> {
         buf.write_f32::<LittleEndian>(F::to_f32(&self.zc).unwrap()).unwrap();
 
         buf.write_f32::<LittleEndian>(F::to_f32(&self.value).unwrap()).unwrap();
+    }
+}
+
+impl<F: Float + FromPrimitive + ToPrimitive> Serialize for Vec<Ellipsoid<F>> {
+    fn from_map(map: &Table) -> Option<Self> {
+        if let Some(&Value::Array(ref arr)) = map.get("ellipsoids") {
+            let mut tr = Vec::new();
+            for it in arr.iter() {
+                if let &Value::Table(ref t) = it {
+                    if let Some(e) = Ellipsoid::from_map(t) {
+                        tr.push(e);
+                    }
+                }
+            }
+            Some(tr)
+        } else {
+            None
+        }
+    }
+
+    fn into_map(self: &Self) -> Table {
+        let mut tr = Table::new();
+        let mut vals: Vec<Value> = Vec::new();
+        for it in self.iter() {
+            let ellipsoid_table = it.into_map();
+            vals.push(Value::Table(ellipsoid_table));
+        }
+        tr.insert("ellipsoids".to_string(), Value::Array(vals));
+        tr
     }
 }
 

@@ -3,7 +3,8 @@
 kernel void render_ellipsoid(
         LightVolume geom,
         Ellipsoid ell,
-        global float* ph) {
+        global float* ph,
+        int num_ellipsoids) {
     int ix = get_global_id(0);
     int iy = get_global_id(1);
     int iz = get_global_id(2);
@@ -19,13 +20,16 @@ kernel void render_ellipsoid(
     const float y = LightVolume_iy2y(geom, iy) - geom->dy/2.f;
     const float z = LightVolume_iz2z(geom, iz) - geom->dz/2.f;
 
-    for(int iix=0; iix<num_samples_per_dim; ++iix) {
-        const float xx = x + geom->dx*iix/(num_samples_per_dim - 1.f);
-        for(int iiy=0; iiy<num_samples_per_dim; ++iiy) {
-            const float yy = y + geom->dy*iiy/(num_samples_per_dim - 1.f);
-            for(int iiz=0; iiz<num_samples_per_dim; ++iiz) {
-                const float zz = z + geom->dz*iiz/(num_samples_per_dim - 1.f);
-                accum += Ellipsoid_eval(ell, xx, yy, zz);
+    for(int il=0; il<num_ellipsoids; ++il) {
+        Ellipsoid ellipsoid_i = ell + il;
+        for(int iix=0; iix<num_samples_per_dim; ++iix) {
+            const float xx = x + geom->dx*iix/(num_samples_per_dim - 1.f);
+            for(int iiy=0; iiy<num_samples_per_dim; ++iiy) {
+                const float yy = y + geom->dy*iiy/(num_samples_per_dim - 1.f);
+                for(int iiz=0; iiz<num_samples_per_dim; ++iiz) {
+                    const float zz = z + geom->dz*iiz/(num_samples_per_dim - 1.f);
+                    accum += Ellipsoid_eval(ellipsoid_i, xx, yy, zz);
+                }
             }
         }
     }

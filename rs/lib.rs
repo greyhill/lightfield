@@ -19,6 +19,12 @@ pub use isometry::*;
 mod single_lens_camera;
 pub use single_lens_camera::*;
 
+mod camera;
+pub use camera::*;
+
+mod object;
+pub use object::*;
+
 mod geom;
 pub use geom::*;
 

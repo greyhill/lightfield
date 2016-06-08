@@ -63,11 +63,22 @@ impl<F: Float + FromPrimitive> PhantomRenderer<F> {
                             wait_for: &[Event]) -> Result<Event, Error> {
         // create ellipsoid info buffer
         let ellipsoid_buf = try!(ellipsoid.as_cl_buffer(&self.queue));
+        self.render_ellipsoids(1, 
+                               &ellipsoid_buf,
+                               vol,
+                               wait_for)
+    }
 
+    pub fn render_ellipsoids(self: &mut Self,
+                             num_ellipsoids: usize,
+                             ellipsoids: &Mem,
+                             vol: &mut Mem,
+                             wait_for: &[Event]) -> Result<Event, Error> {
         // bind arguments
         try!(self.render_ellipsoid.bind(0, &self.geom_buf));
-        try!(self.render_ellipsoid.bind(1, &ellipsoid_buf));
+        try!(self.render_ellipsoid.bind(1, ellipsoids));
         try!(self.render_ellipsoid.bind_mut(2, vol));
+        try!(self.render_ellipsoid.bind_scalar(3, &(num_ellipsoids as i32)));
 
         // run kernel
         let local_size = (32, 8, 1);
