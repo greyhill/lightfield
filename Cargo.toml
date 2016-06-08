@@ -30,6 +30,9 @@ version = '0.2.14'
 git = "https://github.com/greyhill/proust"
 version = "0.0.5"
 
+[dependencies.avsfld]
+git = "https://github.com/greyhill/avsfldrs"
+
 [[bin]]
 name = "render_phantom"
 path = "rs/bin/render_phantom.rs"
