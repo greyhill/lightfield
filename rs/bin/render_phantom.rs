@@ -1,12 +1,17 @@
 extern crate lightfield as lf;
 extern crate getopts as go;
+extern crate proust;
+extern crate avsfld;
 
 use go::Options;
 use std::env;
+use lf::Serialize;
+use lf::ClBuffer;
+use lf::Geometry;
+use self::proust::*;
 
 // usage, nominally:
-// render_volume --camera camera.toml --phantom phantom.toml --discretization disc.toml --distance 50 --out blah.png
-//      --plane pinhole | pillbox --angles 20
+// render_phantom --phantom phantom.toml --geometry geometry.toml --out blah.fld
 
 fn print_usage(name: &String, opts: Options) {
     let brief = format!("Usage: {} [options]", name);
@@ -20,13 +25,9 @@ fn main() {
 
     // set up command line options parser
     let mut opts = Options::new();
-    opts.reqopt("c", "camera", "TOML file describing camera", "FILE");
-    opts.reqopt("p", "phantom", "TOML file describing phantom ", "FILE");
-    opts.reqopt("z", "discretization", "TOML file describing discretization", "FILE");
-    opts.reqopt("d", "distance", "Distance (mm) from the camera to the center of the scene", "DISTANCE");
-    opts.reqopt("o", "out", "Where to save rendered image", "FILE");
-    opts.reqopt("b", "basis", "Angular basis function", "pinhole | pillbox");
-    opts.reqopt("a", "angles", "Number of angles", "INT");
+    opts.reqopt("p", "phantom", "TOML file describing phantom", "FILE");
+    opts.reqopt("g", "geometry", "TOML file describing geometry", "FILE");
+    opts.reqopt("o", "out", "Output path", "FILE");
     opts.optflag("h", "help", "Print help and exit");
 
     // parse options
@@ -43,5 +44,38 @@ fn main() {
         print_usage(my_name, opts);
         return;
     }
+
+    // read configuration
+    let geom: lf::LightVolume<f32> = lf::LightVolume::from_map(
+        &lf::table_from_file(matches.opt_str("geometry").unwrap())
+            .expect("Error reading geometry configuration")
+        ).expect("Error parsing geometry configuration");
+
+    let ellipses: Vec<lf::Ellipsoid<f32>> = Vec::<lf::Ellipsoid<_>>::from_map(
+        &lf::table_from_file(matches.opt_str("phantom").unwrap())
+            .expect("Error reading phantom configuration")
+        ).expect("Error parsing phantom configuration");
+
+    // create environment
+    let env = lf::Environment::new_easy().expect("Error creating OpenCL environment");
+    let queue = &env.queues[0];
+
+    // create renderer, put things on the GPU
+    let mut renderer = lf::PhantomRenderer::new(geom.clone(), queue.clone())
+        .expect("Error creating phantom renderer");
+    let ell_buf = ellipses.as_cl_buffer(&queue).expect("Error loading ellipses onto GPU");
+    let mut vol = geom.zeros_buf(&queue).expect("Error creating zero buffer");
+
+    // render ellipses
+    renderer.render_ellipsoids(ellipses.len(), &ell_buf, &mut vol, &[])
+        .expect("Error rendering ellipses")
+        .wait().expect("Error waiting for render");
+
+    // read rendered ellipses
+    let mut rendered_vol = geom.zeros();
+    queue.read_buffer(&vol, &mut rendered_vol).expect("Error reading rendered phantom");
+    geom.save(&rendered_vol, matches.opt_str("out").unwrap()).expect("Error writing rendered phantom");
+
+    println!("Rendered phantom written to {}", matches.opt_str("out").unwrap());
 }
 
