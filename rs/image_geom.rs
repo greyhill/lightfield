@@ -2,6 +2,7 @@ extern crate num;
 extern crate toml;
 extern crate byteorder;
 extern crate avsfld;
+extern crate image;
 use serialize::*;
 use cl_traits::*;
 use geom::*;
@@ -10,6 +11,7 @@ use self::num::{Float, FromPrimitive, ToPrimitive};
 use self::byteorder::*;
 use std::path::Path;
 use std::fs::File;
+use self::image::*;
 
 /// Pixel or plane geometry
 #[derive(Clone, Debug)]
@@ -22,7 +24,7 @@ pub struct ImageGeometry<F: Float> {
     pub offset_t: F,
 }
 
-impl<F: Float + FromPrimitive> ImageGeometry<F> {
+impl<F: Float + ToPrimitive + FromPrimitive> ImageGeometry<F> {
     pub fn ws(self: &Self) -> F {
         (F::from_usize(self.ns).unwrap() - F::one())/F::from_f32(2f32).unwrap() + self.offset_s
     }
@@ -47,7 +49,7 @@ impl<F: Float + FromPrimitive> ImageGeometry<F> {
         (s, t)
     }
 
-    pub fn save_fld<P: AsRef<Path>>(self: &Self, buf: &[F], path: P) -> Result<(), ()> {
+    fn save_fld<P: AsRef<Path>>(self: &Self, buf: &[F], path: P) -> Result<(), ()> {
         let mut file = if let Ok(f) = File::create(path) {
             f
         } else {
@@ -60,7 +62,7 @@ impl<F: Float + FromPrimitive> ImageGeometry<F> {
         }
     }
 
-    pub fn load_fld<P: AsRef<Path>>(self: &Self, path: P) -> Result<Vec<F>, ()> {
+    fn load_fld<P: AsRef<Path>>(self: &Self, path: P) -> Result<Vec<F>, ()> {
         let mut file = if let Ok(f) = self::avsfld::AVSFile::open(&path) {
             f
         } else {
@@ -69,6 +71,47 @@ impl<F: Float + FromPrimitive> ImageGeometry<F> {
         match file.read() {
             Ok(tr) => Ok(tr),
             Err(_) => Err(()),
+        }
+    }
+
+    fn save_image<P: AsRef<Path>>(self: &Self, buf: &[F], path: P) -> Result<(), ()> {
+        let mut min_val = buf[0].clone();
+        let mut max_val = buf[0].clone();
+        for &b in buf.iter() {
+            if b < min_val {
+                min_val = b.clone();
+            }
+            if b > max_val {
+                max_val = b.clone();
+            }
+        }
+
+        let image_f32 = buf.iter().map(|&f| {
+            let v = (f - min_val)/(max_val - min_val)*F::from_u8(255).unwrap();
+            F::to_u8(&v).unwrap()
+        }).collect();
+
+        let image: ImageBuffer<Luma<u8>, Vec<u8>> = 
+            ImageBuffer::from_raw(self.ns as u32, self.nt as u32, image_f32)
+                .expect("logic error -- buffer not big enough");
+        match image.save(path) {
+            Ok(()) => Ok(()),
+            Err(_) => Err(()),
+        }
+    }
+
+    fn load_image<P: AsRef<Path>>(self: &Self, path: P) -> Result<Vec<F>, ()> {
+        let dyn_image = if let Ok(dyn_image) = open(path) {
+            dyn_image
+        } else {
+            return Err(());
+        };
+        if let DynamicImage::ImageLuma8(gray_image) = dyn_image.grayscale() {
+            let raw = gray_image.into_raw();
+            let tr = raw.into_iter().map(|byte| F::from_u8(byte).unwrap()).collect();
+            Ok(tr)
+        } else {
+            panic!("Failed conversion to grayscale?");
         }
     }
 }
@@ -82,6 +125,7 @@ impl<F: Float + FromPrimitive> Geometry<F> for ImageGeometry<F> {
         if let Some(extension) = path.as_ref().extension() {
             match extension.to_str() {
                 Some("fld") => self.save_fld(buf, &path),
+                Some("png") => self.save_image(buf, &path),
                 _ => Err(()),
             }
         } else {
@@ -93,6 +137,7 @@ impl<F: Float + FromPrimitive> Geometry<F> for ImageGeometry<F> {
         if let Some(extension) = path.as_ref().extension() {
             match extension.to_str() {
                 Some("fld") => self.load_fld(&path),
+                Some("bmp") | Some("png") | Some("tif") | Some("tiff") => self.load_image(&path),
                 _ => Err(()),
             }
         } else {

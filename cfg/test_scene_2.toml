@@ -6,5 +6,5 @@ config = 'geometries/100mm3.toml'
 name = 'main_camera'
 config = 'cameras/test_simple.toml'
 position = { x = 25.0, y = 0.0, z = -500.0 }
-data = 'test.fld'
+data = 'test.png'
 

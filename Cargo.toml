@@ -33,6 +33,9 @@ version = "0.0.5"
 [dependencies.avsfld]
 git = "https://github.com/greyhill/avsfldrs"
 
+[dependencies.image]
+version = '0.10.0'
+
 [[bin]]
 name = "render_phantom"
 path = "rs/bin/render_phantom.rs"
