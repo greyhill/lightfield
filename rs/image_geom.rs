@@ -1,6 +1,7 @@
 extern crate num;
 extern crate toml;
 extern crate byteorder;
+extern crate avsfld;
 use serialize::*;
 use cl_traits::*;
 use geom::*;
@@ -8,6 +9,7 @@ use self::toml::*;
 use self::num::{Float, FromPrimitive, ToPrimitive};
 use self::byteorder::*;
 use std::path::Path;
+use std::fs::File;
 
 /// Pixel or plane geometry
 #[derive(Clone, Debug)]
@@ -44,6 +46,31 @@ impl<F: Float + FromPrimitive> ImageGeometry<F> {
         let t = (F::from_usize(it).unwrap() - self.wt())*self.dt;
         (s, t)
     }
+
+    pub fn save_fld<P: AsRef<Path>>(self: &Self, buf: &[F], path: P) -> Result<(), ()> {
+        let mut file = if let Ok(f) = File::create(path) {
+            f
+        } else {
+            return Err(());
+        };
+        let sizes = [self.ns, self.nt];
+        match self::avsfld::AVSFile::write(&mut file, &sizes, buf) {
+            Ok(()) => Ok(()),
+            Err(_) => Err(()),
+        }
+    }
+
+    pub fn load_fld<P: AsRef<Path>>(self: &Self, path: P) -> Result<Vec<F>, ()> {
+        let mut file = if let Ok(f) = self::avsfld::AVSFile::open(&path) {
+            f
+        } else {
+            return Err(())
+        };
+        match file.read() {
+            Ok(tr) => Ok(tr),
+            Err(_) => Err(()),
+        }
+    }
 }
 
 impl<F: Float + FromPrimitive> Geometry<F> for ImageGeometry<F> {
@@ -52,11 +79,25 @@ impl<F: Float + FromPrimitive> Geometry<F> for ImageGeometry<F> {
     }
 
     fn save<P: AsRef<Path>>(self: &Self, buf: &[F], path: P) -> Result<(), ()> {
-        unimplemented!()
+        if let Some(extension) = path.as_ref().extension() {
+            match extension.to_str() {
+                Some("fld") => self.save_fld(buf, &path),
+                _ => Err(()),
+            }
+        } else {
+            Err(())
+        }
     }
 
     fn load<P: AsRef<Path>>(self: &Self, path: P) -> Result<Vec<F>, ()> {
-        unimplemented!()
+        if let Some(extension) = path.as_ref().extension() {
+            match extension.to_str() {
+                Some("fld") => self.load_fld(&path),
+                _ => Err(()),
+            }
+        } else {
+            Err(())
+        }
     }
 }
 
