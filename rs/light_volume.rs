@@ -27,6 +27,7 @@ pub struct LightVolume<F: Float> {
     pub offset_x: F,
     pub offset_y: F,
     pub offset_z: F,
+    pub opaque: bool,
 }
 
 impl<F: Float + FromPrimitive> LightVolume<F> {
@@ -129,6 +130,11 @@ impl<F: Float + ToPrimitive + FromPrimitive> ClBuffer for LightVolume<F> {
         buf.write_f32::<LittleEndian>(F::to_f32(&self.wx()).unwrap()).unwrap();
         buf.write_f32::<LittleEndian>(F::to_f32(&self.wy()).unwrap()).unwrap();
         buf.write_f32::<LittleEndian>(F::to_f32(&self.wz()).unwrap()).unwrap();
+        if self.opaque {
+            buf.write_i32::<LittleEndian>(1i32).unwrap()
+        } else {
+            buf.write_i32::<LittleEndian>(0i32).unwrap()
+        }
     }
 }
 
@@ -143,8 +149,9 @@ impl<F: Float + FromPrimitive + ToPrimitive> Serialize for LightVolume<F> {
         let offset_x = map.get("offset_x");
         let offset_y = map.get("offset_y");
         let offset_z = map.get("offset_z");
+        let opaque = map.get("opaque");
 
-        match (nx, ny, nz, dx, dy, dz, offset_x, offset_y, offset_z) {
+        match (nx, ny, nz, dx, dy, dz, offset_x, offset_y, offset_z, opaque) {
             (Some(&Value::Integer(nx)),
              Some(&Value::Integer(ny)),
              Some(&Value::Integer(nz)),
@@ -153,7 +160,9 @@ impl<F: Float + FromPrimitive + ToPrimitive> Serialize for LightVolume<F> {
              Some(&Value::Float(dz)),
              Some(&Value::Float(offset_x)),
              Some(&Value::Float(offset_y)),
-             Some(&Value::Float(offset_z))) => Some(LightVolume{
+             Some(&Value::Float(offset_z)),
+             Some(&Value::Boolean(opaque)),
+             ) => Some(LightVolume{
                 nx: nx as usize,
                 ny: ny as usize,
                 nz: nz as usize,
@@ -163,6 +172,7 @@ impl<F: Float + FromPrimitive + ToPrimitive> Serialize for LightVolume<F> {
                 offset_x: F::from_f64(offset_x).unwrap(),
                 offset_y: F::from_f64(offset_y).unwrap(),
                 offset_z: F::from_f64(offset_z).unwrap(),
+                opaque: opaque,
             }),
             _ => None,
         }
@@ -179,6 +189,7 @@ impl<F: Float + FromPrimitive + ToPrimitive> Serialize for LightVolume<F> {
         tr.insert("offset_x".to_string(), Value::Float(F::to_f64(&self.offset_x).unwrap()));
         tr.insert("offset_y".to_string(), Value::Float(F::to_f64(&self.offset_y).unwrap()));
         tr.insert("offset_z".to_string(), Value::Float(F::to_f64(&self.offset_z).unwrap()));
+        tr.insert("opaque".to_string(), Value::Boolean(self.opaque));
         tr
     }
 }
@@ -195,6 +206,7 @@ fn test_light_volume() {
         offset_x = 4.0
         offset_y = 8.0
         offset_z = 12.0
+        opaque = false
     "#;
 
     let mut parser = Parser::new(test);
@@ -210,6 +222,7 @@ fn test_light_volume() {
     assert_eq!(v.offset_x, 4.0);
     assert_eq!(v.offset_y, 8.0);
     assert_eq!(v.offset_z, 12.0);
+    assert_eq!(v.opaque, false);
 
     let vv: LightVolume<f32> = LightVolume::from_map(&v.into_map()).unwrap();
 
@@ -222,5 +235,6 @@ fn test_light_volume() {
     assert_eq!(v.offset_x, vv.offset_x);
     assert_eq!(v.offset_y, vv.offset_y);
     assert_eq!(v.offset_z, vv.offset_z);
+    assert_eq!(v.opaque, vv.opaque);
 }
 

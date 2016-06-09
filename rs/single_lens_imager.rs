@@ -37,6 +37,8 @@ impl<F: Float + FromPrimitive> SingleLensVolumeImager<F> {
             plane: plane.clone(),
             to_plane: Optics::translation(&camera.distance_detector_lens),
         };
+        let (fx, fy) = camera.lens.optics().compose(&detector_lfg.to_plane).focused_distance();
+        println!("{} {}", F::to_f32(&fx).unwrap(), F::to_f32(&fy).unwrap());
 
         // TODO
         assert!(rotation.is_none());

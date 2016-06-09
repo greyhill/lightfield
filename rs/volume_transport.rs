@@ -426,6 +426,7 @@ fn test_volume_dirac() {
         offset_x: 0.5,
         offset_y: 2.9,
         offset_z: 0.0,
+        opaque: false,
     };
 
     let dst_geom = ImageGeometry{
@@ -503,6 +504,7 @@ fn test_volume_pillbox() {
         offset_x: 0.5,
         offset_y: 2.9,
         offset_z: 0.0,
+        opaque: false,
     };
 
     let dst_geom = ImageGeometry{

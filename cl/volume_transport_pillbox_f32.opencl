@@ -120,7 +120,14 @@ kernel void volume_forw_s(
     const int write_coord = coord_cache[local_id_t];
     const float write_val = value_cache[local_id_t];
     if(write_coord >= 0) {
-        dst[write_coord] += write_val;
+        const float cval = dst[write_coord];
+        if(volume_geom->opaque) {
+            if(fabs(cval) < fabs(write_val)) {
+                dst[write_coord] = write_val;
+            }
+        } else {
+            dst[write_coord] = cval + write_val;
+        }
     }
 }
 

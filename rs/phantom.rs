@@ -109,6 +109,7 @@ fn test_phantom_renderer() {
         offset_x: 1.0,
         offset_y: 2.0,
         offset_z: 3.0,
+        opaque: false,
     };
 
     let mut v_buf = vg.zeros_buf(&queue).unwrap();

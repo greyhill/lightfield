@@ -16,6 +16,8 @@ struct LightVolume {
     float wx;
     float wy;
     float wz;
+
+    int opaque;
 };
 typedef constant struct LightVolume* LightVolume;
 
