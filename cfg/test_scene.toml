@@ -6,10 +6,12 @@ config = "test_volume.toml"
 name = "focal0"
 config = "cameras/test_focal.toml"
 position = { x = 0.0, y = 0.0, z = -500.0 }
+data = "test0.png"
 
 [[camera]]
 name = "focal1"
 config = "cameras/test_focal.toml"
+data = "test1.fld"
 [camera.position]
 x = 50.0
 y = 60.0

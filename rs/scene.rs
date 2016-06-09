@@ -56,7 +56,7 @@ pub fn table_from_file<P: AsRef<Path>>(path: P) -> Option<Table> {
 pub struct SceneCamera<F: Float> {
     pub name: String,
     pub config: Table,
-    pub data_path: Option<PathBuf>,
+    pub data_path: PathBuf,
     pub position: Vector3<F>,
     pub rotation: Option<Rotation3<F>>,
 }
@@ -95,13 +95,10 @@ impl<F: Float + FromPrimitive + ToPrimitive> SceneCamera<F> {
 
         let data_path = match table.get("data") {
             Some(&Value::String(ref data_path_ext)) => {
-                Some(path_from(&root_path, data_path_ext))
-            },
-            None => {
-                None
+                path_from(&root_path, data_path_ext)
             },
             _ => {
-                println!("Camera data can be either unlisted or a path");
+                println!("No camera data path given");
                 return None;
             },
         };
@@ -135,7 +132,7 @@ impl<F: Float + FromPrimitive + ToPrimitive> SceneCamera<F> {
 #[derive(Clone, Debug)]
 pub struct SceneObject {
     pub config: Table,
-    pub data_path: Option<PathBuf>,
+    pub data_path: PathBuf,
 }
 
 impl SceneObject {
@@ -162,10 +159,9 @@ impl SceneObject {
         };
 
         let data_path = match table.get("data") {
-            Some(&Value::String(ref path_ext)) => Some(path_from(&root_path, path_ext)),
-            None => None,
+            Some(&Value::String(ref path_ext)) => path_from(&root_path, path_ext),
             _ => {
-                println!("object.data field was not a String?");
+                println!("object.data field was not a String");
                 return None;
             },
         };
