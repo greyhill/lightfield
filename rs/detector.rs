@@ -4,6 +4,8 @@ use serialize::*;
 use self::num::{Float, FromPrimitive, ToPrimitive};
 use self::toml::*;
 use image_geom::*;
+use geom::*;
+use std::path::Path;
 
 /// Photodetector
 #[derive(Clone, Debug)]
@@ -14,6 +16,20 @@ pub struct Detector<F: Float> {
     pub dt: F,
     pub offset_s: F,
     pub offset_t: F,
+}
+
+impl<F: Float + FromPrimitive> Geometry<F> for Detector<F> {
+    fn shape(self: &Self) -> Vec<usize> {
+        vec![self.ns, self.nt]
+    }
+
+    fn save<P: AsRef<Path>>(self: &Self, buf: &[F], path: P) -> Result<(), ()> {
+        self.image_geometry().save(buf, path)
+    }
+
+    fn load<P: AsRef<Path>>(self: &Self, path: P) -> Result<Vec<F>, ()> {
+        self.image_geometry().load(path)
+    }
 }
 
 impl<F: Float> Detector<F> {

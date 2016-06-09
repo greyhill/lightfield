@@ -37,3 +37,7 @@ git = "https://github.com/greyhill/avsfldrs"
 name = "render_phantom"
 path = "rs/bin/render_phantom.rs"
 
+[[bin]]
+name = "generate_data"
+path = "rs/bin/generate_data.rs"
+

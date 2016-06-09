@@ -1,6 +1,7 @@
 extern crate num;
 extern crate toml;
 extern crate nalgebra as na;
+extern crate proust;
 use self::toml::*;
 use std::path::*;
 use isometry::*;

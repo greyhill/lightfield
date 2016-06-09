@@ -6,28 +6,28 @@ use self::proust::*;
 use light_volume::*;
 use self::num::{FromPrimitive, Float};
 use self::nalgebra::{Rotation3, Vector3};
-use single_lens_camera::*;
 use angular_plane::*;
 use volume_transport::*;
 use optics::*;
 use light_field_geom::*;
+use single_lens_camera::*;
+use detector::*;
 
 /// Implementation of an imager for a volume
 pub struct SingleLensVolumeImager<F: Float + FromPrimitive> {
     xport: VolumeTransport<F>,
     plane: AngularPlane<F>,
-    queue: CommandQueue,
+    detector: Detector<F>,
 }
 
-impl<F: Float + FromPrimitive> Imager<F, LightVolume<F>, SingleLensCamera<F>>
-for SingleLensVolumeImager<F> {
-    fn new(geom: LightVolume<F>,
-           camera: SingleLensCamera<F>,
-           position: Vector3<F>,
-           rotation: Option<Rotation3<F>>,
-           na: usize,
-           basis: AngularBasis,
-           queue: CommandQueue) -> Result<Self, Error> {
+impl<F: Float + FromPrimitive> SingleLensVolumeImager<F> {
+    pub fn new(geom: LightVolume<F>,
+               camera: SingleLensCamera<F>,
+               position: Vector3<F>,
+               rotation: Option<Rotation3<F>>,
+               na: usize,
+               basis: AngularBasis,
+               queue: CommandQueue) -> Result<Self, Error> {
         // angular plane on main lens
         let plane = camera.lens.as_angular_plane(basis, na);
 
@@ -66,12 +66,20 @@ for SingleLensVolumeImager<F> {
         Ok(SingleLensVolumeImager{
             xport: xport,
             plane: plane,
-            queue: queue,
+            detector: camera.detector,
         })
     }
+}
 
+
+impl<F: Float + FromPrimitive> Imager<F, LightVolume<F>>
+for SingleLensVolumeImager<F> {
     fn na(self: &Self) -> usize {
         self.plane.s.len()
+    }
+
+    fn detector(self: &Self) -> &Detector<F> {
+        &self.detector
     }
 
     fn forw_angle(self: &mut Self,
