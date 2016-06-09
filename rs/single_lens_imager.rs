@@ -43,7 +43,7 @@ impl<F: Float + FromPrimitive> SingleLensVolumeImager<F> {
 
         // geometry of the object in the camera's optical frame
         // TODO: this will require some rejiggering when I add rotations
-        let distance_to_object = position.z;
+        let distance_to_object = -position.z;
         let camera_ox = position.x / geom.dx;
         let camera_oy = position.y / geom.dy;
 
