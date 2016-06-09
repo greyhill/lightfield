@@ -1,0 +1,10 @@
+[object]
+data = './torch.fld'
+config = '100mm3.toml'
+
+[[camera]]
+name = 'main_camera'
+config = 'cameras/test_simplemera.toml'
+position = { x = 25.0, y = 0.0, z = -500.0 }
+data = 'test.fld'
+
