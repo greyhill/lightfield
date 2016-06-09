@@ -17,7 +17,6 @@ fn path_from<P: AsRef<Path>, M: AsRef<Path>>(root_path: P, more: M) -> PathBuf {
     let mut tr = PathBuf::from(root_path.as_ref());
     tr.pop();
     tr.push(more);
-    println!("derived path {:?}", tr);
     tr
 }
 
