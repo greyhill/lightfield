@@ -15,6 +15,7 @@ use light_field_geom::*;
 /// Implementation of an imager for a volume
 pub struct SingleLensVolumeImager<F: Float + FromPrimitive> {
     xport: VolumeTransport<F>,
+    plane: AngularPlane<F>,
     queue: CommandQueue,
 }
 
@@ -64,8 +65,13 @@ for SingleLensVolumeImager<F> {
 
         Ok(SingleLensVolumeImager{
             xport: xport,
+            plane: plane,
             queue: queue,
         })
+    }
+
+    fn na(self: &Self) -> usize {
+        self.plane.s.len()
     }
 
     fn forw_angle(self: &mut Self,
