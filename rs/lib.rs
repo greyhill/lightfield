@@ -79,3 +79,6 @@ pub use single_lens_imager::*;
 mod mask;
 pub use mask::*;
 
+mod coded_aperture_camera;
+pub use coded_aperture_camera::*;
+
