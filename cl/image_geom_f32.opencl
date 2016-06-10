@@ -41,3 +41,17 @@ kernel void image_zero(
     img[is + geom->ns*it] = 0.f;
 }
 
+kernel void apply_mask(
+        ImageGeometry geom,
+        global const float* mask,
+        global float* img) {
+    int is = get_global_id(0);
+    int it = get_global_id(1);
+
+    if(is >= geom->ns || it >= geom->nt) {
+        return;
+    }
+
+    img[is + geom->ns*it] *= mask[is + geom->ns*it];
+}
+

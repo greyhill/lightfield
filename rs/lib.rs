@@ -76,3 +76,6 @@ pub use imager::*;
 mod single_lens_imager;
 pub use single_lens_imager::*;
 
+mod mask;
+pub use mask::*;
+
