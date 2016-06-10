@@ -59,3 +59,62 @@ impl<F: Float + FromPrimitive + ToPrimitive> Serialize for CodedApertureCamera<F
     }
 }
 
+#[test]
+fn test_coded_aperture() {
+    let test = r#"
+    distance_lens_mask = 32.0
+    distance_detector_mask = 2.0
+
+    [mask_geometry]
+    ns = 300
+    nt = 200
+    ds = 1e-2
+    dt = 1e-3
+    offset_s = 0.5
+    offset_t = 0.25
+
+    [detector]
+    ns = 1024
+    nt = 2048
+    ds = 5e-2
+    dt = 5e-3
+    offset_s = 1.0
+    offset_t = 2.0
+
+    [lens]
+    center_s = 3.0
+    center_t = -5.2
+    radius_s = 4.0
+    radius_t = 5.2
+    focal_length_s = 12.0
+    focal_length_t = 24.0
+    "#;
+
+    let map = Parser::new(test).parse().unwrap();
+    let camera: CodedApertureCamera<f32> = CodedApertureCamera::from_map(&map).unwrap();
+
+    assert_eq!(camera.distance_lens_mask, 32.0);
+    assert_eq!(camera.distance_detector_mask, 2.0);
+
+    assert_eq!(camera.mask_geometry.ns, 300);
+    assert_eq!(camera.mask_geometry.nt, 200);
+    assert_eq!(camera.mask_geometry.ds, 1e-2);
+    assert_eq!(camera.mask_geometry.dt, 1e-3);
+    assert_eq!(camera.mask_geometry.offset_s, 0.5);
+    assert_eq!(camera.mask_geometry.offset_t, 0.25);
+
+    assert_eq!(camera.detector.ns, 1024);
+    assert_eq!(camera.detector.nt, 2048);
+    assert_eq!(camera.detector.ds, 5e-2);
+    assert_eq!(camera.detector.dt, 5e-3);
+    assert_eq!(camera.detector.offset_s, 1.0);
+    assert_eq!(camera.detector.offset_t, 2.0);
+
+    assert_eq!(camera.lens.center_s, 3.0);
+    assert_eq!(camera.lens.center_t, -5.2);
+    assert_eq!(camera.lens.radius_s, 4.0);
+    assert_eq!(camera.lens.radius_t, 5.2);
+    assert_eq!(camera.lens.focal_length_s, 12.0);
+    assert_eq!(camera.lens.focal_length_t, 24.0);
+}
+
