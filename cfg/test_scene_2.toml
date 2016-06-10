@@ -8,3 +8,9 @@ config = 'cameras/test_simple.toml'
 position = { x = 25.0, y = 0.0, z = -500.0 }
 data = 'test.png'
 
+[[camera]]
+name = 'coded_camera'
+config = 'cameras/test_coded.toml'
+position = { x = 25.0, y = 0.0, z = -500.0 }
+data = 'coded.png'
+

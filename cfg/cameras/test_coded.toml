@@ -1,0 +1,28 @@
+distance_lens_mask = 31.0
+distance_detector_mask = 1.0
+mask_path = 'test_coded_mask.png'
+
+[mask_geometry]
+ns = 256
+nt = 256
+ds = 20e-3
+dt = 20e-3
+offset_s = 0.0
+offset_t = 0.0
+
+[lens]
+focal_length_s = 30.0
+focal_length_t = 30.0
+center_s = 0.0
+center_t = 0.0
+radius_s = 10.0
+radius_t = 10.0
+
+[detector]
+ns = 1024
+nt = 1024
+ds = 5e-3
+dt = 5e-3
+offset_s = 0.0
+offset_t = 0.0
+
