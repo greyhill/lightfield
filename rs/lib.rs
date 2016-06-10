@@ -82,3 +82,6 @@ pub use mask::*;
 mod coded_aperture_camera;
 pub use coded_aperture_camera::*;
 
+mod coded_aperture_imager;
+pub use coded_aperture_imager::*;
+

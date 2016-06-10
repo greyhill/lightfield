@@ -59,11 +59,19 @@ pub struct SceneCamera<F: Float> {
     pub data_path: PathBuf,
     pub position: Vector3<F>,
     pub rotation: Option<Rotation3<F>>,
+    pub config_path: PathBuf,
 }
 
 impl<F: Float + FromPrimitive + ToPrimitive> SceneCamera<F> {
     pub fn get_config(self: &Self) -> Option<CameraConfig<F>> {
-        CameraConfig::from_map(&self.config)
+        if let Some(mut cc) = CameraConfig::from_map(&self.config) {
+            if let Err(()) = cc.load_assets(&self.config_path) {
+                return None;
+            }
+            Some(cc)
+        } else {
+            None
+        }
     }
 
     fn from_toml<P: AsRef<Path>>(root_path: P, table: &Table) -> Option<Self> {
@@ -74,18 +82,18 @@ impl<F: Float + FromPrimitive + ToPrimitive> SceneCamera<F> {
             return None;
         };
 
-        let config = match table.get("config") {
+        let (config, config_path) = match table.get("config") {
             Some(&Value::String(ref config_path_ext)) => {
                 let path = path_from(&root_path, config_path_ext);
-                if let Some(config) = table_from_file(path) {
-                    config
+                if let Some(config) = table_from_file(&path) {
+                    (config, path.to_path_buf())
                 } else {
                     println!("Error parsing Camera config");
                     return None;
                 }
             },
             Some(&Value::Table(ref tab)) => {
-                tab.clone()
+                (tab.clone(), root_path.as_ref().to_path_buf())
             },
             _ => {
                 println!("Camera was listed without a valid configuration");
@@ -124,6 +132,7 @@ impl<F: Float + FromPrimitive + ToPrimitive> SceneCamera<F> {
             data_path: data_path,
             position: position,
             rotation: None,
+            config_path: config_path,
         })
     }
 }

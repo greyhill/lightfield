@@ -13,10 +13,14 @@ use self::proust::Error as PError;
 use angular_plane::*;
 use imager::*;
 use single_lens_imager::*;
+use coded_aperture_camera::*;
+use coded_aperture_imager::*;
+use std::path::Path;
 
 #[derive(Clone, Debug)]
 pub enum CameraConfig<F: Float> {
     SingleLensCamera(SingleLensCamera<F>),
+    CodedApertureCamera(CodedApertureCamera<F>),
 }
 
 impl<F: 'static + Float + FromPrimitive> CameraConfig<F> {
@@ -29,13 +33,22 @@ impl<F: 'static + Float + FromPrimitive> CameraConfig<F> {
                          queue: CommandQueue) -> Result<Box<Imager<F, LightVolume<F>>>, PError> {
         match self {
             &CameraConfig::SingleLensCamera(ref slc) => Ok(Box::new(try!(SingleLensVolumeImager::new(
-                light_volume,
-                slc.clone(),
-                camera_position,
-                camera_rotation,
-                na,
-                basis,
-                queue,
+                            light_volume,
+                            slc.clone(),
+                            camera_position,
+                            camera_rotation,
+                            na,
+                            basis,
+                            queue,
+            )))),
+            &CameraConfig::CodedApertureCamera(ref cac) => Ok(Box::new(try!(CodedApertureVolumeImager::new(
+                            light_volume,
+                            cac.clone(),
+                            camera_position,
+                            camera_rotation,
+                            na,
+                            basis,
+                            queue,
             )))),
         }
     }
@@ -44,8 +57,10 @@ impl<F: 'static + Float + FromPrimitive> CameraConfig<F> {
 impl<F: Float + FromPrimitive + ToPrimitive> Serialize for CameraConfig<F> {
     fn from_map(map: &Table) -> Option<Self> {
         let slc = SingleLensCamera::<F>::from_map(map);
-        match slc {
-            Some(slc) => Some(CameraConfig::SingleLensCamera(slc)),
+        let cac = CodedApertureCamera::<F>::from_map(map);
+        match (slc, cac) {
+            (Some(slc), _) => Some(CameraConfig::SingleLensCamera(slc)),
+            (None, Some(cac)) => Some(CameraConfig::CodedApertureCamera(cac)),
             _ => None,
         }
     }
@@ -53,6 +68,14 @@ impl<F: Float + FromPrimitive + ToPrimitive> Serialize for CameraConfig<F> {
     fn into_map(self: &Self) -> Table {
         match self {
             &CameraConfig::SingleLensCamera(ref slc) => slc.into_map(),
+            &CameraConfig::CodedApertureCamera(ref cac) => cac.into_map(),
+        }
+    }
+
+    fn load_assets<P: AsRef<Path>>(self: &mut Self, path: P) -> Result<(), ()> {
+        match self {
+            &mut CameraConfig::SingleLensCamera(ref mut slc) => slc.load_assets(path),
+            &mut CameraConfig::CodedApertureCamera(ref mut cac) => cac.load_assets(path)
         }
     }
 }

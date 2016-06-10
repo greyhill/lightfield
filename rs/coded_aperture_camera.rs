@@ -6,6 +6,8 @@ use self::toml::*;
 use lens::*;
 use detector::*;
 use image_geom::*;
+use std::path::Path;
+use geom::*;
 
 /// Description of a coded aperture camera
 #[derive(Clone, Debug)]
@@ -15,6 +17,8 @@ pub struct CodedApertureCamera<F: Float> {
     pub mask_geometry: ImageGeometry<F>,
     pub distance_lens_mask: F,
     pub distance_detector_mask: F,
+    pub mask_path: String,
+    pub mask: Option<Vec<F>>,
 }
 
 impl<F: Float + FromPrimitive + ToPrimitive> Serialize for CodedApertureCamera<F> {
@@ -24,13 +28,15 @@ impl<F: Float + FromPrimitive + ToPrimitive> Serialize for CodedApertureCamera<F
         let mask_geometry = map.get("mask_geometry");
         let distance_lens_mask = map.get("distance_lens_mask");
         let distance_detector_mask = map.get("distance_detector_mask");
+        let mask_path = map.get("mask_path");
 
-        match (lens, detector, mask_geometry, distance_lens_mask, distance_detector_mask) {
+        match (lens, detector, mask_geometry, distance_lens_mask, distance_detector_mask, mask_path) {
             (Some(&Value::Table(ref lens_tab)),
              Some(&Value::Table(ref det_tab)),
              Some(&Value::Table(ref mask_tab)),
              Some(&Value::Float(distance_lens_mask)),
-             Some(&Value::Float(distance_detector_mask))) => {
+             Some(&Value::Float(distance_detector_mask)),
+             Some(&Value::String(ref mask_path))) => {
                 match (Lens::from_map(lens_tab), Detector::from_map(det_tab), ImageGeometry::from_map(mask_tab)) {
                     (Some(lens), Some(det), Some(mask_geom)) => {
                         Some(CodedApertureCamera{
@@ -39,6 +45,8 @@ impl<F: Float + FromPrimitive + ToPrimitive> Serialize for CodedApertureCamera<F
                             mask_geometry: mask_geom,
                             distance_lens_mask: F::from_f64(distance_lens_mask).unwrap(),
                             distance_detector_mask: F::from_f64(distance_detector_mask).unwrap(),
+                            mask_path: mask_path.clone(),
+                            mask: None,
                         })
                     },
                     _ => None,
@@ -55,7 +63,25 @@ impl<F: Float + FromPrimitive + ToPrimitive> Serialize for CodedApertureCamera<F
         tr.insert("mask_geometry".to_string(), Value::Table(self.mask_geometry.into_map()));
         tr.insert("distance_lens_mask".to_string(), Value::Float(F::to_f64(&self.distance_lens_mask).unwrap()));
         tr.insert("distance_detector_mask".to_string(), Value::Float(F::to_f64(&self.distance_detector_mask).unwrap()));
+        tr.insert("mask_path".to_string(), Value::String(self.mask_path.clone()));
         tr
+    }
+
+    fn load_assets<P: AsRef<Path>>(self: &mut Self, root_path: P) -> Result<(), ()> {
+        if self.mask.is_none() {
+            let mut pb = root_path.as_ref().to_path_buf();
+            pb.pop(); // pop off configuration file name
+            pb.push(&self.mask_path); // get path to mask file
+            match self.mask_geometry.load(&pb) {
+                Ok(m) => {
+                    self.mask = Some(m);
+                    Ok(())
+                },
+                Err(_) => Err(())
+            }
+        } else {
+            Ok(())
+        }
     }
 }
 
@@ -64,6 +90,7 @@ fn test_coded_aperture() {
     let test = r#"
     distance_lens_mask = 32.0
     distance_detector_mask = 2.0
+    mask_path = "../mask.fld"
 
     [mask_geometry]
     ns = 300
