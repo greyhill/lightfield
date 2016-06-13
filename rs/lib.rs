@@ -85,3 +85,6 @@ pub use coded_aperture_camera::*;
 mod coded_aperture_imager;
 pub use coded_aperture_imager::*;
 
+mod lens_array;
+pub use lens_array::*;
+

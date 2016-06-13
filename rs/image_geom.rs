@@ -24,6 +24,22 @@ pub struct ImageGeometry<F: Float> {
     pub offset_t: F,
 }
 
+fn fmin<F: Float>(x: F, y: F) -> F {
+    if x < y {
+        x
+    } else {
+        y
+    }
+}
+
+fn fmax<F: Float>(x: F, y: F) -> F {
+    if x > y {
+        x
+    } else {
+        y
+    }
+}
+
 impl<F: Float + ToPrimitive + FromPrimitive> ImageGeometry<F> {
     pub fn ws(self: &Self) -> F {
         (F::from_usize(self.ns).unwrap() - F::one())/F::from_f32(2f32).unwrap() + self.offset_s
@@ -47,6 +63,44 @@ impl<F: Float + ToPrimitive + FromPrimitive> ImageGeometry<F> {
         let s = (F::from_usize(is).unwrap() - self.ws())*self.ds;
         let t = (F::from_usize(it).unwrap() - self.wt())*self.dt;
         (s, t)
+    }
+
+    /// Returns (s0, s1, t0, t1) sptial bounds for this geometry
+    pub fn spatial_bounds(self: &Self) -> (F, F, F, F) {
+        let (s0, t0, _, _) = self.pixel_bounds(0, 0);
+        let (_, _, s1, t1) = self.pixel_bounds(self.ns - 1, self.nt - 1);
+        (s0, s1, t0, t1)
+    }
+
+    pub fn is2s(self: &Self, is: usize) -> F {
+        (F::from_usize(is).unwrap() - self.ws())*self.ds
+    }
+
+    pub fn it2t(self: &Self, it: usize) -> F {
+        (F::from_usize(it).unwrap() - self.wt())*self.dt
+    }
+
+    pub fn s2is(self: &Self, s: F) -> F {
+        s/self.ds + self.ws() + F::from_f32(0.5f32).unwrap()
+    }
+
+    pub fn t2it(self: &Self, t: F) -> F {
+        t/self.dt + self.wt() + F::from_f32(0.5f32).unwrap()
+    }
+
+    /// Returns (is0, is1, it0, it1) bounds for the pixel rectangular region
+    /// bounding the given spatial coordinates
+    pub fn region_pixels(self: &Self, s0: F, s1: F, t0: F, t1: F) -> (usize, usize, usize, usize) {
+        let ns = F::from_usize(self.ns).unwrap();
+        let nt = F::from_usize(self.nt).unwrap();
+        let is0 = fmax(F::zero(), fmin(self.s2is(s0), ns));
+        let is1 = fmax(F::zero(), fmin(self.s2is(s1), ns));
+        let it0 = fmax(F::zero(), fmin(self.t2it(t0), nt));
+        let it1 = fmax(F::zero(), fmin(self.t2it(t1), nt));
+        (F::to_usize(&is0).unwrap(),
+         F::to_usize(&is1).unwrap(),
+         F::to_usize(&it0).unwrap(),
+         F::to_usize(&it1).unwrap())
     }
 
     fn save_fld<P: AsRef<Path>>(self: &Self, buf: &[F], path: P) -> Result<(), ()> {
