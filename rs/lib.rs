@@ -88,3 +88,6 @@ pub use coded_aperture_imager::*;
 mod lens_array;
 pub use lens_array::*;
 
+mod plenoptic_camera;
+pub use plenoptic_camera::*;
+
