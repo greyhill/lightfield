@@ -61,3 +61,25 @@ kernel void apply_mask(
     img[is + geom->ns*it] *= mask_val;
 }
 
+kernel void apply_mask_to(
+        ImageGeometry geom,
+        global const float* mask,
+        global const float* img,
+        global float* out) {
+    const int is = get_global_id(0);
+    const int it = get_global_id(1);
+
+    if(is >= geom->ns || it >= geom->nt) {
+        return;
+    }
+
+    // trick: masks with entries > 1 are clamped to 1; sometimes these
+    // values are used to store extra information and the numbers [0..1]
+    // are used for masking
+    float mask_val = mask[is + geom->ns*it];
+    mask_val = fmin(1.f, mask_val);
+
+    out[is + geom->ns*it] = img[is + geom->ns*it] * mask_val;
+}
+
+
