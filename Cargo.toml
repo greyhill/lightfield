@@ -44,3 +44,7 @@ path = "rs/bin/render_phantom.rs"
 name = "generate_data"
 path = "rs/bin/generate_data.rs"
 
+[[bin]]
+name = "microlens_tool"
+path = "rs/bin/microlens_tool.rs"
+

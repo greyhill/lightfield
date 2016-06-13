@@ -25,6 +25,77 @@ impl<F: Float + FromPrimitive> Lens<F> {
         Optics::anisotropic_lens(&self.center_s, &self.center_t,
                                  &self.focal_length_s, &self.focal_length_t)
     }
+
+    pub fn tesselate_quad_1(ig: &ImageGeometry<F>, lens: &Self) -> Vec<Self> {
+        let mut tr = Vec::new();
+        let mut t = lens.radius_t;
+        let height = F::from_usize(ig.nt).unwrap() * ig.dt;
+        let width = F::from_usize(ig.ns).unwrap() * ig.ds;
+
+        loop {
+            let mut s = lens.radius_s;
+            loop {
+                s = s + lens.radius_s + lens.radius_s;
+
+                let mut li = lens.clone();
+                li.center_s = s;
+                li.center_t = t;
+                tr.push(li);
+
+                if s > width - lens.radius_s {
+                    break
+                }
+            }
+
+            t = t + lens.radius_t + lens.radius_t;
+            if t > height - lens.radius_t {
+                break
+            }
+        }
+        tr
+    }
+
+    pub fn tesselate_quad_2(ig: &ImageGeometry<F>, 
+                            lens1: &Self,
+                            lens2: &Self,) -> Vec<Self> {
+        assert!(lens1.radius_s == lens2.radius_s);
+        assert!(lens1.radius_t == lens2.radius_t);
+
+        let mut tr = Vec::new();
+        let height = F::from_usize(ig.nt).unwrap() * ig.dt;
+        let width = F::from_usize(ig.ns).unwrap() * ig.ds;
+
+        let mut t = lens1.radius_t;
+        let mut it = 0;
+        loop {
+            let mut s = lens1.radius_s;
+            let mut is = 0;
+            loop {
+                s = s + lens1.radius_s + lens1.radius_s;
+                is += 1;
+
+                let mut li = if is + it % 2 == 0 {
+                    lens1.clone()
+                } else {
+                    lens2.clone()
+                };
+                li.center_s = s;
+                li.center_t = t;
+                tr.push(li);
+
+                if s > width - lens1.radius_s {
+                    break
+                }
+            }
+
+            t = t + lens1.radius_t + lens1.radius_t;
+            it += 1;
+            if t > height - lens1.radius_t {
+                break
+            }
+        }
+        tr
+    }
 }
 
 impl<F: Float + FromPrimitive> BoundingGeometry<F> for Lens<F> {
