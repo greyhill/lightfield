@@ -54,7 +54,7 @@ impl<F: Float + FromPrimitive> CodedApertureVolumeImager<F> {
         // TODO
         assert!(rotation.is_none());
 
-        // maybe this good design?
+        // maybe this isn't good design?
         let mask = match camera.mask {
             Some(ref v) => try!(Mask::new(camera.mask_geometry.clone(), v, queue.clone())),
             None => panic!("CodedApertureVolumeImager::new called with unloaded mask"),
@@ -82,7 +82,7 @@ impl<F: Float + FromPrimitive> CodedApertureVolumeImager<F> {
                                                      mask_lfg.clone(),
                                                      optics_object_to_plane,
                                                      true, // overwrite_forw
-                                                     true, // overwrite_back
+                                                     false, // overwrite_back
                                                      false, // onto_detector
                                                      queue.clone()));
 
