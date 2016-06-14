@@ -5,7 +5,7 @@ use imager::*;
 use self::proust::*;
 use light_volume::*;
 use self::num::{FromPrimitive, Float};
-use self::nalgebra::{Rotation3, Vector3};
+use self::nalgebra::Vector3;
 use angular_plane::*;
 use volume_transport::*;
 use optics::*;
@@ -27,13 +27,9 @@ impl<F: Float + FromPrimitive> PlenopticVolumeImager<F> {
     pub fn new(geom: LightVolume<F>,
                camera: PlenopticCamera<F>,
                position: Vector3<F>,
-               rotation: Option<Rotation3<F>>,
                na: usize,
                basis: AngularBasis,
                queue: CommandQueue) -> Result<Self, Error> {
-        // TODO
-        assert!(rotation.is_none());
-
         // angular plane on main lens
         let plane = camera.lens.as_angular_plane(basis, na);
 
@@ -103,7 +99,6 @@ for PlenopticVolumeImager<F> {
                   view: &mut Mem,
                   ia: usize,
                   wait_for: &[Event]) -> Result<Event, Error> {
-        // TODO -- will need an extra step for non-identity rotation
         let mut tmp_copy = self.tmp.clone();
         let evt = try!(self.xport.forw(object, &mut tmp_copy, ia, wait_for));
         self.array.forw(&tmp_copy, view, ia, &[evt])
@@ -114,7 +109,6 @@ for PlenopticVolumeImager<F> {
                   object: &mut Mem,
                   ia: usize,
                   wait_for: &[Event]) -> Result<Event, Error> {
-        // TODO -- will need an extra step for non-identity rotation
         let mut tmp_copy = self.tmp.clone();
         let evt = try!(self.array.back(view, &mut tmp_copy, ia, wait_for));
         self.xport.back(&tmp_copy, object, ia, &[evt])

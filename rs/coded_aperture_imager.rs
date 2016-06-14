@@ -5,7 +5,7 @@ use imager::*;
 use self::proust::*;
 use light_volume::*;
 use self::num::{FromPrimitive, Float};
-use self::nalgebra::{Rotation3, Vector3};
+use self::nalgebra::Vector3;
 use angular_plane::*;
 use volume_transport::*;
 use optics::*;
@@ -30,7 +30,6 @@ impl<F: Float + FromPrimitive> CodedApertureVolumeImager<F> {
     pub fn new(geom: LightVolume<F>,
                camera: CodedApertureCamera<F>,
                position: Vector3<F>,
-               rotation: Option<Rotation3<F>>,
                na: usize,
                basis: AngularBasis,
                queue: CommandQueue) -> Result<Self, Error> {
@@ -51,9 +50,6 @@ impl<F: Float + FromPrimitive> CodedApertureVolumeImager<F> {
             to_plane: Optics::translation(&(camera.distance_lens_mask + camera.distance_detector_mask)),
         };
 
-        // TODO
-        assert!(rotation.is_none());
-
         // maybe this isn't good design?
         let mask = match camera.mask {
             Some(ref v) => try!(Mask::new(camera.mask_geometry.clone(), v, queue.clone())),
@@ -64,7 +60,6 @@ impl<F: Float + FromPrimitive> CodedApertureVolumeImager<F> {
         let tmp_buf = try!(camera.mask_geometry.zeros_buf(&queue));
 
         // geometry of the object in the camera's optical frame
-        // TODO: this will require some rejiggering when I add rotations
         let distance_to_object = -position.z;
         let camera_ox = position.x / geom.dx;
         let camera_oy = position.y / geom.dy;
@@ -123,7 +118,6 @@ for CodedApertureVolumeImager<F> {
                   view: &mut Mem,
                   ia: usize,
                   wait_for: &[Event]) -> Result<Event, Error> {
-        // TODO -- will need an extra step with non-zero rotation
         let mut tmp_copy = self.tmp_buf.clone();
         let mut evt = try!(self.volume_xport.forw(object, &mut tmp_copy, ia, wait_for));
         evt = try!(self.mask.apply_mask(&mut tmp_copy, &[evt]));
@@ -135,7 +129,6 @@ for CodedApertureVolumeImager<F> {
                   object: &mut Mem,
                   ia: usize,
                   wait_for: &[Event]) -> Result<Event, Error> {
-        // TODO -- will need an extra step with non-zero rotation
         let mut tmp_copy = self.tmp_buf.clone();
         let mut evt = try!(self.xport.back(view, &mut tmp_copy, ia, wait_for));
         evt = try!(self.mask.apply_mask(&mut tmp_copy, &[evt]));

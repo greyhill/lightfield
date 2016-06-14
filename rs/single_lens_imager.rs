@@ -5,7 +5,7 @@ use imager::*;
 use self::proust::*;
 use light_volume::*;
 use self::num::{FromPrimitive, Float};
-use self::nalgebra::{Rotation3, Vector3};
+use self::nalgebra::Vector3;
 use angular_plane::*;
 use volume_transport::*;
 use optics::*;
@@ -24,7 +24,6 @@ impl<F: Float + FromPrimitive> SingleLensVolumeImager<F> {
     pub fn new(geom: LightVolume<F>,
                camera: SingleLensCamera<F>,
                position: Vector3<F>,
-               rotation: Option<Rotation3<F>>,
                na: usize,
                basis: AngularBasis,
                queue: CommandQueue) -> Result<Self, Error> {
@@ -40,11 +39,7 @@ impl<F: Float + FromPrimitive> SingleLensVolumeImager<F> {
         let (fx, fy) = camera.lens.optics().compose(&detector_lfg.to_plane).focused_distance();
         println!("{} {}", F::to_f32(&fx).unwrap(), F::to_f32(&fy).unwrap());
 
-        // TODO
-        assert!(rotation.is_none());
-
         // geometry of the object in the camera's optical frame
-        // TODO: this will require some rejiggering when I add rotations
         let distance_to_object = -position.z;
         let camera_ox = position.x / geom.dx;
         let camera_oy = position.y / geom.dy;
@@ -89,7 +84,6 @@ for SingleLensVolumeImager<F> {
                   view: &mut Mem,
                   ia: usize,
                   wait_for: &[Event]) -> Result<Event, Error> {
-        // TODO -- will need an extra step with non-zero rotation
         self.xport.forw(object, view, ia, wait_for)
     }
 
@@ -99,7 +93,6 @@ for SingleLensVolumeImager<F> {
                   ia: usize,
                   wait_for: &[Event]) -> Result<Event, Error> {
         self.xport.back(view, object, ia, wait_for)
-        // TODO -- will need extra step with non-zero rotation
     }
 }
 
