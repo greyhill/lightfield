@@ -3,7 +3,7 @@ extern crate toml;
 extern crate nalgebra;
 extern crate proust;
 use self::num::{Float, FromPrimitive, ToPrimitive};
-use self::nalgebra::{Vector3, Rotation3};
+use self::nalgebra::{Vector3, Rotation3, BaseFloat, ApproxEq};
 use serialize::*;
 use single_lens_camera::*;
 use self::toml::*;
@@ -18,6 +18,8 @@ use coded_aperture_imager::*;
 use plenoptic_camera::*;
 use plenoptic_imager::*;
 use std::path::Path;
+use volume_rotation::*;
+use rotated_imager::*;
 
 #[derive(Clone, Debug)]
 pub enum CameraConfig<F: Float> {
@@ -26,7 +28,7 @@ pub enum CameraConfig<F: Float> {
     PlenopticCamera(PlenopticCamera<F>),
 }
 
-impl<F: 'static + Float + FromPrimitive> CameraConfig<F> {
+impl<F: 'static + Float + FromPrimitive + BaseFloat + ApproxEq<F>> CameraConfig<F> {
     pub fn volume_imager(self: &Self,
                          light_volume: LightVolume<F>,
                          camera_position: Vector3<F>,
@@ -34,32 +36,44 @@ impl<F: 'static + Float + FromPrimitive> CameraConfig<F> {
                          na: usize,
                          basis: AngularBasis,
                          queue: CommandQueue) -> Result<Box<Imager<F, LightVolume<F>>>, PError> {
-        match self {
-            &CameraConfig::SingleLensCamera(ref slc) => Ok(Box::new(try!(SingleLensVolumeImager::new(
-                            light_volume,
+        let (rotator, geom) = match camera_rotation {
+            Some(rot) => {
+                let rotator = try!(VolumeRotation::new(&rot, light_volume, queue.clone()));
+                let geom = rotator.dst_geom.clone();
+                (Some(rotator), geom)
+            },
+            None => {
+                (None, light_volume)
+            },
+        };
+
+        let internal_imager: Box<Imager<F, LightVolume<F>>> = match self {
+            &CameraConfig::SingleLensCamera(ref slc) => Box::new(try!(SingleLensVolumeImager::new(
+                            geom,
                             slc.clone(),
                             camera_position,
                             na,
                             basis,
-                            queue,
-            )))),
-            &CameraConfig::CodedApertureCamera(ref cac) => Ok(Box::new(try!(CodedApertureVolumeImager::new(
-                            light_volume,
+                            queue.clone(),
+            ))),
+            &CameraConfig::CodedApertureCamera(ref cac) => Box::new(try!(CodedApertureVolumeImager::new(
+                            geom,
                             cac.clone(),
                             camera_position,
                             na,
                             basis,
-                            queue,
-            )))),
-            &CameraConfig::PlenopticCamera(ref pc) => Ok(Box::new(try!(PlenopticVolumeImager::new(
-                            light_volume,
+                            queue.clone(),
+            ))),
+            &CameraConfig::PlenopticCamera(ref pc) => Box::new(try!(PlenopticVolumeImager::new(
+                            geom,
                             pc.clone(),
                             camera_position,
                             na,
                             basis,
-                            queue,
-            )))),
-        }
+                            queue.clone(),
+            ))),
+        };
+        Ok(Box::new(try!(RotatedVolumeImager::new(rotator, internal_imager, queue))))
     }
 }
 

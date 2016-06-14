@@ -5,7 +5,7 @@ extern crate proust;
 use self::toml::*;
 use std::path::*;
 use isometry::*;
-use self::na::{Rotation3, Vector3};
+use self::na::{Rotation3, Vector3, BaseFloat};
 use std::fs::File;
 use std::io::Read;
 use self::num::{Float, ToPrimitive, FromPrimitive};
@@ -53,7 +53,7 @@ pub fn table_from_file<P: AsRef<Path>>(path: P) -> Option<Table> {
 
 /// Description of a camera from a configuration file
 #[derive(Clone, Debug)]
-pub struct SceneCamera<F: Float> {
+pub struct SceneCamera<F: Float + BaseFloat> {
     pub name: String,
     pub config: Table,
     pub data_path: PathBuf,
@@ -62,7 +62,7 @@ pub struct SceneCamera<F: Float> {
     pub config_path: PathBuf,
 }
 
-impl<F: Float + FromPrimitive + ToPrimitive> SceneCamera<F> {
+impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> SceneCamera<F> {
     pub fn get_config(self: &Self) -> Option<CameraConfig<F>> {
         if let Some(mut cc) = CameraConfig::from_map(&self.config) {
             if let Err(()) = cc.load_assets(&self.config_path) {
@@ -126,12 +126,24 @@ impl<F: Float + FromPrimitive + ToPrimitive> SceneCamera<F> {
             },
         };
 
+        let rotation = match table.get("rotation") {
+            Some(&Value::Table(ref tab)) => {
+                if let Some(v) = Rotation::<F>::from_map(tab) {
+                    Some(v)
+                } else {
+                    println!("Malformed camera rotation");
+                    return None;
+                }
+            },
+            _ => None,
+        };
+
         Some(SceneCamera{
             name: name,
             config: config,
             data_path: data_path,
             position: position,
-            rotation: None,
+            rotation: rotation,
             config_path: config_path,
         })
     }
@@ -145,7 +157,7 @@ pub struct SceneObject {
 }
 
 impl SceneObject {
-    pub fn get_config<F: Float + FromPrimitive + ToPrimitive>(self: &Self) -> Option<ObjectConfig<F>> {
+    pub fn get_config<F: BaseFloat + Float + FromPrimitive + ToPrimitive>(self: &Self) -> Option<ObjectConfig<F>> {
         ObjectConfig::from_map(&self.config)
     }
 
@@ -184,12 +196,12 @@ impl SceneObject {
 
 /// Description of a scene from a configuration file
 #[derive(Clone, Debug)]
-pub struct Scene<F: Float> {
+pub struct Scene<F: Float + BaseFloat> {
     pub object: SceneObject,
     pub cameras: Vec<SceneCamera<F>>,
 }
 
-impl<F: Float + FromPrimitive> Scene<F> {
+impl<F: BaseFloat + Float + FromPrimitive> Scene<F> {
     pub fn read<P: AsRef<Path>>(path: P) -> Option<Self> {
         // open config file
         let config_toml = if let Some(toml) = table_from_file(&path) {
