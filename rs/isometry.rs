@@ -60,7 +60,7 @@ impl<F: Float + BaseFloat + ApproxEq<F>> ShearDecomposition<F> {
             m33: F::one(),
         };
 
-        let mut tmp = inverse(from).unwrap() * y_tilde;
+        let mut tmp = *from * inverse(&y_tilde).unwrap();
 
         let xx_tilde = tmp.m11;
         let xy_tilde = tmp.m12;
@@ -80,25 +80,89 @@ impl<F: Float + BaseFloat + ApproxEq<F>> ShearDecomposition<F> {
             m33: F::one(),
         };
 
-        tmp = inverse(&tmp).unwrap() * x_tilde;
+        tmp = tmp * inverse(&x_tilde).unwrap();
 
         let zx_tilde = tmp.m31;
         let zy_tilde = tmp.m32;
         let zz_tilde = tmp.m33;
 
         ShearDecomposition{
-            sx: F::one() / xx_tilde,
-            sy: F::one() / yy_tilde,
-            sz: F::one() / zz_tilde,
+            sx: xx_tilde,
+            sy: yy_tilde,
+            sz: zz_tilde,
 
-            xy: xy_tilde / (yy_tilde * xx_tilde),
-            xz: zx_tilde / xx_tilde,
+            xy: xy_tilde * yy_tilde / xx_tilde,
+            xz: xz_tilde / xx_tilde,
 
             yx: yx_tilde / yy_tilde,
             yz: yz_tilde / yy_tilde,
 
-            zx: zx_tilde / (xx_tilde * zz_tilde),
-            zy: zy_tilde / (yy_tilde * zz_tilde),
+            zx: zx_tilde * xx_tilde / zz_tilde,
+            zy: zy_tilde * yy_tilde / zz_tilde,
+        }
+    }
+
+    pub fn shear_x(self: &Self) -> Matrix3<F> {
+        Matrix3{
+            m11: F::one(),
+            m12: self.xy,
+            m13: self.xz,
+
+            m21: F::zero(),
+            m22: F::one(),
+            m23: F::zero(),
+
+            m31: F::zero(),
+            m32: F::zero(),
+            m33: F::one(),
+        }
+    }
+
+    pub fn shear_y(self: &Self) -> Matrix3<F> {
+        Matrix3{
+            m11: F::one(),
+            m12: F::zero(),
+            m13: F::zero(),
+
+            m21: self.yx,
+            m22: F::one(),
+            m23: self.yz,
+
+            m31: F::zero(),
+            m32: F::zero(),
+            m33: F::one(),
+        }
+    }
+
+    pub fn shear_z(self: &Self) -> Matrix3<F> {
+        Matrix3{
+            m11: F::one(),
+            m12: F::zero(),
+            m13: F::zero(),
+
+            m21: F::zero(),
+            m22: F::one(),
+            m23: F::zero(),
+
+            m31: self.zx,
+            m32: self.zy,
+            m33: F::one(),
+        }
+    }
+
+    pub fn scale(self: &Self) -> Matrix3<F> {
+        Matrix3{
+            m11: self.sx,
+            m12: F::zero(),
+            m13: F::zero(),
+
+            m21: F::zero(),
+            m22: self.sy,
+            m23: F::zero(),
+
+            m31: F::zero(),
+            m32: F::zero(),
+            m33: self.sz,
         }
     }
 }
@@ -262,6 +326,26 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> Serialize for Rotation<
 
         tr
     }
+}
+
+#[test]
+fn test_shear_decomp() {
+    let rot: Rotation<f32> = Rotation::new_with_euler_angles(1.0, 2.0, 3.0);
+    let rot_mtx = rot.submatrix();
+    let decomp = ShearDecomposition::new(&rot);
+    let decomp_mtx = decomp.scale() * decomp.shear_z() * decomp.shear_x() * decomp.shear_y();
+
+    assert!((rot_mtx.m11 - decomp_mtx.m11).abs() < 1e-6);
+    assert!((rot_mtx.m21 - decomp_mtx.m21).abs() < 1e-6);
+    assert!((rot_mtx.m31 - decomp_mtx.m31).abs() < 1e-6);
+
+    assert!((rot_mtx.m12 - decomp_mtx.m12).abs() < 1e-6);
+    assert!((rot_mtx.m22 - decomp_mtx.m22).abs() < 1e-6);
+    assert!((rot_mtx.m32 - decomp_mtx.m32).abs() < 1e-6);
+
+    assert!((rot_mtx.m13 - decomp_mtx.m13).abs() < 1e-6);
+    assert!((rot_mtx.m23 - decomp_mtx.m23).abs() < 1e-6);
+    assert!((rot_mtx.m33 - decomp_mtx.m33).abs() < 1e-6);
 }
 
 #[test]
