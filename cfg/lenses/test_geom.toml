@@ -1,0 +1,7 @@
+ns = 1024
+nt = 1024
+ds = 5e-3
+dt = 5e-3
+offset_s = 0.0
+offset_t = 0.0
+

@@ -14,3 +14,9 @@ config = 'cameras/test_coded.toml'
 position = { x = 25.0, y = 0.0, z = -500.0 }
 data = 'coded.png'
 
+[[camera]]
+name = "plenoptic_camera"
+config = 'cameras/test_plenoptic.toml'
+position = { x = 25.0, y = 0.0, z = -500.0 }
+data = 'plenoptic.png'
+

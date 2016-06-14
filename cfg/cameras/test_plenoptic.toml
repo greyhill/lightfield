@@ -1,0 +1,20 @@
+distance_lens_array = 35.0
+distance_detector_array = 0.4
+array_path = "../lenses/test_array.toml"
+
+[lens]
+focal_length_s = 30.0
+focal_length_t = 30.0
+center_s = 0.0
+center_t = 0.0
+radius_s = 10.0
+radius_t = 10.0
+
+[detector]
+ns = 1024
+nt = 1024
+ds = 5e-3
+dt = 5e-3
+offset_s = 0.0
+offset_t = 0.0
+
