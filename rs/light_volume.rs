@@ -43,6 +43,18 @@ impl<F: Float + FromPrimitive> LightVolume<F> {
         (F::from_usize(self.nz).unwrap() - F::one())/F::from_f32(2f32).unwrap() + self.offset_z
     }
 
+    pub fn ix2x(self: &Self, ix: usize) -> F {
+        (F::from_usize(ix).unwrap() - self.wx())*self.dx
+    }
+
+    pub fn iy2y(self: &Self, iy: usize) -> F {
+        (F::from_usize(iy).unwrap() - self.wy())*self.dy
+    }
+
+    pub fn iz2z(self: &Self, iz: usize) -> F {
+        (F::from_usize(iz).unwrap() - self.wz())*self.dz
+    }
+
     /// Returns the image geometry for this slice
     pub fn transaxial_image_geometry(self: &Self) -> ImageGeometry<F> {
         ImageGeometry{
@@ -77,6 +89,23 @@ impl<F: Float + FromPrimitive> LightVolume<F> {
         }
     }
 
+    pub fn scale(self: &Self, sx: F, sy: F, sz: F) -> Self {
+        LightVolume{
+            nx: self.nx,
+            ny: self.ny,
+            nz: self.nz,
+
+            dx: self.dx * sx,
+            dy: self.dy * sy,
+            dz: self.dz * sz,
+
+            offset_x: self.offset_x,
+            offset_y: self.offset_y,
+            offset_z: self.offset_z,
+
+            opaque: self.opaque
+        }
+    }
 }
 
 impl<F: Float + FromPrimitive> Geometry<F> for LightVolume<F> {
