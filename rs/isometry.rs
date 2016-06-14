@@ -6,7 +6,7 @@ use cl_traits::*;
 use serialize::*;
 use self::num::{Float, FromPrimitive, ToPrimitive};
 use self::toml::*;
-use self::nalgebra::{Isometry3, Vector3, Rotation3, Matrix3, BaseFloat};
+use self::nalgebra::{Isometry3, Vector3, Rotation3, Matrix3, BaseFloat, inverse, ApproxEq};
 use self::byteorder::*;
 
 /// Isometry for placing objects in space
@@ -17,6 +17,91 @@ pub type Vector<F> = Vector3<F>;
 
 /// Rotation in 3d space
 pub type Rotation<F> = Rotation3<F>;
+
+/// Decomposition of a 3D rotation into three shears and a rescaling
+///
+/// Decomposes a 3D coordinate rotation `R` into the `R = S*Z*X*Y`, where
+/// `S` is a scaling (diagonal) transformation, and `X`, `Y` and `Z` are 
+/// one-dimensional shears.
+#[derive(Clone)]
+pub struct ShearDecomposition<F: Float> {
+    pub sx: F,
+    pub sy: F,
+    pub sz: F,
+
+    pub xy: F,
+    pub xz: F,
+
+    pub yx: F,
+    pub yz: F,
+
+    pub zx: F,
+    pub zy: F,
+}
+
+impl<F: Float + BaseFloat + ApproxEq<F>> ShearDecomposition<F> {
+    pub fn new(rot: &Rotation3<F>) -> Self {
+        let from = rot.submatrix();
+
+        let yx_tilde = from.m21;
+        let yy_tilde = from.m22;
+        let yz_tilde = from.m23;
+        let y_tilde = Matrix3{
+            m11: F::one(),
+            m12: F::zero(),
+            m13: F::zero(),
+
+            m21: yx_tilde,
+            m22: yy_tilde,
+            m23: yz_tilde,
+
+            m31: F::zero(),
+            m32: F::zero(),
+            m33: F::one(),
+        };
+
+        let mut tmp = inverse(from).unwrap() * y_tilde;
+
+        let xx_tilde = tmp.m11;
+        let xy_tilde = tmp.m12;
+        let xz_tilde = tmp.m13;
+
+        let x_tilde = Matrix3{
+            m11: xx_tilde,
+            m12: xy_tilde,
+            m13: xz_tilde,
+
+            m21: F::zero(),
+            m22: F::one(),
+            m23: F::zero(),
+
+            m31: F::zero(),
+            m32: F::zero(),
+            m33: F::one(),
+        };
+
+        tmp = inverse(&tmp).unwrap() * x_tilde;
+
+        let zx_tilde = tmp.m31;
+        let zy_tilde = tmp.m32;
+        let zz_tilde = tmp.m33;
+
+        ShearDecomposition{
+            sx: F::one() / xx_tilde,
+            sy: F::one() / yy_tilde,
+            sz: F::one() / zz_tilde,
+
+            xy: xy_tilde / (yy_tilde * xx_tilde),
+            xz: zx_tilde / xx_tilde,
+
+            yx: yx_tilde / yy_tilde,
+            yz: yz_tilde / yy_tilde,
+
+            zx: zx_tilde / (xx_tilde * zz_tilde),
+            zy: zy_tilde / (yy_tilde * zz_tilde),
+        }
+    }
+}
 
 impl<F> ClHeader for Isometry<F> {
     fn header() -> &'static str {
