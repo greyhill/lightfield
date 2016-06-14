@@ -33,6 +33,18 @@ inline float LightVolume_iz2z(LightVolume self, const int iz) {
     return (iz - self->wz)*self->dz;
 }
 
+inline float LightVolume_x2ix(LightVolume self, float x) {
+    return x/self->dx + self->wx + 0.5f;
+}
+
+inline float LightVolume_y2iy(LightVolume self, float y) {
+    return y/self->dy + self->wy + 0.5f;
+}
+
+inline float LightVolume_z2iz(LightVolume self, float z) {
+    return z/self->dz + self->wz + 0.5f;
+}
+
 kernel void volume_zero(
         LightVolume geom,
         global float* vol) {

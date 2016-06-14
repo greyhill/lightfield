@@ -94,3 +94,6 @@ pub use plenoptic_camera::*;
 mod plenoptic_imager;
 pub use plenoptic_imager::*;
 
+mod volume_rotation;
+pub use volume_rotation::*;
+

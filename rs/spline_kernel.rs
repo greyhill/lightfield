@@ -12,6 +12,13 @@ pub enum SplineKernel<F: Float> {
 }
 
 impl<F: Float> SplineKernel<F> {
+    /// Sorts the taus and returns a SplineKernel
+    pub fn new_trapezoid(height: F, mag: F, taus: &[F]) -> Self {
+        let mut t = taus.to_owned();
+        t.sort_by(|l, r| l.partial_cmp(r).unwrap());
+        SplineKernel::Trapezoid(height, mag, [taus[0], taus[1], taus[2], taus[3]])
+    }
+
     /// Height of the kernel
     pub fn height(self: &Self) -> F {
         match self {
