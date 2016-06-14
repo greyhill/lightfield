@@ -1,0 +1,8 @@
+focal_length_s = 2.336
+focal_length_t = 2.336
+radius_s = 0.1035
+radius_t = 0.1035
+
+# these don't matter
+center_s = 0.0
+center_t = 0.0

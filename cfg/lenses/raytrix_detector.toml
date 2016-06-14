@@ -1,0 +1,6 @@
+ns = 2400
+nt = 2400
+ds = 5.5e-3
+dt = 5.5e-3
+offset_s = 0.0
+offset_t = 0.0

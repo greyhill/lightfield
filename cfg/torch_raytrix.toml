@@ -1,0 +1,10 @@
+[object]
+data = './torch.fld'
+config = 'geometries/100mm3.toml'
+
+[[camera]]
+name = 'raytrix'
+config = 'cameras/raytrix.toml'
+position = { x = 0.0, y = 0.0, z = -500.0 }
+data = 'raytrix.png'
+
