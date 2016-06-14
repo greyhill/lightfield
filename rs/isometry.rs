@@ -207,6 +207,22 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> Serialize for Rotation<
         let yz = map.get("yz");
         let zz = map.get("zz");
 
+        let rot_x = map.get("rot_x");
+        let rot_y = map.get("rot_y");
+        let rot_z = map.get("rot_z");
+
+        match (rot_x, rot_y, rot_z) {
+            (Some(&Value::Float(rot_x)),
+             Some(&Value::Float(rot_y)),
+             Some(&Value::Float(rot_z))) => {
+                return Some(Rotation::new_with_euler_angles(
+                    F::from_f64(rot_z).unwrap(),
+                    F::from_f64(rot_x).unwrap(),
+                    F::from_f64(rot_y).unwrap()))
+            },
+            _ => {},
+        };
+
         match (xx, yx, zx, xy, yy, zy, xz, yz, zz) {
             (Some(&Value::Float(xx)),
              Some(&Value::Float(yx)),
