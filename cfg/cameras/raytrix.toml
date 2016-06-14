@@ -1,4 +1,4 @@
-distance_lens_array = 95.0
+distance_lens_array = 100.0
 distance_detector_array = 2.0
 array_path = '../lenses/raytrix_array.toml'
 
@@ -7,8 +7,8 @@ focal_length_s = 100.0
 focal_length_t = 100.0
 center_s = 0.0
 center_t = 0.0
-radius_s = 10.0
-radius_t = 10.0
+radius_s = 4.5
+radius_t = 4.5
 
 [detector]
 ns = 2400

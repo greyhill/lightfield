@@ -38,7 +38,7 @@ where F: Float + FromPrimitive,
         for it in 0 .. geom.nt {
             for is in 0 .. geom.ns {
                 let (s0, s1, t0, t1) = geom.pixel_bounds(is, it);
-                let wk = self.rasterize(s0, s1, t0, t1, 10); // 10 provides reasonable accuracy
+                let wk = F::one() - self.rasterize(s0, s1, t0, t1, 10); // 10 provides reasonable accuracy
                 if wk > F::zero() {
                     let (sk, tk) = geom.pixel_center(is, it);
                     s.push(sk);
