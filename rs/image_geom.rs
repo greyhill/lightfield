@@ -67,8 +67,8 @@ impl<F: Float + ToPrimitive + FromPrimitive> ImageGeometry<F> {
 
     /// Returns (s0, s1, t0, t1) sptial bounds for this geometry
     pub fn spatial_bounds(self: &Self) -> (F, F, F, F) {
-        let (s0, t0, _, _) = self.pixel_bounds(0, 0);
-        let (_, _, s1, t1) = self.pixel_bounds(self.ns - 1, self.nt - 1);
+        let (s0, _, t0, _) = self.pixel_bounds(0, 0);
+        let (_, s1, _, t1) = self.pixel_bounds(self.ns - 1, self.nt - 1);
         (s0, s1, t0, t1)
     }
 

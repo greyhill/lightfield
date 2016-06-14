@@ -11,6 +11,7 @@ use occluder::*;
 use transport::*;
 use light_field_geom::*;
 use optics::*;
+use std::cmp::min;
 
 /// Microlens array operation
 ///
@@ -39,11 +40,15 @@ impl<F: Float + FromPrimitive + ToPrimitive> LensArray<F> {
             let (s0, s1, t0, t1) = lens_geom.spatial_bounds();
             let (is0, is1, it0, it1) = array_geometry.region_pixels(s0, s1, t0, t1);
 
+            if is1 == is0 || it1 == it0 {
+                continue;
+            }
+
             // update mask 
             for it in it0 .. it1 {
                 for is in is0 .. is1 {
                     let (ss0, ss1, tt0, tt1) = array_geometry.pixel_bounds(is, it);
-                    let mask_val = lens.rasterize(ss0, ss1, tt0, tt1, 10); // TODO magic number
+                    let mask_val = F::one() - lens.rasterize(ss0, ss1, tt0, tt1, 10); // TODO magic number
                     let mask_index = is + array_geometry.ns*it;
 
                     // in case over overlap between two lenses, use the maximum
@@ -64,11 +69,28 @@ impl<F: Float + FromPrimitive + ToPrimitive> LensArray<F> {
                                 .then(&array_lfg.to_plane),
             };
 
-            // TODO dilate the bounds on the detector
+            // TODO use a less magical dilation
+            let dilation_s = (is1 - is0) / 2;
+            let dilation_t = (it1 - it0) / 2;
+
+            let ds0 = if is0 < dilation_s {
+                0
+            } else {
+                is0 - dilation_s
+            };
+            let ds1 = min(is1 + dilation_s, array_geometry.ns);
+
+            let dt0 = if it0 < dilation_t {
+                0
+            } else {
+                it0 - dilation_t
+            };
+            let dt1 = min(it1 + dilation_t, array_geometry.nt);
+
             let xport = try!(Transport::new(array_lfg.clone(),
                                             lens_detector_lfg,
                                             Some((is0, is1, it0, it1)), // source bounds
-                                            Some((is0, is1, it0, it1)), // destination bounds
+                                            Some((ds0, ds1, dt0, dt1)), // destination bounds
                                             false, // overwrite forw
                                             false, // overwrite back
                                             true, // conservative forw,

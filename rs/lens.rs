@@ -28,12 +28,12 @@ impl<F: Float + FromPrimitive> Lens<F> {
 
     pub fn tesselate_quad_1(ig: &ImageGeometry<F>, lens: &Self) -> Vec<Self> {
         let mut tr = Vec::new();
-        let mut t = lens.radius_t;
-        let height = F::from_usize(ig.nt).unwrap() * ig.dt;
-        let width = F::from_usize(ig.ns).unwrap() * ig.ds;
+
+        let (s0, s1, t0, t1) = ig.spatial_bounds();
+        let mut t = t0;
 
         loop {
-            let mut s = lens.radius_s;
+            let mut s = s0;
             loop {
                 s = s + lens.radius_s + lens.radius_s;
 
@@ -42,13 +42,13 @@ impl<F: Float + FromPrimitive> Lens<F> {
                 li.center_t = t;
                 tr.push(li);
 
-                if s > width - lens.radius_s {
+                if s > s1 {
                     break
                 }
             }
 
             t = t + lens.radius_t + lens.radius_t;
-            if t > height - lens.radius_t {
+            if t > t1 {
                 break
             }
         }
@@ -62,13 +62,13 @@ impl<F: Float + FromPrimitive> Lens<F> {
         assert!(lens1.radius_t == lens2.radius_t);
 
         let mut tr = Vec::new();
-        let height = F::from_usize(ig.nt).unwrap() * ig.dt;
-        let width = F::from_usize(ig.ns).unwrap() * ig.ds;
 
-        let mut t = lens1.radius_t;
+        let (s0, s1, t0, t1) = ig.spatial_bounds();
+        let mut t = t0;
         let mut it = 0;
+
         loop {
-            let mut s = lens1.radius_s;
+            let mut s = s0;
             let mut is = 0;
             loop {
                 s = s + lens1.radius_s + lens1.radius_s;
@@ -83,14 +83,14 @@ impl<F: Float + FromPrimitive> Lens<F> {
                 li.center_t = t;
                 tr.push(li);
 
-                if s > width - lens1.radius_s {
+                if s > s1 {
                     break
                 }
             }
 
             t = t + lens1.radius_t + lens1.radius_t;
             it += 1;
-            if t > height - lens1.radius_t {
+            if t > t1 {
                 break
             }
         }
