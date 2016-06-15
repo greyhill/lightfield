@@ -17,15 +17,15 @@ impl<F: Float> SplineKernel<F> {
     pub fn new_trapezoid(height: F, mag: F, taus: &[F]) -> Self {
         let mut t = taus.to_owned();
         t.sort_by(|l, r| l.partial_cmp(r).unwrap());
-        SplineKernel::Trapezoid(height, mag, [taus[0], taus[1], taus[2], taus[3]])
+        SplineKernel::Trapezoid(height, mag, [t[0], t[1], t[2], t[3]])
     }
 
     /// sorts taus and returns a SplineKernel
     pub fn new_quad(height: F, mag: F, taus: &[F]) -> Self {
         let mut t = taus.to_owned();
         t.sort_by(|l, r| l.partial_cmp(r).unwrap());
-        SplineKernel::Quad(height, mag, [taus[0], taus[1], taus[2], taus[3],
-                                         taus[4], taus[5], taus[6], taus[7]])
+        SplineKernel::Quad(height, mag, [t[0], t[1], t[2], t[3],
+                                         t[4], t[5], t[6], t[7]])
     }
 
     /// Height of the kernel
