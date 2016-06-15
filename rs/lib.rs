@@ -100,3 +100,6 @@ pub use volume_rotation::*;
 mod rotated_imager;
 pub use rotated_imager::*;
 
+mod potential_function;
+pub use potential_function::*;
+
