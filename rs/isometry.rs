@@ -18,6 +18,70 @@ pub type Vector<F> = Vector3<F>;
 /// Rotation in 3d space
 pub type Rotation<F> = Rotation3<F>;
 
+pub fn rotation_x<F: Float + FromPrimitive + BaseFloat>(x_deg: F) -> Rotation<F> {
+    let x_rad = F::pi() * x_deg / F::from_f32(180f32).unwrap();
+
+    let m = Matrix3{
+        m11: F::one(),
+        m12: F::zero(),
+        m13: F::zero(),
+
+        m21: F::zero(),
+        m31: F::zero(),
+
+        m22: x_rad.cos(),
+        m32: x_rad.sin(),
+
+        m23: -x_rad.sin(),
+        m33: x_rad.cos(),
+    };
+    unsafe { Rotation::new_with_matrix(m) }
+}
+
+pub fn rotation_y<F: Float + FromPrimitive + BaseFloat>(y_deg: F) -> Rotation<F> {
+    let y_rad = F::pi() * y_deg / F::from_f32(180f32).unwrap();
+
+    let m = Matrix3{
+        m21: F::zero(),
+        m22: F::one(),
+        m23: F::zero(),
+
+        m12: F::zero(),
+        m32: F::zero(),
+
+        m11: y_rad.cos(),
+        m31: y_rad.sin(),
+
+        m13: -y_rad.sin(),
+        m33: y_rad.cos(),
+    };
+    unsafe { Rotation::new_with_matrix(m) }
+}
+
+pub fn rotation_z<F: Float + FromPrimitive + BaseFloat>(z_deg: F) -> Rotation<F> {
+    let z_rad = F::pi() * z_deg / F::from_f32(180f32).unwrap();
+
+    let m = Matrix3{
+        m31: F::zero(),
+        m32: F::zero(),
+        m33: F::one(),
+
+        m13: F::zero(),
+        m23: F::zero(),
+
+        m11: z_rad.cos(),
+        m21: z_rad.sin(),
+
+        m12: -z_rad.sin(),
+        m22: z_rad.cos(),
+    };
+    unsafe { Rotation::new_with_matrix(m) }
+}
+
+pub fn rotation_from_euler_angles<F: Float + FromPrimitive + BaseFloat>(x_deg: F, y_deg: F, z_deg: F) -> Rotation<F> {
+    rotation_z(z_deg) * rotation_y(y_deg) * rotation_x(x_deg)
+}
+
 /// Decomposition of a 3D rotation into three shears and a rescaling
 ///
 /// Decomposes a 3D coordinate rotation `R` into the `R = S*Z*X*Y`, where
@@ -279,10 +343,10 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> Serialize for Rotation<
             (Some(&Value::Float(rot_x)),
              Some(&Value::Float(rot_y)),
              Some(&Value::Float(rot_z))) => {
-                return Some(Rotation::new_with_euler_angles(
-                    F::from_f64(rot_z).unwrap(),
+                return Some(rotation_from_euler_angles(
                     F::from_f64(rot_x).unwrap(),
-                    F::from_f64(rot_y).unwrap()))
+                    F::from_f64(rot_y).unwrap(),
+                    F::from_f64(rot_z).unwrap()))
             },
             _ => {},
         };
