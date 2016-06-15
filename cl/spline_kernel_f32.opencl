@@ -97,8 +97,10 @@ float QuadSplineKernel_integrate(
     float accum = 0.f;
     float c1 = 1.f / ((t1 - t0) * ((t1 - t0) / 2.f + t2 - t1 + (t3 - t2) / 2.f));
 
-    float l = fmax(x0, t0);
-    float r = fmin(x1, t1);
+    float l, r;
+
+    l = fmax(x0, t0);
+    r = fmin(x1, t1);
     if(r > l) {
         accum += c1 * (POW3(r - t0) - POW3(l - t0)) / 6.f;
     }

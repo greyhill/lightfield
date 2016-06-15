@@ -91,12 +91,16 @@ impl<F: Float + BaseFloat + ApproxEq<F> + FromPrimitive> VolumeRotation<F> {
                 let x = dst_geom.ix2x(ix);
 
                 let taus_forw = vec![
-                    -shear_decomp.zx*(x + dst_geom.dx/c2) - shear_decomp.zy*(y + dst_geom.dy/c2),
-                    -shear_decomp.zx*(x + dst_geom.dx/c2) - shear_decomp.zy*(y - dst_geom.dy/c2),
-                    -shear_decomp.zx*(x - dst_geom.dx/c2) - shear_decomp.zy*(y + dst_geom.dy/c2),
-                    -shear_decomp.zx*(x - dst_geom.dx/c2) - shear_decomp.zy*(y - dst_geom.dy/c2),
+                    dst_geom.dz/c2 - shear_decomp.zx*(x + dst_geom.dx/c2) - shear_decomp.zy*(y + dst_geom.dy/c2),
+                    dst_geom.dz/c2 - shear_decomp.zx*(x + dst_geom.dx/c2) - shear_decomp.zy*(y - dst_geom.dy/c2),
+                    dst_geom.dz/c2 - shear_decomp.zx*(x - dst_geom.dx/c2) - shear_decomp.zy*(y + dst_geom.dy/c2),
+                    dst_geom.dz/c2 - shear_decomp.zx*(x - dst_geom.dx/c2) - shear_decomp.zy*(y - dst_geom.dy/c2),
+                    -dst_geom.dz/c2 - shear_decomp.zx*(x + dst_geom.dx/c2) - shear_decomp.zy*(y + dst_geom.dy/c2),
+                    -dst_geom.dz/c2 - shear_decomp.zx*(x + dst_geom.dx/c2) - shear_decomp.zy*(y - dst_geom.dy/c2),
+                    -dst_geom.dz/c2 - shear_decomp.zx*(x - dst_geom.dx/c2) - shear_decomp.zy*(y + dst_geom.dy/c2),
+                    -dst_geom.dz/c2 - shear_decomp.zx*(x - dst_geom.dx/c2) - shear_decomp.zy*(y - dst_geom.dy/c2),
                 ];
-                let forw = SplineKernel::new_trapezoid(hx_forw_z * hy_forw_z, F::one(), &taus_forw);
+                let forw = SplineKernel::new_quad(hx_forw_z * hy_forw_z, F::one(), &taus_forw);
                 forw.as_cl_bytes(&mut forw_z_buf);
             }
         }
@@ -110,12 +114,16 @@ impl<F: Float + BaseFloat + ApproxEq<F> + FromPrimitive> VolumeRotation<F> {
                 let x = dst_geom.ix2x(ix);
 
                 let taus_forw = vec![
-                    -shear_decomp.yx*(x + dst_geom.dx/c2) - shear_decomp.yz*(z + dst_geom.dz/c2),
-                    -shear_decomp.yx*(x + dst_geom.dx/c2) - shear_decomp.yz*(z - dst_geom.dz/c2),
-                    -shear_decomp.yx*(x - dst_geom.dx/c2) - shear_decomp.yz*(z + dst_geom.dz/c2),
-                    -shear_decomp.yx*(x - dst_geom.dx/c2) - shear_decomp.yz*(z - dst_geom.dz/c2),
+                    dst_geom.dy/c2 -shear_decomp.yx*(x + dst_geom.dx/c2) - shear_decomp.yz*(z + dst_geom.dz/c2),
+                    dst_geom.dy/c2 -shear_decomp.yx*(x + dst_geom.dx/c2) - shear_decomp.yz*(z - dst_geom.dz/c2),
+                    dst_geom.dy/c2 -shear_decomp.yx*(x - dst_geom.dx/c2) - shear_decomp.yz*(z + dst_geom.dz/c2),
+                    dst_geom.dy/c2 -shear_decomp.yx*(x - dst_geom.dx/c2) - shear_decomp.yz*(z - dst_geom.dz/c2),
+                    -dst_geom.dy/c2 -shear_decomp.yx*(x + dst_geom.dx/c2) - shear_decomp.yz*(z + dst_geom.dz/c2),
+                    -dst_geom.dy/c2 -shear_decomp.yx*(x + dst_geom.dx/c2) - shear_decomp.yz*(z - dst_geom.dz/c2),
+                    -dst_geom.dy/c2 -shear_decomp.yx*(x - dst_geom.dx/c2) - shear_decomp.yz*(z + dst_geom.dz/c2),
+                    -dst_geom.dy/c2 -shear_decomp.yx*(x - dst_geom.dx/c2) - shear_decomp.yz*(z - dst_geom.dz/c2),
                 ];
-                let forw = SplineKernel::new_trapezoid(hx_forw_y * hz_forw_y, F::one(), &taus_forw);
+                let forw = SplineKernel::new_quad(hx_forw_y * hz_forw_y, F::one(), &taus_forw);
                 forw.as_cl_bytes(&mut forw_y_buf);
             }
         }
@@ -129,16 +137,19 @@ impl<F: Float + BaseFloat + ApproxEq<F> + FromPrimitive> VolumeRotation<F> {
                 let y = dst_geom.iy2y(iy);
 
                 let taus_forw = vec![
-                    -shear_decomp.xy*(y + dst_geom.dy/c2) - shear_decomp.xz*(z + dst_geom.dz/c2),
-                    -shear_decomp.xy*(y + dst_geom.dy/c2) - shear_decomp.xz*(z - dst_geom.dz/c2),
-                    -shear_decomp.xy*(y - dst_geom.dy/c2) - shear_decomp.xz*(z + dst_geom.dz/c2),
-                    -shear_decomp.xy*(y - dst_geom.dy/c2) - shear_decomp.xz*(z - dst_geom.dz/c2),
+                    dst_geom.dx/c2 -shear_decomp.xy*(y + dst_geom.dy/c2) - shear_decomp.xz*(z + dst_geom.dz/c2),
+                    dst_geom.dx/c2 -shear_decomp.xy*(y + dst_geom.dy/c2) - shear_decomp.xz*(z - dst_geom.dz/c2),
+                    dst_geom.dx/c2 -shear_decomp.xy*(y - dst_geom.dy/c2) - shear_decomp.xz*(z + dst_geom.dz/c2),
+                    dst_geom.dx/c2 -shear_decomp.xy*(y - dst_geom.dy/c2) - shear_decomp.xz*(z - dst_geom.dz/c2),
+                    -dst_geom.dx/c2 -shear_decomp.xy*(y + dst_geom.dy/c2) - shear_decomp.xz*(z + dst_geom.dz/c2),
+                    -dst_geom.dx/c2 -shear_decomp.xy*(y + dst_geom.dy/c2) - shear_decomp.xz*(z - dst_geom.dz/c2),
+                    -dst_geom.dx/c2 -shear_decomp.xy*(y - dst_geom.dy/c2) - shear_decomp.xz*(z + dst_geom.dz/c2),
+                    -dst_geom.dx/c2 -shear_decomp.xy*(y - dst_geom.dy/c2) - shear_decomp.xz*(z - dst_geom.dz/c2),
                 ];
-                let forw = SplineKernel::new_trapezoid(hy_forw_x * hz_forw_x, F::one(), &taus_forw);
+                let forw = SplineKernel::new_quad(hy_forw_x * hz_forw_x, F::one(), &taus_forw);
                 forw.as_cl_bytes(&mut forw_x_buf);
             }
         }
-
 
         let forw_x = try!(queue.create_buffer_from_slice(&forw_x_buf));
         let forw_y = try!(queue.create_buffer_from_slice(&forw_y_buf));
