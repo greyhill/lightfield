@@ -27,6 +27,10 @@ pub struct VolumeRotation<F: Float> {
     spline_forw_y: Mem,
     spline_forw_z: Mem,
 
+    spline_back_x: Mem,
+    spline_back_y: Mem,
+    spline_back_z: Mem,
+
     dst_geom_buf: Mem,
 }
 
@@ -80,11 +84,16 @@ impl<F: Float + BaseFloat + ApproxEq<F> + FromPrimitive> VolumeRotation<F> {
         let mut forw_x_buf: Vec<u8> = Vec::new();
         let mut forw_y_buf: Vec<u8> = Vec::new();
         let mut forw_z_buf: Vec<u8> = Vec::new();
+
+        let mut back_x_buf: Vec<u8> = Vec::new();
+        let mut back_y_buf: Vec<u8> = Vec::new();
+        let mut back_z_buf: Vec<u8> = Vec::new();
+
         let c2 = F::one() + F::one();
 
-        // forw z
-        let hx_forw_z = (dst_geom.dz / shear_decomp.zx).abs();
-        let hy_forw_z = fmin((dst_geom.dx*shear_decomp.zx/shear_decomp.zy).abs(), dst_geom.dy.abs());
+        // z splines
+        let hx_z = (dst_geom.dz / shear_decomp.zx).abs();
+        let hy_z = fmin((dst_geom.dx*shear_decomp.zx/shear_decomp.zy).abs(), dst_geom.dy.abs());
         for iy in 0 .. dst_geom.ny {
             let y = dst_geom.iy2y(iy);
             for ix in 0 .. dst_geom.nx {
@@ -100,14 +109,27 @@ impl<F: Float + BaseFloat + ApproxEq<F> + FromPrimitive> VolumeRotation<F> {
                     -dst_geom.dz/c2 - shear_decomp.zx*(x - dst_geom.dx/c2) - shear_decomp.zy*(y + dst_geom.dy/c2),
                     -dst_geom.dz/c2 - shear_decomp.zx*(x - dst_geom.dx/c2) - shear_decomp.zy*(y - dst_geom.dy/c2),
                 ];
-                let forw = SplineKernel::new_quad(hx_forw_z * hy_forw_z, F::one(), &taus_forw);
+                let forw = SplineKernel::new_quad(hx_z * hy_z, F::one(), &taus_forw);
                 forw.as_cl_bytes(&mut forw_z_buf);
+
+                let taus_back = vec![
+                    dst_geom.dz/c2 + shear_decomp.zx*(x + dst_geom.dx/c2) + shear_decomp.zy*(y + dst_geom.dy/c2),
+                    dst_geom.dz/c2 + shear_decomp.zx*(x + dst_geom.dx/c2) + shear_decomp.zy*(y - dst_geom.dy/c2),
+                    dst_geom.dz/c2 + shear_decomp.zx*(x - dst_geom.dx/c2) + shear_decomp.zy*(y + dst_geom.dy/c2),
+                    dst_geom.dz/c2 + shear_decomp.zx*(x - dst_geom.dx/c2) + shear_decomp.zy*(y - dst_geom.dy/c2),
+                    -dst_geom.dz/c2 + shear_decomp.zx*(x + dst_geom.dx/c2) + shear_decomp.zy*(y + dst_geom.dy/c2),
+                    -dst_geom.dz/c2 + shear_decomp.zx*(x + dst_geom.dx/c2) + shear_decomp.zy*(y - dst_geom.dy/c2),
+                    -dst_geom.dz/c2 + shear_decomp.zx*(x - dst_geom.dx/c2) + shear_decomp.zy*(y + dst_geom.dy/c2),
+                    -dst_geom.dz/c2 + shear_decomp.zx*(x - dst_geom.dx/c2) + shear_decomp.zy*(y - dst_geom.dy/c2),
+                ];
+                let back = SplineKernel::new_quad(hx_z * hy_z, F::one(), &taus_back);
+                back.as_cl_bytes(&mut back_z_buf);
             }
         }
 
-        // forw y
-        let hx_forw_y = (dst_geom.dy / shear_decomp.yx).abs();
-        let hz_forw_y = fmin((dst_geom.dx*shear_decomp.yx/shear_decomp.yz).abs(), dst_geom.dz.abs());
+        // y splines
+        let hx_y = (dst_geom.dy / shear_decomp.yx).abs();
+        let hz_y = fmin((dst_geom.dx*shear_decomp.yx/shear_decomp.yz).abs(), dst_geom.dz.abs());
         for iz in 0 .. dst_geom.nz {
             let z = dst_geom.iz2z(iz);
             for ix in 0 .. dst_geom.nx {
@@ -123,14 +145,27 @@ impl<F: Float + BaseFloat + ApproxEq<F> + FromPrimitive> VolumeRotation<F> {
                     -dst_geom.dy/c2 -shear_decomp.yx*(x - dst_geom.dx/c2) - shear_decomp.yz*(z + dst_geom.dz/c2),
                     -dst_geom.dy/c2 -shear_decomp.yx*(x - dst_geom.dx/c2) - shear_decomp.yz*(z - dst_geom.dz/c2),
                 ];
-                let forw = SplineKernel::new_quad(hx_forw_y * hz_forw_y, F::one(), &taus_forw);
+                let forw = SplineKernel::new_quad(hx_y * hz_y, F::one(), &taus_forw);
                 forw.as_cl_bytes(&mut forw_y_buf);
+
+                let taus_back = vec![
+                    dst_geom.dy/c2 +shear_decomp.yx*(x + dst_geom.dx/c2) + shear_decomp.yz*(z + dst_geom.dz/c2),
+                    dst_geom.dy/c2 +shear_decomp.yx*(x + dst_geom.dx/c2) + shear_decomp.yz*(z - dst_geom.dz/c2),
+                    dst_geom.dy/c2 +shear_decomp.yx*(x - dst_geom.dx/c2) + shear_decomp.yz*(z + dst_geom.dz/c2),
+                    dst_geom.dy/c2 +shear_decomp.yx*(x - dst_geom.dx/c2) + shear_decomp.yz*(z - dst_geom.dz/c2),
+                    -dst_geom.dy/c2 +shear_decomp.yx*(x + dst_geom.dx/c2) + shear_decomp.yz*(z + dst_geom.dz/c2),
+                    -dst_geom.dy/c2 +shear_decomp.yx*(x + dst_geom.dx/c2) + shear_decomp.yz*(z - dst_geom.dz/c2),
+                    -dst_geom.dy/c2 +shear_decomp.yx*(x - dst_geom.dx/c2) + shear_decomp.yz*(z + dst_geom.dz/c2),
+                    -dst_geom.dy/c2 +shear_decomp.yx*(x - dst_geom.dx/c2) + shear_decomp.yz*(z - dst_geom.dz/c2),
+                ];
+                let back = SplineKernel::new_quad(hx_y * hz_y, F::one(), &taus_back);
+                back.as_cl_bytes(&mut back_y_buf);
             }
         }
 
         // forw x
-        let hy_forw_x = (dst_geom.dx / shear_decomp.xy).abs();
-        let hz_forw_x = fmin((dst_geom.dy*shear_decomp.xy/shear_decomp.xz).abs(), dst_geom.dz.abs());
+        let hy_x = (dst_geom.dx / shear_decomp.xy).abs();
+        let hz_x = fmin((dst_geom.dy*shear_decomp.xy/shear_decomp.xz).abs(), dst_geom.dz.abs());
         for iz in 0 .. dst_geom.nz {
             let z = dst_geom.iz2z(iz);
             for iy in 0 .. dst_geom.ny {
@@ -146,14 +181,31 @@ impl<F: Float + BaseFloat + ApproxEq<F> + FromPrimitive> VolumeRotation<F> {
                     -dst_geom.dx/c2 -shear_decomp.xy*(y - dst_geom.dy/c2) - shear_decomp.xz*(z + dst_geom.dz/c2),
                     -dst_geom.dx/c2 -shear_decomp.xy*(y - dst_geom.dy/c2) - shear_decomp.xz*(z - dst_geom.dz/c2),
                 ];
-                let forw = SplineKernel::new_quad(hy_forw_x * hz_forw_x, F::one(), &taus_forw);
+                let forw = SplineKernel::new_quad(hy_x * hz_x, F::one(), &taus_forw);
                 forw.as_cl_bytes(&mut forw_x_buf);
+
+                let taus_back = vec![
+                    dst_geom.dx/c2 +shear_decomp.xy*(y + dst_geom.dy/c2) + shear_decomp.xz*(z + dst_geom.dz/c2),
+                    dst_geom.dx/c2 +shear_decomp.xy*(y + dst_geom.dy/c2) + shear_decomp.xz*(z - dst_geom.dz/c2),
+                    dst_geom.dx/c2 +shear_decomp.xy*(y - dst_geom.dy/c2) + shear_decomp.xz*(z + dst_geom.dz/c2),
+                    dst_geom.dx/c2 +shear_decomp.xy*(y - dst_geom.dy/c2) + shear_decomp.xz*(z - dst_geom.dz/c2),
+                    -dst_geom.dx/c2 +shear_decomp.xy*(y + dst_geom.dy/c2) + shear_decomp.xz*(z + dst_geom.dz/c2),
+                    -dst_geom.dx/c2 +shear_decomp.xy*(y + dst_geom.dy/c2) + shear_decomp.xz*(z - dst_geom.dz/c2),
+                    -dst_geom.dx/c2 +shear_decomp.xy*(y - dst_geom.dy/c2) + shear_decomp.xz*(z + dst_geom.dz/c2),
+                    -dst_geom.dx/c2 +shear_decomp.xy*(y - dst_geom.dy/c2) + shear_decomp.xz*(z - dst_geom.dz/c2),
+                ];
+                let back = SplineKernel::new_quad(hy_x * hz_x, F::one(), &taus_back);
+                back.as_cl_bytes(&mut back_x_buf);
             }
         }
 
         let forw_x = try!(queue.create_buffer_from_slice(&forw_x_buf));
         let forw_y = try!(queue.create_buffer_from_slice(&forw_y_buf));
         let forw_z = try!(queue.create_buffer_from_slice(&forw_z_buf));
+
+        let back_x = try!(queue.create_buffer_from_slice(&back_x_buf));
+        let back_y = try!(queue.create_buffer_from_slice(&back_y_buf));
+        let back_z = try!(queue.create_buffer_from_slice(&back_z_buf));
 
         Ok(VolumeRotation{
             src_geom: src_geom,
@@ -168,6 +220,10 @@ impl<F: Float + BaseFloat + ApproxEq<F> + FromPrimitive> VolumeRotation<F> {
             spline_forw_x: forw_x,
             spline_forw_y: forw_y,
             spline_forw_z: forw_z,
+
+            spline_back_x: back_x,
+            spline_back_y: back_y,
+            spline_back_z: back_z,
 
             dst_geom_buf: dst_geom_buf,
         })
@@ -234,11 +290,65 @@ impl<F: Float + BaseFloat + ApproxEq<F> + FromPrimitive> VolumeRotation<F> {
         self.forw_y(out, &[evt])
     }
 
+    fn back_y(self: &mut Self,
+              vol: &Mem,
+              out: &mut Mem,
+              wait_for: &[Event]) -> Result<Event, Error> {
+        try!(self.filter_y.bind(0, &self.dst_geom_buf));
+        try!(self.filter_y.bind(1, &self.spline_back_y));
+        try!(self.filter_y.bind(2, vol));
+        try!(self.filter_y.bind(3, out));
+
+        let local_size = (32, 8, 1);
+        let global_size = (self.dst_geom.nx, self.dst_geom.ny, self.dst_geom.nz);
+
+        self.queue.run_with_events(&mut self.filter_y,
+                                   local_size,
+                                   global_size,
+                                   wait_for)
+    }
+
+    fn back_x(self: &mut Self,
+              out: &Mem,
+              wait_for: &[Event]) -> Result<Event, Error> {
+        try!(self.filter_x.bind(0, &self.dst_geom_buf));
+        try!(self.filter_x.bind(1, &self.spline_back_x));
+        try!(self.filter_x.bind(2, &out));
+        try!(self.filter_x.bind(3, &mut self.tmp));
+
+        let local_size = (32, 8, 1);
+        let global_size = (self.dst_geom.nx, self.dst_geom.ny, self.dst_geom.nz);
+
+        self.queue.run_with_events(&mut self.filter_x,
+                                   local_size,
+                                   global_size,
+                                   wait_for)
+    }
+
+    fn back_z(self: &mut Self,
+              out: &mut Mem,
+              wait_for: &[Event]) -> Result<Event, Error> {
+        try!(self.filter_z.bind(0, &self.dst_geom_buf));
+        try!(self.filter_z.bind(1, &self.spline_back_z));
+        try!(self.filter_z.bind(2, &self.tmp));
+        try!(self.filter_z.bind(3, out));
+
+        let local_size = (32, 8, 1);
+        let global_size = (self.dst_geom.nx, self.dst_geom.ny, self.dst_geom.nz);
+
+        self.queue.run_with_events(&mut self.filter_z,
+                                   local_size,
+                                   global_size,
+                                   wait_for)
+    }
+
     pub fn back(self: &mut Self,
                 vol: &Mem,
                 out: &mut Mem,
                 wait_for: &[Event]) -> Result<Event, Error> {
-        unimplemented!()
+        let mut evt = try!(self.back_y(vol, out, wait_for));
+        evt = try!(self.back_x(out, &[evt]));
+        self.back_z(out, &[evt])
     }
 }
 
@@ -246,7 +356,7 @@ impl<F: Float + BaseFloat + ApproxEq<F> + FromPrimitive> VolumeRotation<F> {
 fn test_volume_rotation() {
     use env::*;
 
-    let rot: Rotation<f32> = Rotation::new_with_euler_angles(-1.0, 1.0, -0.0);
+    let rot: Rotation<f32> = Rotation::new_with_euler_angles(0.2, 0.4, -0.6);
     let env = Environment::new_easy().unwrap();
     let queue = &env.queues[0];
 
@@ -263,6 +373,33 @@ fn test_volume_rotation() {
         opaque: false,
     };
 
-    let rotator = VolumeRotation::new(&rot, src_geom, queue.clone()).unwrap();
+    let mut rotator = VolumeRotation::new(&rot, src_geom.clone(), queue.clone()).unwrap();
+
+    let u_vec = src_geom.rands();
+    let v_vec = src_geom.rands();
+
+    let u = queue.create_buffer_from_slice(&u_vec).unwrap();
+    let v = queue.create_buffer_from_slice(&v_vec).unwrap();
+
+    let mut rot_u = src_geom.zeros_buf(&queue).unwrap();
+    let mut v_rot = src_geom.zeros_buf(&queue).unwrap();
+
+    rotator.forw(&u, &mut rot_u, &[]).unwrap().wait().unwrap();
+    rotator.back(&v, &mut v_rot, &[]).unwrap().wait().unwrap();
+
+    let mut rot_u_vec = src_geom.zeros();
+    let mut v_rot_vec = src_geom.zeros();
+
+    queue.read_buffer(&rot_u, &mut rot_u_vec).unwrap().wait().unwrap();
+    queue.read_buffer(&v_rot, &mut v_rot_vec).unwrap().wait().unwrap();
+
+    let v1 = rot_u_vec.iter().zip(v_vec.iter()).fold(0f32, |s, (ui, vi)| s + ui*vi);
+    let v2 = v_rot_vec.iter().zip(u_vec.iter()).fold(0f32, |s, (vi, ui)| s + ui*vi);
+    let nrmse = (v1 - v2).abs() / v1.abs().max(v2.abs());
+
+    println!("Adjoint NRMSE for Volume Rotation: {}", nrmse);
+    println!("v'Tu: {}", v1);
+    println!("(T'v)'u: {}", v2);
+    assert!(nrmse < 1e-4);
 }
 
