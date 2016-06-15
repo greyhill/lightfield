@@ -3,6 +3,7 @@ extern crate toml;
 use self::num::{Float, ToPrimitive, FromPrimitive};
 use self::toml::*;
 use serialize::*;
+use cl_traits::*;
 
 /// Convex one-dimensional potential function (loss)
 #[derive(Clone, Debug)]
@@ -10,6 +11,12 @@ pub enum PotentialFunction<F: Float> {
     Quad,
     Abs,
     Fair(F),
+}
+
+impl<F: Float> ClHeader for PotentialFunction<F> {
+    fn header() -> &'static str {
+        include_str!("../cl/potential_function_f32.opencl")
+    }
 }
 
 impl<F: Float + FromPrimitive + ToPrimitive> Serialize 
