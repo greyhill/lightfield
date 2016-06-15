@@ -126,7 +126,7 @@ impl<F: Float + BaseFloat + ApproxEq<F> + FromPrimitive> VolumeRotation<F> {
         for iz in 0 .. dst_geom.nz {
             let z = dst_geom.iz2z(iz);
             for iy in 0 .. dst_geom.ny {
-                let y = dst_geom.ix2x(iy);
+                let y = dst_geom.iy2y(iy);
 
                 let taus_forw = vec![
                     -shear_decomp.xy*(y + dst_geom.dy/c2) - shear_decomp.xz*(z + dst_geom.dz/c2),
@@ -180,30 +180,13 @@ impl<F: Float + BaseFloat + ApproxEq<F> + FromPrimitive> VolumeRotation<F> {
                                    wait_for)
     }
 
-    fn forw_y(self: &mut Self,
-              out: &Mem,
-              wait_for: &[Event]) -> Result<Event, Error> {
-        try!(self.filter_y.bind(0, &self.dst_geom_buf));
-        try!(self.filter_y.bind(1, &self.spline_forw_y));
-        try!(self.filter_y.bind(2, out));
-        try!(self.filter_y.bind(3, &mut self.tmp));
-
-        let local_size = (32, 8, 1);
-        let global_size = (self.dst_geom.nx, self.dst_geom.ny, self.dst_geom.nz);
-
-        self.queue.run_with_events(&mut self.filter_y,
-                                   local_size,
-                                   global_size,
-                                   wait_for)
-    }
-
     fn forw_x(self: &mut Self,
-              out: &mut Mem,
+              out: &Mem,
               wait_for: &[Event]) -> Result<Event, Error> {
         try!(self.filter_x.bind(0, &self.dst_geom_buf));
         try!(self.filter_x.bind(1, &self.spline_forw_x));
-        try!(self.filter_x.bind(2, &self.tmp));
-        try!(self.filter_x.bind(3, out));
+        try!(self.filter_x.bind(2, &out));
+        try!(self.filter_x.bind(3, &mut self.tmp));
 
         let local_size = (32, 8, 1);
         let global_size = (self.dst_geom.nx, self.dst_geom.ny, self.dst_geom.nz);
@@ -214,13 +197,30 @@ impl<F: Float + BaseFloat + ApproxEq<F> + FromPrimitive> VolumeRotation<F> {
                                    wait_for)
     }
 
+    fn forw_y(self: &mut Self,
+              out: &mut Mem,
+              wait_for: &[Event]) -> Result<Event, Error> {
+        try!(self.filter_y.bind(0, &self.dst_geom_buf));
+        try!(self.filter_y.bind(1, &self.spline_forw_y));
+        try!(self.filter_y.bind(2, &self.tmp));
+        try!(self.filter_y.bind(3, out));
+
+        let local_size = (32, 8, 1);
+        let global_size = (self.dst_geom.nx, self.dst_geom.ny, self.dst_geom.nz);
+
+        self.queue.run_with_events(&mut self.filter_y,
+                                   local_size,
+                                   global_size,
+                                   wait_for)
+    }
+
     pub fn forw(self: &mut Self,
                 vol: &Mem,
                 out: &mut Mem,
                 wait_for: &[Event]) -> Result<Event, Error> {
         let mut evt = try!(self.forw_z(vol, out, wait_for));
-        evt = try!(self.forw_y(out, &[evt]));
-        self.forw_x(out, &[evt])
+        evt = try!(self.forw_x(out, &[evt]));
+        self.forw_y(out, &[evt])
     }
 
     pub fn back(self: &mut Self,

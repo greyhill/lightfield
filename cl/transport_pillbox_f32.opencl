@@ -219,8 +219,8 @@ float transport_s_iprod(
     for(int src_is=src_ismin; src_is<src_ismax; ++src_is) {
         const float src_s = ImageGeometry_is2s(src_geom, src_is);
         const float w = Trap_integrate(tau0, tau1, tau2, tau3,
-                src_s - src_geom->ds/2.f,
-                src_s + src_geom->ds/2.f);
+                src_s - fabs(src_geom->ds)/2.f,
+                src_s + fabs(src_geom->ds)/2.f);
         accum += w * tmp[dst_it_offset + (dst_it1 - dst_it0)*(src_is - src_is0)];
     }
 
@@ -263,8 +263,8 @@ float transport_t_iprod(
     for(int src_it=src_itmin; src_it<src_itmax; ++src_it) {
         const float src_t = ImageGeometry_it2t(src_geom, src_it);
         const float w = Trap_integrate(tau0, tau1, tau2, tau3,
-                src_t - src_geom->dt/2.f,
-                src_t + src_geom->dt/2.f);
+                src_t - fabs(src_geom->dt)/2.f,
+                src_t + fabs(src_geom->dt)/2.f);
         accum += w * src[src_is + src_geom->ns*src_it];
     }
 

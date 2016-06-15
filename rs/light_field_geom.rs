@@ -24,7 +24,7 @@ impl<F: Float + FromPrimitive> LightFieldGeometry<F> {
             &AngularBasis::Dirac => {
                 let vs = (self.plane.ds / self.to_plane.su).abs() * self.geom.ds;
                 let vt = (self.plane.dt / self.to_plane.tv).abs() * self.geom.dt;
-                vs * vt
+                (vs * vt).abs()
             },
             &AngularBasis::Pillbox => {
                 let c2 = F::from_f32(2f32).unwrap();
@@ -39,7 +39,7 @@ impl<F: Float + FromPrimitive> LightFieldGeometry<F> {
                 let t_m = t_m_a.max(t_m_b);
                 let t_h = self.geom.dt.min(self.plane.dt / self.to_plane.tt.abs());
 
-                c2 * c2 * s_m * s_h * t_m * t_h
+                (c2 * c2 * s_m * s_h * t_m * t_h).abs()
             },
         }
     }

@@ -40,6 +40,7 @@ impl<F: 'static + Float + FromPrimitive + BaseFloat + ApproxEq<F>> CameraConfig<
             Some(rot) => {
                 let rotator = try!(VolumeRotation::new(&rot, light_volume, queue.clone()));
                 let geom = rotator.dst_geom.clone();
+                println!("{} {} {}", F::to_f32(&geom.dx).unwrap(), F::to_f32(&geom.dy).unwrap(), F::to_f32(&geom.dz).unwrap());
                 (Some(rotator), geom)
             },
             None => {
