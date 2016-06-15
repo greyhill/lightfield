@@ -41,6 +41,24 @@ kernel void image_zero(
     img[is + geom->ns*it] = 0.f;
 }
 
+kernel void image_residual(
+        ImageGeometry geom,
+        global float* proj,
+        float proj_scale,
+        global float* measurements,
+        global float* out) {
+    int is = get_global_id(0);
+    int it = get_global_id(1);
+
+    if(is >= geom->ns || it >= geom->nt) {
+        return;
+    }
+
+    int idx = is + geom->ns*it;
+
+    out[idx] = proj_scale * proj[idx] - measurements[idx];
+}
+
 kernel void apply_mask(
         ImageGeometry geom,
         global const float* mask,
