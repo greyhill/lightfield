@@ -92,8 +92,11 @@ impl<F: Float + BaseFloat + ApproxEq<F> + FromPrimitive> VolumeRotation<F> {
         let c2 = F::one() + F::one();
 
         // z splines
-        let hx_z = (dst_geom.dz / shear_decomp.zx).abs();
-        let hy_z = fmin((dst_geom.dx*shear_decomp.zx/shear_decomp.zy).abs(), dst_geom.dy.abs());
+        // TRICK: we use "1" for the height of the rotation kernels because
+        // multi-camera calibration is a wash anyway and it removes a 
+        // degeracy at >= 40 degree rotations.
+        //let hx_z = (dst_geom.dz / shear_decomp.zx).abs();
+        //let hy_z = fmin((dst_geom.dx*shear_decomp.zx/shear_decomp.zy).abs(), dst_geom.dy.abs());
         for iy in 0 .. dst_geom.ny {
             let y = dst_geom.iy2y(iy);
             for ix in 0 .. dst_geom.nx {
@@ -109,7 +112,7 @@ impl<F: Float + BaseFloat + ApproxEq<F> + FromPrimitive> VolumeRotation<F> {
                     -dst_geom.dz/c2 - shear_decomp.zx*(x - dst_geom.dx/c2) - shear_decomp.zy*(y + dst_geom.dy/c2),
                     -dst_geom.dz/c2 - shear_decomp.zx*(x - dst_geom.dx/c2) - shear_decomp.zy*(y - dst_geom.dy/c2),
                 ];
-                let forw = SplineKernel::new_quad(hx_z * hy_z, F::one(), &taus_forw);
+                let forw = SplineKernel::new_quad(F::one(), F::one(), &taus_forw);
                 forw.as_cl_bytes(&mut forw_z_buf);
 
                 let taus_back = vec![
@@ -122,14 +125,14 @@ impl<F: Float + BaseFloat + ApproxEq<F> + FromPrimitive> VolumeRotation<F> {
                     -dst_geom.dz/c2 + shear_decomp.zx*(x - dst_geom.dx/c2) + shear_decomp.zy*(y + dst_geom.dy/c2),
                     -dst_geom.dz/c2 + shear_decomp.zx*(x - dst_geom.dx/c2) + shear_decomp.zy*(y - dst_geom.dy/c2),
                 ];
-                let back = SplineKernel::new_quad(hx_z * hy_z, F::one(), &taus_back);
+                let back = SplineKernel::new_quad(F::one(), F::one(), &taus_back);
                 back.as_cl_bytes(&mut back_z_buf);
             }
         }
 
         // y splines
-        let hx_y = (dst_geom.dy / shear_decomp.yx).abs();
-        let hz_y = fmin((dst_geom.dx*shear_decomp.yx/shear_decomp.yz).abs(), dst_geom.dz.abs());
+        //let hx_y = (dst_geom.dy / shear_decomp.yx).abs();
+        //let hz_y = fmin((dst_geom.dx*shear_decomp.yx/shear_decomp.yz).abs(), dst_geom.dz.abs());
         for iz in 0 .. dst_geom.nz {
             let z = dst_geom.iz2z(iz);
             for ix in 0 .. dst_geom.nx {
@@ -145,7 +148,7 @@ impl<F: Float + BaseFloat + ApproxEq<F> + FromPrimitive> VolumeRotation<F> {
                     -dst_geom.dy/c2 -shear_decomp.yx*(x - dst_geom.dx/c2) - shear_decomp.yz*(z + dst_geom.dz/c2),
                     -dst_geom.dy/c2 -shear_decomp.yx*(x - dst_geom.dx/c2) - shear_decomp.yz*(z - dst_geom.dz/c2),
                 ];
-                let forw = SplineKernel::new_quad(hx_y * hz_y, F::one(), &taus_forw);
+                let forw = SplineKernel::new_quad(F::one(), F::one(), &taus_forw);
                 forw.as_cl_bytes(&mut forw_y_buf);
 
                 let taus_back = vec![
@@ -158,14 +161,14 @@ impl<F: Float + BaseFloat + ApproxEq<F> + FromPrimitive> VolumeRotation<F> {
                     -dst_geom.dy/c2 +shear_decomp.yx*(x - dst_geom.dx/c2) + shear_decomp.yz*(z + dst_geom.dz/c2),
                     -dst_geom.dy/c2 +shear_decomp.yx*(x - dst_geom.dx/c2) + shear_decomp.yz*(z - dst_geom.dz/c2),
                 ];
-                let back = SplineKernel::new_quad(hx_y * hz_y, F::one(), &taus_back);
+                let back = SplineKernel::new_quad(F::one(), F::one(), &taus_back);
                 back.as_cl_bytes(&mut back_y_buf);
             }
         }
 
         // forw x
-        let hy_x = (dst_geom.dx / shear_decomp.xy).abs();
-        let hz_x = fmin((dst_geom.dy*shear_decomp.xy/shear_decomp.xz).abs(), dst_geom.dz.abs());
+        //let hy_x = (dst_geom.dx / shear_decomp.xy).abs();
+        //let hz_x = fmin((dst_geom.dy*shear_decomp.xy/shear_decomp.xz).abs(), dst_geom.dz.abs());
         for iz in 0 .. dst_geom.nz {
             let z = dst_geom.iz2z(iz);
             for iy in 0 .. dst_geom.ny {
@@ -181,7 +184,7 @@ impl<F: Float + BaseFloat + ApproxEq<F> + FromPrimitive> VolumeRotation<F> {
                     -dst_geom.dx/c2 -shear_decomp.xy*(y - dst_geom.dy/c2) - shear_decomp.xz*(z + dst_geom.dz/c2),
                     -dst_geom.dx/c2 -shear_decomp.xy*(y - dst_geom.dy/c2) - shear_decomp.xz*(z - dst_geom.dz/c2),
                 ];
-                let forw = SplineKernel::new_quad(hy_x * hz_x, F::one(), &taus_forw);
+                let forw = SplineKernel::new_quad(F::one(), F::one(), &taus_forw);
                 forw.as_cl_bytes(&mut forw_x_buf);
 
                 let taus_back = vec![
@@ -194,7 +197,7 @@ impl<F: Float + BaseFloat + ApproxEq<F> + FromPrimitive> VolumeRotation<F> {
                     -dst_geom.dx/c2 +shear_decomp.xy*(y - dst_geom.dy/c2) + shear_decomp.xz*(z + dst_geom.dz/c2),
                     -dst_geom.dx/c2 +shear_decomp.xy*(y - dst_geom.dy/c2) + shear_decomp.xz*(z - dst_geom.dz/c2),
                 ];
-                let back = SplineKernel::new_quad(hy_x * hz_x, F::one(), &taus_back);
+                let back = SplineKernel::new_quad(F::one(), F::one(), &taus_back);
                 back.as_cl_bytes(&mut back_x_buf);
             }
         }
