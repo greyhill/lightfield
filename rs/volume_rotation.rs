@@ -34,6 +34,7 @@ pub struct VolumeRotation<F: Float> {
     dst_geom_buf: Mem,
 }
 
+/*
 fn fmin<F: Float>(x: F, y: F) -> F {
     if x < y {
         x
@@ -41,6 +42,7 @@ fn fmin<F: Float>(x: F, y: F) -> F {
         y
     }
 }
+*/
 
 impl<F: Float> ClHeader for VolumeRotation<F> {
     fn header() -> &'static str {

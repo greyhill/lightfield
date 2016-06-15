@@ -82,33 +82,35 @@ Imager<F, LightVolume<F>> for RotatedVolumeImager<F> {
         }
     }
 
-    fn forw(self: &mut Self,
+    fn forw_subset(self: &mut Self,
                   object: &Mem,
                   view: &mut Mem,
+                  angles: &[usize],
                   wait_for: &[Event]) -> Result<Event, Error> {
         match (&mut self.rotator, &mut self.tmp) {
             (&mut Some(ref mut rotator), &mut Some(ref mut tmp)) => {
                 let evt = try!(rotator.forw(object, tmp, wait_for));
-                self.imager.forw(tmp, view, &[evt])
+                self.imager.forw_subset(tmp, view, angles, &[evt])
             },
             (&mut None, &mut None) => {
-                self.imager.forw(object, view, wait_for)
+                self.imager.forw_subset(object, view, angles, wait_for)
             },
             _ => panic!("Unexpected state in RotatedVolumeImager")
         }
     }
 
-    fn back(self: &mut Self,
+    fn back_subset(self: &mut Self,
                   view: &Mem,
                   object: &mut Mem,
+                  angles: &[usize],
                   wait_for: &[Event]) -> Result<Event, Error> {
         match (&mut self.rotator, &mut self.tmp) {
             (&mut Some(ref mut rotator), &mut Some(ref mut tmp)) => {
-                let evt = try!(self.imager.back(view, tmp, wait_for));
+                let evt = try!(self.imager.back_subset(view, tmp, angles, wait_for));
                 rotator.back(tmp, object, &[evt])
             },
             (&mut None, &mut None) => {
-                self.imager.back(view, object, wait_for)
+                self.imager.back_subset(view, object, angles, wait_for)
             },
             _ => panic!("Unexpected state in RotatedVolumeImager")
         }

@@ -30,11 +30,8 @@ where F: Float + FromPrimitive,
             view: &mut Mem,
             wait_for: &[Event]) -> Result<Event, Error> {
         let na = self.na();
-        let mut evt = try!(self.forw_angle(object, view, 0, wait_for));
-        for ia in 1 .. na {
-            evt = try!(self.forw_angle(object, view, ia, &[evt]));
-        }
-        Ok(evt)
+        let angles: Vec<usize> = (0 .. na).collect();
+        self.forw_subset(object, view, &angles, wait_for)
     }
 
     fn back(&mut self,
@@ -42,8 +39,29 @@ where F: Float + FromPrimitive,
             object: &mut Mem,
             wait_for: &[Event]) -> Result<Event, Error> {
         let na = self.na();
+        let angles: Vec<usize> = (0 .. na).collect();
+        self.back_subset(view, object, &angles, wait_for)
+    }
+
+    fn forw_subset(self: &mut Self,
+                   object: &Mem,
+                   view: &mut Mem,
+                   angles: &[usize],
+                   wait_for: &[Event]) -> Result<Event, Error> {
+        let mut evt = try!(self.forw_angle(object, view, 0, wait_for));
+        for &ia in angles.iter() {
+            evt = try!(self.forw_angle(object, view, ia, &[evt]));
+        }
+        Ok(evt)
+    }
+
+    fn back_subset(self: &mut Self,
+                   view: &Mem,
+                   object: &mut Mem,
+                   angles: &[usize],
+                   wait_for: &[Event]) -> Result<Event, Error> {
         let mut evt = try!(self.back_angle(view, object, 0, wait_for));
-        for ia in 1 .. na {
+        for &ia in angles.iter() {
             evt = try!(self.back_angle(view, object, ia, &[evt]));
         }
         Ok(evt)
