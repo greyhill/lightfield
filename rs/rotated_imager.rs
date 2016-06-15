@@ -56,7 +56,7 @@ Imager<F, LightVolume<F>> for RotatedVolumeImager<F> {
         match (&mut self.rotator, &mut self.tmp) {
             (&mut Some(ref mut rotator), &mut Some(ref mut tmp)) => {
                 let evt = try!(rotator.forw(object, tmp, wait_for));
-                self.imager.forw_angle(tmp, view, ia, wait_for)
+                self.imager.forw_angle(tmp, view, ia, &[evt])
             },
             (&mut None, &mut None) => {
                 self.imager.forw_angle(object, view, ia, wait_for)
@@ -72,7 +72,8 @@ Imager<F, LightVolume<F>> for RotatedVolumeImager<F> {
                   wait_for: &[Event]) -> Result<Event, Error> {
         match (&mut self.rotator, &mut self.tmp) {
             (&mut Some(ref mut rotator), &mut Some(ref mut tmp)) => {
-                unimplemented!()
+                let evt = try!(self.imager.back_angle(view, tmp, ia, wait_for));
+                rotator.back(tmp, object, &[evt])
             },
             (&mut None, &mut None) => {
                 self.imager.back_angle(view, object, ia, wait_for)
@@ -88,7 +89,7 @@ Imager<F, LightVolume<F>> for RotatedVolumeImager<F> {
         match (&mut self.rotator, &mut self.tmp) {
             (&mut Some(ref mut rotator), &mut Some(ref mut tmp)) => {
                 let evt = try!(rotator.forw(object, tmp, wait_for));
-                self.imager.forw(tmp, view, wait_for)
+                self.imager.forw(tmp, view, &[evt])
             },
             (&mut None, &mut None) => {
                 self.imager.forw(object, view, wait_for)
@@ -103,7 +104,8 @@ Imager<F, LightVolume<F>> for RotatedVolumeImager<F> {
                   wait_for: &[Event]) -> Result<Event, Error> {
         match (&mut self.rotator, &mut self.tmp) {
             (&mut Some(ref mut rotator), &mut Some(ref mut tmp)) => {
-                unimplemented!()
+                let evt = try!(self.imager.back(view, tmp, wait_for));
+                rotator.back(tmp, object, &[evt])
             },
             (&mut None, &mut None) => {
                 self.imager.back(view, object, wait_for)
