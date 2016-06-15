@@ -2,6 +2,18 @@
 data = "../test_volume.fld"
 config = "test_volume.toml"
 
+[object.box_constraints]
+min = 0.0
+
+[object.sparsifying]
+type = 'abs'
+weight = 2.0
+
+[object.edge_preserving]
+type = 'fair'
+weight = 3.0
+delta = 2.0
+
 [[camera]]
 name = "focal0"
 config = "cameras/test_focal.toml"

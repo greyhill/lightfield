@@ -12,6 +12,7 @@ use self::num::{Float, ToPrimitive, FromPrimitive};
 use object::*;
 use camera::*;
 use serialize::*;
+use potential_function::*;
 
 fn path_from<P: AsRef<Path>, M: AsRef<Path>>(root_path: P, more: M) -> PathBuf {
     let mut tr = PathBuf::from(root_path.as_ref());
@@ -151,13 +152,25 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> SceneCamera<F> {
 
 /// Description of object from a configuration file
 #[derive(Clone, Debug)]
-pub struct SceneObject {
+pub struct SceneObject<F: Float + BaseFloat> {
     pub config: Table,
     pub data_path: PathBuf,
+
+    /// Box constraint minimum value
+    pub box_min: Option<F>,
+
+    /// Box constraint maximum value
+    pub box_max: Option<F>,
+
+    /// Sparsifying regularizer
+    pub sparsifying: Option<PotentialFunction<F>>,
+
+    /// Edge preserving regularizer
+    pub edge_preserving: Option<PotentialFunction<F>>,
 }
 
-impl SceneObject {
-    pub fn get_config<F: BaseFloat + Float + FromPrimitive + ToPrimitive>(self: &Self) -> Option<ObjectConfig<F>> {
+impl<F: Float + BaseFloat + FromPrimitive> SceneObject<F> {
+    pub fn get_config(self: &Self) -> Option<ObjectConfig<F>> {
         ObjectConfig::from_map(&self.config)
     }
 
@@ -187,9 +200,68 @@ impl SceneObject {
             },
         };
 
+        let (box_min, box_max) = match table.get("box_constraints") {
+            Some(&Value::Table(ref tab)) => {
+                let box_min = if let Some(&Value::Float(f)) = tab.get("min") {
+                    Some(F::from_f64(f).unwrap())
+                } else {
+                    None
+                };
+
+                let box_max = if let Some(&Value::Float(f)) = tab.get("max") {
+                    Some(F::from_f64(f).unwrap())
+                } else {
+                    None
+                };
+
+                (box_min, box_max)
+            },
+            None => (None, None),
+            _ => {
+                println!("Malformed box constraints");
+                return None;
+            }
+        };
+
+        let sparsifying = match table.get("sparsifying") {
+            Some(&Value::Table(ref tab)) => {
+                if let Some(pf) = PotentialFunction::from_map(tab) {
+                    Some(pf)
+                } else {
+                    println!("Malformed sparsifying regularization");
+                    return None;
+                }
+            },
+            None => None,
+            _ => {
+                println!("Sparsifying regularization must be a table if present");
+                return None;
+            },
+        };
+
+        let edge_preserving = match table.get("edge_preserving") {
+            Some(&Value::Table(ref tab)) => {
+                if let Some(pf) = PotentialFunction::from_map(tab) {
+                    Some(pf)
+                } else {
+                    println!("Malformed edge-preserving regularizer");
+                    return None;
+                }
+            },
+            None => None,
+            _ => {
+                println!("Edge-preserving regularization must be a table if present");
+                return None;
+            },
+        };
+
         Some(SceneObject{
             config: config,
             data_path: data_path,
+            box_min: box_min,
+            box_max: box_max,
+            sparsifying: sparsifying,
+            edge_preserving: edge_preserving,
         })
     }
 }
@@ -197,7 +269,7 @@ impl SceneObject {
 /// Description of a scene from a configuration file
 #[derive(Clone, Debug)]
 pub struct Scene<F: Float + BaseFloat> {
-    pub object: SceneObject,
+    pub object: SceneObject<F>,
     pub cameras: Vec<SceneCamera<F>>,
 }
 
@@ -298,6 +370,26 @@ fn test_scene() {
     assert_eq!(scene.cameras[1].position.x, 50.0);
     assert_eq!(scene.cameras[1].position.y, 60.0);
     assert_eq!(scene.cameras[1].position.z, 12.0);
+
+    if let Some(f) = scene.object.box_min {
+        assert_eq!(f, 0.0);
+    } else {
+        assert!(false);
+    }
+    assert!(scene.object.box_max.is_none());
+
+    if let Some(PotentialFunction::Abs(w)) = scene.object.sparsifying {
+        assert_eq!(w, 2.0);
+    } else {
+        assert!(false);
+    }
+
+    if let Some(PotentialFunction::Fair(w, f)) = scene.object.edge_preserving {
+        assert_eq!(w, 3.0);
+        assert_eq!(f, 2.0);
+    } else {
+        assert!(false);
+    }
 
     if let Some(CameraConfig::SingleLensCamera(slc)) = scene.cameras[0].get_config() {
         assert_eq!(slc.detector.ns, 1024);
