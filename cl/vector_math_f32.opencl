@@ -20,6 +20,17 @@ kernel void VectorMath_mix(int dimension,
     if(idx >= dimension) {
         return;
     }
-    vec[idx] = ax*x[idx] + ay*y[idx];
+    out[idx] = ax*x[idx] + ay*y[idx];
+}
+
+kernel void VectorMath_div(int dimension,
+        global float* x,
+        global float* y,
+        global float* out) {
+    int idx = get_global_id(0);
+    if(idx >= dimension) {
+        return;
+    }
+    out[idx] = x[idx] / y[idx];
 }
 

@@ -10,6 +10,7 @@ pub struct VectorMath<F: Float + ToPrimitive + FromPrimitive> {
     queue: CommandQueue,
     set: Kernel,
     mix: Kernel,
+    div: Kernel,
     m_: PhantomData<F>,
 }
 
@@ -33,11 +34,13 @@ impl<F: Float + ToPrimitive + FromPrimitive> VectorMath<F> {
         // create kernels
         let set = try!(built.create_kernel("VectorMath_set"));
         let mix = try!(built.create_kernel("VectorMath_mix"));
+        let div = try!(built.create_kernel("VectorMath_div"));
 
         Ok(VectorMath{
             queue: queue,
             set: set,
             mix: mix,
+            div: div,
             m_: PhantomData,
         })
     }
@@ -85,5 +88,36 @@ impl<F: Float + ToPrimitive + FromPrimitive> VectorMath<F> {
                                    global_size,
                                    wait_for)
     }
+
+    /// Implements `out[i] = x[i] / y[i]`
+    pub fn div(self: &mut Self,
+               np: usize,
+               x: &Mem,
+               y: &Mem,
+               out: &mut Mem,
+               wait_for: &[Event]) -> Result<Event, Error> {
+        try!(self.div.bind_scalar(0, &(np as i32)));
+        try!(self.div.bind(1, x));
+        try!(self.div.bind(2, y));
+        try!(self.div.bind_mut(3, out));
+
+        let local_size = (256, 1, 1);
+        let global_size = (np, 1, 1);
+
+        self.queue.run_with_events(&mut self.div,
+                                   local_size,
+                                   global_size,
+                                   wait_for)
+    }
+}
+
+#[test]
+fn test_vector_math() {
+    use env::*;
+
+    let env = Environment::new_easy().unwrap();
+    let queue = &env.queues[0];
+
+    let vm = VectorMath::<f32>::new(queue.clone()).unwrap();
 }
 
