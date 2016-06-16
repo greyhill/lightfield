@@ -92,9 +92,9 @@ impl<F: Float + FromPrimitive + ToPrimitive> LensArray<F> {
                                             Some((is0, is1, it0, it1)), // source bounds
                                             Some((ds0, ds1, dt0, dt1)), // destination bounds
                                             false, // overwrite forw
-                                            false, // overwrite back
+                                            true, // overwrite back
                                             true, // conservative forw,
-                                            true, // conservative back
+                                            false, // conservative back
                                             true, // onto detector
                                             queue.clone()));
             xports.push(xport);
