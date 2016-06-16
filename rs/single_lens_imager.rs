@@ -36,7 +36,6 @@ impl<F: Float + FromPrimitive> SingleLensVolumeImager<F> {
             plane: plane.clone(),
             to_plane: Optics::translation(&camera.distance_detector_lens),
         };
-        let (fx, fy) = camera.lens.optics().compose(&detector_lfg.to_plane).focused_distance();
 
         // geometry of the object in the camera's optical frame
         let distance_to_object = -position.z;
