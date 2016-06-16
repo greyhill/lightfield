@@ -106,3 +106,6 @@ pub use rotated_imager::*;
 mod potential_function;
 pub use potential_function::*;
 
+mod fista_volume_solver;
+pub use fista_volume_solver::*;
+
