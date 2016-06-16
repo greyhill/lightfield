@@ -21,6 +21,8 @@ pub struct FistaVolumeSolver<F: Float + FromPrimitive + ToPrimitive + BaseFloat>
     projections: Vec<Mem>,
     tmp_buffers: Vec<Mem>,
 
+    camera_scales: Vec<F>,
+
     queue: CommandQueue,
 }
 
@@ -66,6 +68,8 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
             measurements: measurements_vec,
             projections: projections,
 
+            camera_scales: Vec::new(),
+
             queue: queue,
         };
         try!(volume_solver.compute_denominator());
@@ -73,6 +77,8 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
         Ok(volume_solver)
     }
 
+    /// Computes data-fidelity term diagonal majorizer and camera normalization
+    /// factors
     fn compute_denominator(self: &mut Self) -> Result<(), Error> {
         let ones = try!(self.geom.ones_buf(&self.queue));
         let mut tmp = try!(self.geom.zeros_buf(&self.queue));
@@ -86,9 +92,29 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
 
             // project and backproject volume of ones into tmp
             evt = try!(imager.forw(&ones, proj_buf, &[evt]));
+
+            /* // Heuristic, don't use
+            // read projection
+            try!(evt.wait());
+            let mut proj_host = imager.detector().image_geometry().zeros();
+            try!(self.queue.read_buffer(&proj_buf, &mut proj_host));
+
+            // compute normalization factor from maximum of projection
+            let mut max_val = F::zero();
+            for &mi in proj_host.iter() {
+                if mi > max_val {
+                    max_val = mi;
+                }
+            }
+            let camera_scale = F::one() / max_val;
+            */
+            self.camera_scales.push(F::one());
+
+            // backproject
             evt = try!(imager.back(proj_buf, &mut tmp, &[evt]));
 
             // accumulate backprojected ones onto denom
+            // note: we scale by camera_scale^2
             evt = try!(self.vecmath.mix(np_geom,
                                         &tmp,
                                         &self.denom,
@@ -143,6 +169,7 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
         let tmp = &mut self.tmp_buffers[camera];
         let proj = &mut self.projections[camera];
         let meas = &mut self.measurements[camera];
+        let cam_scaling = self.camera_scales[camera].clone();
         let mut proj_copy = proj.clone();
 
         let np_obj = self.geom.dimension();
@@ -159,17 +186,18 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
 
         // compute subset scaling
         let subset_scaling = F::from_usize(imager.na()).unwrap() / F::from_usize(subset_angles.len()).unwrap();
+        let scaling = subset_scaling * cam_scaling;
 
         // compute residual
         // note: we use scaling factors subset_scaling^2 on the projection and -subset_scaling on
         // the measurements:
-        //          subset_gradient = scaling * A_subset' * ( scaling A_subset * x - y )
+        //          subset_gradient = cam_scaling * scaling * A_subset' * ( cam_scaling * scaling * A_subset * x - y )
         // this is a little bit different from x-ray ct
         evt = try!(self.vecmath.mix(np_det,
                                     proj,
                                     meas,
-                                    subset_scaling*subset_scaling,
-                                    -subset_scaling,
+                                    scaling*scaling,
+                                    -scaling,
                                     &mut proj_copy,
                                     &[evt]));
 

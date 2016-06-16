@@ -44,6 +44,11 @@ impl<F: Float + FromPrimitive> LightFieldGeometry<F> {
         }
     }
 
+    /// Returns the area of the pixel
+    pub fn pixel_area(self: &Self) -> F {
+        self.plane.ds * self.plane.dt
+    }
+
     /// Returns an optical transformation from this geometry to another
     ///
     /// This assumes both geometies are using the same optical plane.
