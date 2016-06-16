@@ -31,6 +31,11 @@ kernel void VectorMath_div(int dimension,
     if(idx >= dimension) {
         return;
     }
-    out[idx] = x[idx] / y[idx];
+    float yi = y[idx];
+    if(yi != 0.f) {
+        out[idx] = x[idx] / y[idx];
+    } else {
+        out[idx] = 0.f;
+    }
 }
 
