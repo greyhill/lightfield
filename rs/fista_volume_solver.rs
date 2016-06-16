@@ -93,21 +93,6 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
             // project and backproject volume of ones into tmp
             evt = try!(imager.forw(&ones, proj_buf, &[evt]));
 
-            /* // Heuristic, don't use
-            // read projection
-            try!(evt.wait());
-            let mut proj_host = imager.detector().image_geometry().zeros();
-            try!(self.queue.read_buffer(&proj_buf, &mut proj_host));
-
-            // compute normalization factor from maximum of projection
-            let mut max_val = F::zero();
-            for &mi in proj_host.iter() {
-                if mi > max_val {
-                    max_val = mi;
-                }
-            }
-            let camera_scale = F::one() / max_val;
-            */
             self.camera_scales.push(F::one());
 
             // backproject
@@ -125,6 +110,19 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
 
             try!(evt.wait());
         }
+
+        // keep all entries within 1000 of one another
+        let mut denom_host = self.geom.zeros();
+        try!(self.queue.read_buffer(&self.denom, &mut denom_host));
+        let max_val = denom_host.iter().fold(F::one(), |l, &r| if l > r { l } else { r });
+        let c1000 = F::from_f32(1000f32).unwrap();
+        for m in denom_host.iter_mut() {
+            if *m < max_val / c1000 {
+                *m = max_val / c1000;
+            }
+        }
+        try!(self.queue.write_buffer(&mut self.denom, &denom_host));
+
         Ok(())
     }
 
