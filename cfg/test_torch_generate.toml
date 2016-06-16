@@ -1,0 +1,24 @@
+[object]
+data = './torch.fld'
+config = 'geometries/100mm3_over.toml'
+
+[[camera]]
+name = 'central_camera'
+config = 'cameras/test_simple.toml'
+position = { x = 0.0, y = 0.0, z = -500.0 }
+data = 'center.png'
+
+[[camera]]
+name = 'left_camera'
+config = 'cameras/test_simple.toml'
+position = { x = 0.0, y = 0.0, z = -500.0 }
+rotation = { rot_x = 0.0, rot_y = 30.0, rot_z = 0.1 }
+data = 'left.png'
+
+[[camera]]
+name = 'right_camera'
+config = 'cameras/test_simple.toml'
+position = { x = 0.0, y = 0.0, z = -500.0 }
+rotation = { rot_x = 0.0, rot_y = -30.0, rot_z = 0.1 }
+data = 'right.png'
+
