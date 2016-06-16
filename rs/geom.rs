@@ -16,6 +16,11 @@ fn reduce_shape(shape: &[usize]) -> usize {
 
 /// Trait for types describing geometries
 pub trait Geometry<F: Float + FromPrimitive> {
+    /// Returns the number of elements in vectors from this geometry
+    fn dimension(self: &Self) -> usize {
+        self.shape().iter().fold(1usize, |l,r| l*r)
+    }
+
     /// Returns the dimensions of elements of this type
     fn shape(self: &Self) -> Vec<usize>;
 

@@ -28,6 +28,9 @@ pub use object::*;
 mod geom;
 pub use geom::*;
 
+mod vector_math;
+pub use vector_math::*;
+
 mod image_geom;
 pub use image_geom::*;
 
