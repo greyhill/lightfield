@@ -49,6 +49,9 @@ name = "microlens_tool"
 path = "rs/bin/microlens_tool.rs"
 
 [[bin]]
+name = "camera_tool"
+path = "rs/bin/camera_tool.rs"
+
+[[bin]]
 name = 'recon_fista'
 path = 'rs/bin/recon_fista.rs'
-
