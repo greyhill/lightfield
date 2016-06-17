@@ -7,6 +7,7 @@ use lens::*;
 use detector::*;
 use image_geom::*;
 use std::path::Path;
+use optics::*;
 use geom::*;
 
 /// Description of a coded aperture camera
@@ -19,6 +20,15 @@ pub struct CodedApertureCamera<F: Float> {
     pub distance_detector_mask: F,
     pub mask_path: String,
     pub mask: Option<Vec<F>>,
+}
+
+impl<F: Float + FromPrimitive> CodedApertureCamera<F> {
+    pub fn focus_at_distance(self: &mut Self, focus_distance: F) {
+        let pre_optics = Optics::translation(&self.distance_detector_mask);
+        let post_optics = self.lens.optics().then(&Optics::translation(&focus_distance));
+        let (distance_s, distance_t) = Optics::focus_at_distance(&pre_optics, &post_optics);
+        self.distance_lens_mask = (distance_s + distance_t) / (F::one() + F::one());
+    }
 }
 
 impl<F: Float + FromPrimitive + ToPrimitive> Serialize for CodedApertureCamera<F> {

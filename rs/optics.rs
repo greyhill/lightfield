@@ -191,6 +191,20 @@ impl<F: Float> Optics<F> {
         let focused_t = - self.tv / self.vv;
         (focused_s, focused_t)
     }
+
+    /// Returns the appropriate translation distance for focusing
+    pub fn focus_at_distance(pre_optics: &Optics<F>,
+                             post_optics: &Optics<F>) -> (F, F) {
+        // s/u
+        let distance_s = - (post_optics.ss * pre_optics.su + post_optics.su * pre_optics.uu) 
+            / (post_optics.ss * pre_optics.uu);
+
+        // t/v
+        let distance_t = - (post_optics.tt * pre_optics.tv + post_optics.tv * pre_optics.vv) 
+            / (post_optics.tt * pre_optics.vv);
+        
+        (distance_s, distance_t)
+    }
 }
 
 impl<F: Float + FromPrimitive + ToPrimitive> Serialize for Optics<F> {

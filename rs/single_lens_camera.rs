@@ -5,6 +5,7 @@ use self::num::{Float, FromPrimitive, ToPrimitive};
 use self::toml::*;
 use lens::*;
 use detector::*;
+use optics::*;
 
 /// Single lens camera
 #[derive(Clone, Debug)]
@@ -12,6 +13,15 @@ pub struct SingleLensCamera<F: Float> {
     pub lens: Lens<F>,
     pub detector: Detector<F>,
     pub distance_detector_lens: F,
+}
+
+impl<F: Float + FromPrimitive + ToPrimitive> SingleLensCamera<F> {
+    pub fn focus_at_distance(self: &mut Self, focus_distance: F) {
+        let pre_optics = Optics::identity();
+        let post_optics = self.lens.optics().then(&Optics::translation(&focus_distance));
+        let (distance_s, distance_t) = Optics::focus_at_distance(&pre_optics, &post_optics);
+        self.distance_detector_lens = (distance_s + distance_t) / (F::one() + F::one());
+    }
 }
 
 impl<F: Float + FromPrimitive + ToPrimitive> Serialize for SingleLensCamera<F> {

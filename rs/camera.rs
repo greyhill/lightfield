@@ -29,6 +29,14 @@ pub enum CameraConfig<F: Float> {
 }
 
 impl<F: 'static + Float + FromPrimitive + BaseFloat + ApproxEq<F>> CameraConfig<F> {
+    pub fn focus_at_distance(self: &mut Self, distance: F) -> () {
+        match self {
+            &mut CameraConfig::SingleLensCamera(ref mut slc) => slc.focus_at_distance(distance),
+            &mut CameraConfig::CodedApertureCamera(ref mut cac) => cac.focus_at_distance(distance),
+            &mut CameraConfig::PlenopticCamera(ref mut pc) => pc.focus_at_distance(distance),
+        }
+    }
+
     pub fn volume_imager(self: &Self,
                          light_volume: LightVolume<F>,
                          camera_position: Vector3<F>,
