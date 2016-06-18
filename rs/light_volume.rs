@@ -89,6 +89,7 @@ impl<F: Float + FromPrimitive> LightVolume<F> {
         }
     }
 
+    /// Returns a LightVolume with voxel dimensions scaled by the given factors
     pub fn scale(self: &Self, sx: F, sy: F, sz: F) -> Self {
         LightVolume{
             nx: self.nx,
@@ -105,6 +106,11 @@ impl<F: Float + FromPrimitive> LightVolume<F> {
 
             opaque: self.opaque
         }
+    }
+
+    /// Returns the volume of a voxel
+    pub fn voxel_volume(self: &Self) -> F {
+        (self.dx * self.dy * self.dz).abs()
     }
 }
 

@@ -273,7 +273,7 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
         // compute residual
         // note: we use scaling factors subset_scaling^2 on the projection and -subset_scaling on
         // the measurements:
-        //          subset_gradient = cam_scaling * scaling * A_subset' * ( cam_scaling * scaling * A_subset * x - y )
+        //          subset_gradient = scaling * A_subset' * ( scaling * A_subset * x - y )
         // this is a little bit different from x-ray ct
         evt = try!(self.vecmath.mix(np_det,
                                     proj,
