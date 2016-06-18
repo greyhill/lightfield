@@ -27,6 +27,8 @@ pub struct FistaVolumeSolver<F: Float + FromPrimitive + ToPrimitive + BaseFloat>
     tmp_buffers: Vec<Mem>,
 
     camera_scales: Vec<F>,
+    measurements_host: Vec<Vec<F>>,
+    ynorm2s: Vec<F>,
 
     update: Kernel,
     sparsifying_buf: Option<Mem>,
@@ -75,6 +77,15 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
         for &m in measurements.iter() {
             let m_buf = try!(queue.create_buffer_from_slice(m));
             measurements_vec.push(m_buf);
+        }
+
+        // compute ynorm2s
+        // (this is used for multi-camera normalization)
+        let mut ynorm2s = Vec::new();
+        let mut measurements_host = Vec::new();
+        for &m in measurements.iter() {
+            ynorm2s.push(m.iter().fold(F::zero(), |l, &r| l + r*r));
+            measurements_host.push(m.to_owned());
         }
 
         // create projection buffers
@@ -127,6 +138,8 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
             box_max: box_max,
 
             camera_scales: Vec::new(),
+            measurements_host: measurements_host,
+            ynorm2s: ynorm2s,
 
             queue: queue,
 
@@ -227,7 +240,6 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
         let tmp = &mut self.tmp_buffers[camera];
         let proj = &mut self.projections[camera];
         let meas = &mut self.measurements[camera];
-        let cam_scaling = self.camera_scales[camera].clone();
         let mut proj_copy = proj.clone();
 
         let np_obj = self.geom.dimension();
@@ -242,9 +254,21 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
                                       subset_angles,
                                       &[evt]));
 
+        if camera > 0 {
+            // for all cameras but the first, update the camera_scale
+            try!(evt.wait());
+            let mut proj_host = vec![F::zero(); np_det];
+            try!(try!(self.queue.read_buffer(proj, &mut proj_host)).wait());
+            let iprod = proj_host.iter().zip(self.measurements_host[camera].iter()).fold(
+                F::zero(), |l, (&a, &b)| l + a*b);
+            self.camera_scales[camera] = iprod / self.ynorm2s[camera];
+            println!("Camera {} scale: {}", camera, 
+                     F::to_f32(&self.camera_scales[camera]).unwrap());
+        }
+
         // compute subset scaling
         let subset_scaling = F::from_usize(imager.na()).unwrap() / F::from_usize(subset_angles.len()).unwrap();
-        let scaling = subset_scaling * cam_scaling;
+        let scaling = subset_scaling;
 
         // compute residual
         // note: we use scaling factors subset_scaling^2 on the projection and -subset_scaling on
@@ -255,7 +279,7 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
                                     proj,
                                     meas,
                                     scaling*scaling,
-                                    -scaling,
+                                    -scaling*self.camera_scales[camera],
                                     &mut proj_copy,
                                     &[evt]));
 
