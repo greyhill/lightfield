@@ -62,6 +62,8 @@ fn main() {
     let lens_array: Vec<Lens<f32>> = match (&matches.opt_str("pattern").unwrap()[..], lenses.len()) {
         ("quad", 1) => Lens::tesselate_quad_1(&plane_geom, &lenses[0]),
         ("quad", 2) => Lens::tesselate_quad_2(&plane_geom, &lenses[0], &lenses[1]),
+        ("hex", 1) => Lens::tesselate_hex_1(&plane_geom, &lenses[0]),
+        ("hex", 3) => Lens::tesselate_hex_3(&plane_geom, &lenses[0], &lenses[1], &lenses[2]),
         _ => panic!("Unrecognized pattern and number of lenses"),
     };
 

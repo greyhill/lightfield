@@ -18,6 +18,7 @@ use geom::*;
 
 /// Implementation of an imager for a volume
 pub struct CodedApertureVolumeImager<F: Float + FromPrimitive> {
+    geom: LightVolume<F>,
     volume_xport: VolumeTransport<F>,
     tmp_buf: Mem,
     mask: Mask<F>,
@@ -93,6 +94,7 @@ impl<F: Float + FromPrimitive> CodedApertureVolumeImager<F> {
                                         queue.clone()));
 
         Ok(CodedApertureVolumeImager{
+            geom: geom,
             volume_xport: volume_xport,
             tmp_buf: tmp_buf,
             mask: mask,
@@ -111,6 +113,10 @@ for CodedApertureVolumeImager<F> {
 
     fn detector(self: &Self) -> &Detector<F> {
         &self.detector
+    }
+
+    fn geometry(self: &Self) -> &LightVolume<F> {
+        &self.geom
     }
 
     fn forw_angle(self: &mut Self,

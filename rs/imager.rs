@@ -15,6 +15,9 @@ where F: Float + FromPrimitive,
     /// The imager's detector
     fn detector(self: &Self) -> &Detector<F>;
 
+    /// Object geometry
+    fn geometry(self: &Self) -> &ObjectGeometry;
+
     /// Project a single angle out of the discretization
     fn forw_angle(self: &mut Self,
                   object: &Mem,

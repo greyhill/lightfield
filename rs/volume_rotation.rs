@@ -236,10 +236,6 @@ impl<F: Float + BaseFloat + ApproxEq<F> + FromPrimitive> VolumeRotation<F> {
             }
         }
 
-        println!("{} {} {}", F::to_f32(&hx).unwrap(), 
-                             F::to_f32(&hy).unwrap(), 
-                             F::to_f32(&hz).unwrap());
-
         let forw_x = try!(queue.create_buffer_from_slice(&forw_x_buf));
         let forw_y = try!(queue.create_buffer_from_slice(&forw_y_buf));
         let forw_z = try!(queue.create_buffer_from_slice(&forw_z_buf));

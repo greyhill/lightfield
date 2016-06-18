@@ -22,6 +22,7 @@ pub struct FistaVolumeSolver<F: Float + FromPrimitive + ToPrimitive + BaseFloat>
     x: Mem,
     m: Mem,
     denom: Mem,
+    mask3: Mem,
     measurements: Vec<Mem>,
     projections: Vec<Mem>,
     tmp_buffers: Vec<Mem>,
@@ -107,6 +108,7 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
         let x = try!(geometry.zeros_buf(&queue));
         let m = try!(geometry.zeros_buf(&queue));
         let denom = try!(geometry.zeros_buf(&queue));
+        let mask3 = try!(geometry.zeros_buf(&queue));
 
         // create sparsifying buffer
         let sparsifying_buf = if let &Some(ref pf) = sparsifying_regularizer {
@@ -126,6 +128,7 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
             x: x,
             m: m,
             denom: denom,
+            mask3: mask3,
             tmp_buffers: tmp_buffers,
             measurements: measurements_vec,
             projections: projections,
@@ -146,8 +149,43 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
             t: F::one()
         };
         try!(volume_solver.compute_denominator());
+        //try!(volume_solver.compute_mask3());
 
         Ok(volume_solver)
+    }
+
+    /// Backproject zeros 
+    pub fn compute_mask3(self: &mut Self) -> Result<(), Error> {
+        let np_geom = self.geom.dimension();
+        try!(try!(self.vecmath.set(np_geom, &mut self.mask3, F::zero(), &[])).wait());
+
+        for (imager, (proj_buf, (meas, tmp_buffer))) in self.imagers.iter_mut().zip(self.projections.iter_mut()
+                                                                 .zip(self.measurements_host.iter()
+                                                                 .zip(self.tmp_buffers.iter_mut()))) {
+            let mut tmp = vec![F::zero(); meas.len()];
+            for (tmp_i, meas_i) in tmp.iter_mut().zip(meas.iter()) {
+                if *meas_i == F::zero() {
+                    *tmp_i = F::one();
+                }
+            }
+
+            try!(try!(self.queue.write_buffer(proj_buf, &tmp)).wait());
+            try!(try!(self.vecmath.set(np_geom, tmp_buffer, F::zero(), &[])).wait());
+            try!(try!(imager.back(proj_buf, tmp_buffer, &[])).wait());
+        }
+
+        let mut m3_clone = self.mask3.clone();
+        for tmp_buffer in self.tmp_buffers.iter_mut() {
+            try!(try!(self.vecmath.mix(np_geom,
+                                       tmp_buffer,
+                                       &self.mask3,
+                                       F::one(),
+                                       F::one(),
+                                       &mut m3_clone,
+                                       &[])).wait());
+        }
+
+        Ok(())
     }
 
     /// Computes data-fidelity term diagonal majorizer and camera normalization
@@ -162,6 +200,10 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
         for (imager, proj_buf) in self.imagers.iter_mut().zip(self.projections.iter_mut()) {
             // clear tmp buf
             let mut evt = try!(self.vecmath.set(np_geom, &mut tmp, F::zero(), &[]));
+
+            // clear proj buf
+            let np_meas = imager.detector().ns * imager.detector().nt;
+            evt = try!(self.vecmath.set(np_meas, proj_buf, F::zero(), &[evt]));
 
             // project and backproject volume of ones into tmp
             evt = try!(imager.forw(&ones, proj_buf, &[evt]));
@@ -254,7 +296,7 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
                                       subset_angles,
                                       &[evt]));
 
-        if camera > 0 {
+        if false && camera > 0 {
             // for all cameras but the first, update the camera_scale
             try!(evt.wait());
             let mut proj_host = vec![F::zero(); np_det];
@@ -262,8 +304,7 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
             let iprod = proj_host.iter().zip(self.measurements_host[camera].iter()).fold(
                 F::zero(), |l, (&a, &b)| l + a*b);
             self.camera_scales[camera] = iprod / self.ynorm2s[camera];
-            println!("Camera {} scale: {}", camera, 
-                     F::to_f32(&self.camera_scales[camera]).unwrap());
+            println!("Camera {} scale: {}", camera, F::to_f32(&self.camera_scales[camera]).unwrap());
         }
 
         // compute subset scaling
@@ -318,6 +359,7 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
         try!(self.update.bind_mut(7, &mut self.m));
         try!(self.update.bind_scalar(8, &self.t));
         try!(self.update.bind_scalar(9, &t1));
+        try!(self.update.bind(10, &self.mask3));
 
         let local_size = (32, 8, 1);
         let global_size = (self.geom.nx, self.geom.ny, self.geom.nz);

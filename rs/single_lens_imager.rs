@@ -15,6 +15,7 @@ use detector::*;
 
 /// Implementation of an imager for a volume
 pub struct SingleLensVolumeImager<F: Float + FromPrimitive> {
+    geom: LightVolume<F>,
     xport: VolumeTransport<F>,
     plane: AngularPlane<F>,
     detector: Detector<F>,
@@ -59,6 +60,7 @@ impl<F: Float + FromPrimitive> SingleLensVolumeImager<F> {
                                               queue.clone()));
 
         Ok(SingleLensVolumeImager{
+            geom: geom,
             xport: xport,
             plane: plane,
             detector: camera.detector,
@@ -75,6 +77,10 @@ for SingleLensVolumeImager<F> {
 
     fn detector(self: &Self) -> &Detector<F> {
         &self.detector
+    }
+
+    fn geometry(self: &Self) -> &LightVolume<F> {
+        &self.geom
     }
 
     fn forw_angle(self: &mut Self,

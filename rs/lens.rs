@@ -96,6 +96,16 @@ impl<F: Float + FromPrimitive> Lens<F> {
         }
         tr
     }
+
+    pub fn tesselate_hex_1(ig: &ImageGeometry<F>,
+                           lens: &Self) -> Vec<Self> {
+        unimplemented!()
+    }
+
+    pub fn tesselate_hex_3(ig: &ImageGeometry<F>,
+                           lens1: &Self, lens2: &Self, lens3: &Self) -> Vec<Self> {
+        unimplemented!()
+    }
 }
 
 impl<F: Float + FromPrimitive> BoundingGeometry<F> for Lens<F> {

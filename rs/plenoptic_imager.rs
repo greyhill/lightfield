@@ -16,6 +16,7 @@ use lens_array::*;
 use geom::*;
 
 pub struct PlenopticVolumeImager<F: Float + FromPrimitive> {
+    geom: LightVolume<F>,
     xport: VolumeTransport<F>,
     array: LensArray<F>,
     detector: Detector<F>,
@@ -75,6 +76,7 @@ impl<F: Float + FromPrimitive> PlenopticVolumeImager<F> {
                                         queue.clone()));
 
         Ok(PlenopticVolumeImager{
+            geom: geom,
             xport: xport,
             array: array,
             detector: camera.detector,
@@ -92,6 +94,10 @@ for PlenopticVolumeImager<F> {
 
     fn detector(self: &Self) -> &Detector<F> {
         &self.detector
+    }
+
+    fn geometry(self: &Self) -> &LightVolume<F> {
+        &self.geom
     }
 
     fn forw_angle(self: &mut Self,
