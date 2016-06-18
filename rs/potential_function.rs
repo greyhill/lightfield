@@ -1,9 +1,11 @@
 extern crate num;
 extern crate toml;
+extern crate byteorder;
 use self::num::{Float, ToPrimitive, FromPrimitive};
 use self::toml::*;
 use serialize::*;
 use cl_traits::*;
+use self::byteorder::*;
 
 /// Convex one-dimensional potential function (loss)
 #[derive(Clone, Debug)]
@@ -16,6 +18,26 @@ pub enum PotentialFunction<F: Float> {
 impl<F: Float> ClHeader for PotentialFunction<F> {
     fn header() -> &'static str {
         include_str!("../cl/potential_function_f32.opencl")
+    }
+}
+
+impl<F: Float + ToPrimitive> ClBuffer for PotentialFunction<F> {
+    fn as_cl_bytes(self: &Self, buf: &mut Vec<u8>) {
+        match self {
+            &PotentialFunction::Quad(ref weight) => {
+                buf.write_i32::<LittleEndian>(0i32).unwrap();
+                buf.write_f32::<LittleEndian>(F::to_f32(weight).unwrap()).unwrap();
+            },
+            &PotentialFunction::Abs(ref weight) => {
+                buf.write_i32::<LittleEndian>(1i32).unwrap();
+                buf.write_f32::<LittleEndian>(F::to_f32(weight).unwrap()).unwrap();
+            },
+            &PotentialFunction::Fair(ref weight, ref delta) => {
+                buf.write_i32::<LittleEndian>(2i32).unwrap();
+                buf.write_f32::<LittleEndian>(F::to_f32(weight).unwrap()).unwrap();
+                buf.write_f32::<LittleEndian>(F::to_f32(delta).unwrap()).unwrap();
+            },
+        }
     }
 }
 

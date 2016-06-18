@@ -212,7 +212,7 @@ where F: Float + FromPrimitive {
         let u = self.dst.plane.s[ia];
         let v = self.dst.plane.t[ia];
         let scale = if self.onto_detector {
-            self.geom.dz.abs() / self.dst.pixel_area()
+            self.geom.dz.abs() / self.dst.pixel_area() * self.dst.plane.w[ia]
         } else {
             self.geom.dz.abs() / self.dst.pixel_volume()
         };
@@ -248,7 +248,7 @@ where F: Float + FromPrimitive {
         let u = self.dst.plane.s[ia];
         let v = self.dst.plane.t[ia];
         let scale = if self.onto_detector {
-            self.geom.dz.abs() / self.dst.pixel_area()
+            self.geom.dz.abs() / self.dst.pixel_area() * self.dst.plane.w[ia]
         } else {
             self.geom.dz.abs() / self.dst.pixel_volume()
         };

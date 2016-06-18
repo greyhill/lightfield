@@ -8,6 +8,10 @@ use imager::*;
 use vector_math::*;
 use self::proust::*;
 use geom::*;
+use potential_function::*;
+use cl_traits::*;
+use optics::*;
+use image_geom::*;
 
 /// Translucent volume reconstruction via FISTA
 pub struct FistaVolumeSolver<F: Float + FromPrimitive + ToPrimitive + BaseFloat> {
@@ -16,6 +20,7 @@ pub struct FistaVolumeSolver<F: Float + FromPrimitive + ToPrimitive + BaseFloat>
     vecmath: VectorMath<F>,
 
     x: Mem,
+    m: Mem,
     denom: Mem,
     measurements: Vec<Mem>,
     projections: Vec<Mem>,
@@ -23,14 +28,48 @@ pub struct FistaVolumeSolver<F: Float + FromPrimitive + ToPrimitive + BaseFloat>
 
     camera_scales: Vec<F>,
 
+    update: Kernel,
+    sparsifying_buf: Option<Mem>,
+    geom_buf: Mem,
+    box_min: Option<F>,
+    box_max: Option<F>,
+
     queue: CommandQueue,
+
+    t: F,
+}
+
+impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> ClHeader for FistaVolumeSolver<F> {
+    fn header() -> &'static str {
+        include_str!("../cl/fista_volume_solver_f32.opencl")
+    }
 }
 
 impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
     pub fn new(geometry: LightVolume<F>,
                imagers: Vec<Box<Imager<F, LightVolume<F>>>>,
                measurements: &[&[F]],
+               sparsifying_regularizer: &Option<PotentialFunction<F>>,
+               box_min: Option<F>,
+               box_max: Option<F>,
                queue: CommandQueue) -> Result<Self, Error> {
+        // get opencl objects
+        let context = try!(queue.context());
+        let device = try!(queue.device());
+        let sources = &[
+            Optics::<F>::header(),
+            ImageGeometry::<F>::header(),
+            LightVolume::<F>::header(),
+            PotentialFunction::<F>::header(),
+            Self::header(),
+        ];
+
+        // build opencl kernels
+        let unbuilt = try!(Program::new_from_source(context, sources));
+        let built = try!(unbuilt.build(&[device]));
+
+        let update = try!(built.create_kernel("FistaVolumeSolver_update"));
+
         // gather measurements onto gpu
         let mut measurements_vec = Vec::new();
         for &m in measurements.iter() {
@@ -55,7 +94,18 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
 
         // create blank x object
         let x = try!(geometry.zeros_buf(&queue));
+        let m = try!(geometry.zeros_buf(&queue));
         let denom = try!(geometry.zeros_buf(&queue));
+
+        // create sparsifying buffer
+        let sparsifying_buf = if let &Some(ref pf) = sparsifying_regularizer {
+            Some(try!(pf.as_cl_buffer(&queue)))
+        } else {
+            None
+        };
+
+        // create geometry buffer
+        let geom_buf = try!(geometry.as_cl_buffer(&queue));
 
         let mut volume_solver = FistaVolumeSolver{
             geom: geometry,
@@ -63,14 +113,24 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
             vecmath: vecmath,
 
             x: x,
+            m: m,
             denom: denom,
             tmp_buffers: tmp_buffers,
             measurements: measurements_vec,
             projections: projections,
 
+            update: update,
+
+            sparsifying_buf: sparsifying_buf,
+            geom_buf: geom_buf,
+            box_min: box_min,
+            box_max: box_max,
+
             camera_scales: Vec::new(),
 
             queue: queue,
+
+            t: F::one()
         };
         try!(volume_solver.compute_denominator());
 
@@ -208,25 +268,54 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
         Ok(evt)
     }
 
+    fn update_image(self: &mut Self, wait_for: &[Event]) -> Result<Event, Error> {
+        // compute t1
+        let c2 = F::from_f32(2f32).unwrap();
+        let c4 = F::from_f32(4f32).unwrap();
+        let t1 = (F::one() + (F::one() + c4*self.t*self.t).sqrt())/c2;
+
+        // bind arguments
+        try!(self.update.bind(0, &self.geom_buf));
+        match &self.sparsifying_buf {
+            &Some(ref buf) => try!(self.update.bind(1, buf)),
+            &None => try!(self.update.bind_null(1)),
+        };
+        try!(self.update.bind(2, &self.x));
+        try!(self.update.bind(3, &self.denom));
+        try!(self.update.bind(4, &self.tmp_buffers[0]));
+        match self.box_min {
+            Some(ref box_min) => try!(self.update.bind_scalar(5, &F::to_f32(box_min).unwrap())),
+            None => try!(self.update.bind_scalar(5, &-F::infinity())),
+        };
+        match self.box_max {
+            Some(ref box_max) => try!(self.update.bind_scalar(6, &F::to_f32(box_max).unwrap())),
+            None => try!(self.update.bind_scalar(6, &F::infinity())),
+        };
+        try!(self.update.bind_mut(7, &mut self.m));
+        try!(self.update.bind_scalar(8, &self.t));
+        try!(self.update.bind_scalar(9, &t1));
+
+        let local_size = (32, 8, 1);
+        let global_size = (self.geom.nx, self.geom.ny, self.geom.nz);
+
+        self.t = t1;
+
+        self.queue.run_with_events(&mut self.update,
+                                   local_size,
+                                   global_size,
+                                   wait_for)
+    }
+
     /// Run one subset of the FISTA iteration using the given subset of 
     /// angles to compute the data-fidelity gradients
     pub fn run_subset(self: &mut Self,
                       subset_angles: &[usize],
                       wait_for: &[Event]) -> Result<Event, Error> {
-        let np_obj = self.geom.dimension();
-
         // compute the data gradient into self.tmp_buffers[0]
-        let mut evt = try!(self.compute_data_gradient(subset_angles, wait_for));
-        let mut grad_buf = self.tmp_buffers[0].clone();
+        let evt = try!(self.compute_data_gradient(subset_angles, wait_for));
 
-        // TODO -- add regularization and momentum
-        // scale gradient by self.denom
-        evt = try!(self.vecmath.div(np_obj, &self.tmp_buffers[0], &self.denom, &mut grad_buf, &[evt]));
-
-        // add to current image
-        // x+ = x- - g
-        let mut x_copy = self.x.clone();
-        self.vecmath.mix(np_obj, &self.x, &grad_buf, F::one(), -F::one(), &mut x_copy, &[evt])
+        // update the image self.x
+        self.update_image(&[evt])
     }
 
     pub fn image_buffer(self: &Self) -> Mem {

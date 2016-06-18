@@ -11,15 +11,17 @@ use occluder::*;
 use transport::*;
 use light_field_geom::*;
 use optics::*;
+use vector_math::*;
 use std::cmp::min;
 
 /// Microlens array operation
 ///
 /// For computational reasons, a microlens array is assumed to always be
 /// the last element of an optical chain before the detector.
-pub struct LensArray<F: Float> {
+pub struct LensArray<F: Float + FromPrimitive> {
     mask: Mask<F>,
     mask_buf: Mem,
+    vecmath: VectorMath<F>,
     xports: Vec<Transport<F>>,
 }
 
@@ -94,7 +96,7 @@ impl<F: Float + FromPrimitive + ToPrimitive> LensArray<F> {
                                             false, // overwrite forw
                                             true, // overwrite back
                                             true, // conservative forw,
-                                            false, // conservative back
+                                            true, // conservative back
                                             true, // onto detector
                                             queue.clone()));
             xports.push(xport);
@@ -103,10 +105,13 @@ impl<F: Float + FromPrimitive + ToPrimitive> LensArray<F> {
         let mask = try!(Mask::new(array_geometry.clone(), &lens_mask[..], queue.clone()));
         let mask_buf = try!(array_geometry.zeros_buf(&queue));
 
+        let vecmath = try!(VectorMath::new(queue.clone()));
+
         Ok(LensArray{
             mask: mask,
             mask_buf: mask_buf,
             xports: xports,
+            vecmath: vecmath,
         })
     }
 
@@ -135,10 +140,13 @@ impl<F: Float + FromPrimitive + ToPrimitive> LensArray<F> {
                 view: &mut Mem,
                 ia: usize,
                 wait_for: &[Event]) -> Result<Event, Error> {
+        let np = self.mask.geom.dimension();
+        let evt = try!(self.vecmath.set(np, view, F::zero(), wait_for));
+
         // backproject from all ulenses onto ulens plane
         let mut evts: Vec<Event> = Vec::new();
         for xi in self.xports.iter_mut() {
-            let evt_i = try!(xi.back(det, view, ia, wait_for));
+            let evt_i = try!(xi.back(det, view, ia, &[evt.clone()]));
             evts.push(evt_i);
         }
 

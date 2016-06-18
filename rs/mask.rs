@@ -7,7 +7,7 @@ use cl_traits::*;
 
 /// Spatial mask operation
 pub struct Mask<F: Float> {
-    geom: ImageGeometry<F>,
+    pub geom: ImageGeometry<F>,
     geom_buffer: Mem,
     apply_mask: Kernel,
     apply_mask_to: Kernel,

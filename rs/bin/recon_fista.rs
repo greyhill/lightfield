@@ -89,6 +89,9 @@ fn main() {
             let mut solver = FistaVolumeSolver::new(geom.clone(),
                                                     imagers,
                                                     &measurement_slices,
+                                                    &scene.object.sparsifying,
+                                                    scene.object.box_min,
+                                                    scene.object.box_max,
                                                     queue.clone()).expect("Error creating FISTA solver");
 
             // TODO -- run for fewer iterations; be generally more configurable
