@@ -26,6 +26,30 @@ pub struct AngularPlane<F: Float> {
     pub w: Vec<F>,
 }
 
+impl<F: Float> AngularPlane<F> {
+    /// Divides the angles of this plane into subsets and returns their indices
+    pub fn subsets_strided(self: &Self, num_subsets: usize) -> Vec<Vec<usize>> {
+        assert!(num_subsets > 0);
+        let mut tr = Vec::with_capacity(num_subsets);
+        for mut ia in 0 .. num_subsets {
+            let mut sub = Vec::new();
+            loop {
+                if ia >= self.na() {
+                    break;
+                }
+                sub.push(ia);
+                ia += num_subsets;
+            }
+            tr.push(sub);
+        }
+        tr
+    }
+
+    pub fn na(self: &Self) -> usize {
+        self.s.len()
+    }
+}
+
 impl<F, T> AsAngularPlane<F> for T 
 where F: Float + FromPrimitive,
       T: BoundingGeometry<F> + Occluder<F> {

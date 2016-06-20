@@ -25,6 +25,9 @@ fn main() {
     opts.reqopt("s", "scene", "TOML file describing scene", "FILE");
     opts.reqopt("a", "angles", "Angular discretization", "INT");
     opts.reqopt("b", "basis", "Angular basis function", "pillbox | dirac");
+    opts.optopt("i", "interval", "Save an image every N iterations (default 1)", "INT");
+    opts.optopt("n", "niter", "Maximum number of iterations (default none)", "INT");
+    opts.optopt("u", "subsets", "Number of view subsets for acceleration (default 1)", "INT");
     opts.optflag("h", "help", "Print help and exit");
 
     // parse options
@@ -58,6 +61,24 @@ fn main() {
     let scene = Scene::<f32>::read(matches.opt_str("s").unwrap()).expect("Error loading scene file");
     let object_config: ObjectConfig<f32> = scene.object.get_config().expect("Error reading object configuration");
 
+    // read iteration save interval
+    let interval = match matches.opt_str("interval") {
+        Some(s) => s.parse().expect("Error parsing interval"),
+        None => 1usize,
+    };
+
+    // parse maximum number of iterations
+    let niter: Option<usize> = match matches.opt_str("niter") {
+        Some(s) => Some(s.parse().expect("Error parsing niter")),
+        None => None,
+    };
+
+    // parse number of subsets
+    let nsubset = match matches.opt_str("subsets") {
+        Some(s) => s.parse().expect("Error parsing number of subsets"),
+        None => 1usize
+    };
+
     // branch based on the type of object given
     match object_config {
         ObjectConfig::LightVolume(geom) => {
@@ -83,6 +104,9 @@ fn main() {
                 imagers.push(imager);
             }
 
+            // get subsets
+            let subsets = imagers[0].angular_plane().subsets_strided(nsubset);
+
             // create fista solver
             let measurement_slices: Vec<&[f32]> = measurements.iter().map(|m| &m[..]).collect();
             println!("Initializing FISTA solver");
@@ -94,22 +118,34 @@ fn main() {
                                                     scene.object.box_max,
                                                     queue.clone()).expect("Error creating FISTA solver");
 
-            // TODO -- run for fewer iterations; be generally more configurable
-            let angles: Vec<usize> = (0 .. na).collect();
+            // loop iterations
             for iter in 0 .. {
+                match niter {
+                    Some(niter) => if niter == iter { break },
+                    None => {},
+                }
+
+                // get this subset
+                let subset = &subsets[iter % nsubset];
+
                 // Run FISTA iteration
                 println!("Starting iteration {}", iter);
-                solver.run_subset(&angles, &[]).expect("Error running FISTA iteration").wait()
+                solver.run_subset(subset, &[]).expect("Error running FISTA iteration").wait()
                     .expect("Error waiting for FISTA iteration to complete");
 
                 // Get image
-                let x_buf = solver.image_buffer();
-                let mut x = geom.zeros();
-                queue.read_buffer(&x_buf, &mut x).expect("Error reading image buffer").wait()
-                    .expect("Error waiting waiting for image buffer transfer to complete");
+                if iter % interval == 0 {
+                    let x_buf = solver.image_buffer();
+                    let mut x = geom.zeros();
+                    queue.read_buffer(&x_buf, &mut x).expect("Error reading image buffer").wait()
+                        .expect("Error waiting waiting for image buffer transfer to complete");
 
-                geom.save(&x, &scene.object.data_path).expect("Error saving image");
+                    geom.save(&x, &scene.object.data_path).expect("Error saving image");
+                    println!("Saved image");
+                }
             }
+
+            println!("Done!");
         },
     }
 }

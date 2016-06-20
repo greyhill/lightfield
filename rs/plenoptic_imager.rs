@@ -100,6 +100,10 @@ for PlenopticVolumeImager<F> {
         &self.geom
     }
 
+    fn angular_plane(self: &Self) -> &AngularPlane<F> {
+        &self.plane
+    }
+
     fn forw_angle(self: &mut Self,
                   object: &Mem,
                   view: &mut Mem,

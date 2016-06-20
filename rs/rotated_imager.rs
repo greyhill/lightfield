@@ -10,6 +10,7 @@ use imager::*;
 use light_volume::*;
 use volume_rotation::*;
 use vector_math::*;
+use angular_plane::*;
 
 pub struct RotatedVolumeImager<F: Float + FromPrimitive> {
     pub rotator: Option<VolumeRotation<F>>,
@@ -54,6 +55,10 @@ Imager<F, LightVolume<F>> for RotatedVolumeImager<F> {
 
     fn geometry(self: &Self) -> &LightVolume<F> {
         self.imager.geometry()
+    }
+
+    fn angular_plane(self: &Self) -> &AngularPlane<F> {
+        self.imager.angular_plane()
     }
 
     fn forw_angle(self: &mut Self,

@@ -4,6 +4,7 @@ use self::num::{FromPrimitive, Float};
 use self::proust::*;
 use geom::*;
 use detector::*;
+use angular_plane::*;
 
 /// Abstract type for a camera at a location that can image an object
 pub trait Imager<F, ObjectGeometry>
@@ -17,6 +18,9 @@ where F: Float + FromPrimitive,
 
     /// Object geometry
     fn geometry(self: &Self) -> &ObjectGeometry;
+
+    /// Angular plane for the imager
+    fn angular_plane(self: &Self) -> &AngularPlane<F>;
 
     /// Project a single angle out of the discretization
     fn forw_angle(self: &mut Self,
