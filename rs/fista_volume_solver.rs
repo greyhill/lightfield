@@ -17,6 +17,7 @@ use image_geom::*;
 pub struct FistaVolumeSolver<F: Float + FromPrimitive + ToPrimitive + BaseFloat> {
     geom: LightVolume<F>,
     imagers: Vec<Box<Imager<F, LightVolume<F>>>>,
+    subsets: Vec<Vec<Vec<usize>>>,
     vecmath: VectorMath<F>,
 
     x: Mem,
@@ -53,6 +54,7 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
                imagers: Vec<Box<Imager<F, LightVolume<F>>>>,
                measurements: &[&[F]],
                sparsifying_regularizer: &Option<PotentialFunction<F>>,
+               num_subsets: usize,
                box_min: Option<F>,
                box_max: Option<F>,
                queue: CommandQueue) -> Result<Self, Error> {
@@ -117,12 +119,19 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
             None
         };
 
+        let mut subsets = Vec::new();
+        for i in imagers.iter() {
+            subsets.push(i.angular_plane().subsets_strided(num_subsets));
+        }
+
         // create geometry buffer
         let geom_buf = try!(geometry.as_cl_buffer(&queue));
 
         let mut volume_solver = FistaVolumeSolver{
             geom: geometry,
             imagers: imagers,
+            subsets: subsets,
+
             vecmath: vecmath,
 
             x: x,
@@ -244,7 +253,7 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
     /// computes the data gradient for all cameras and stores the accumulated
     /// gradient in `self.tmp_buffers[0]`
     fn compute_data_gradient(self: &mut Self,
-                             subset_angles: &[usize],
+                             subset: usize,
                              wait_for: &[Event]) -> Result<Event, Error> {
         let num_cam = self.imagers.len();
         let np_obj = self.geom.dimension();
@@ -252,7 +261,7 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
         // loop through cameras and compute gradient for each
         let mut camera_events = Vec::new();
         for camera in 0 .. num_cam {
-            let evt = try!(self.compute_camera_gradient(camera, subset_angles, wait_for));
+            let evt = try!(self.compute_camera_gradient(camera, subset, wait_for));
             camera_events.push(evt);
         }
 
@@ -276,13 +285,14 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
 
     fn compute_camera_gradient(self: &mut Self,
                                camera: usize,
-                               subset_angles: &[usize],
+                               subset: usize,
                                wait_for: &[Event]) -> Result<Event, Error> {
         let imager = &mut self.imagers[camera];
         let tmp = &mut self.tmp_buffers[camera];
         let proj = &mut self.projections[camera];
         let meas = &mut self.measurements[camera];
         let mut proj_copy = proj.clone();
+        let subset_angles = &self.subsets[camera][subset];
 
         let np_obj = self.geom.dimension();
         let np_det = imager.detector().image_geometry().dimension();
@@ -375,10 +385,10 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
     /// Run one subset of the FISTA iteration using the given subset of 
     /// angles to compute the data-fidelity gradients
     pub fn run_subset(self: &mut Self,
-                      subset_angles: &[usize],
+                      subset: usize,
                       wait_for: &[Event]) -> Result<Event, Error> {
         // compute the data gradient into self.tmp_buffers[0]
-        let evt = try!(self.compute_data_gradient(subset_angles, wait_for));
+        let evt = try!(self.compute_data_gradient(subset, wait_for));
 
         // update the image self.x
         self.update_image(&[evt])

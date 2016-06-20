@@ -104,9 +104,6 @@ fn main() {
                 imagers.push(imager);
             }
 
-            // get subsets
-            let subsets = imagers[0].angular_plane().subsets_strided(nsubset);
-
             // create fista solver
             let measurement_slices: Vec<&[f32]> = measurements.iter().map(|m| &m[..]).collect();
             println!("Initializing FISTA solver");
@@ -114,6 +111,7 @@ fn main() {
                                                     imagers,
                                                     &measurement_slices,
                                                     &scene.object.sparsifying,
+                                                    nsubset,
                                                     scene.object.box_min,
                                                     scene.object.box_max,
                                                     queue.clone()).expect("Error creating FISTA solver");
@@ -125,12 +123,9 @@ fn main() {
                     None => {},
                 }
 
-                // get this subset
-                let subset = &subsets[iter % nsubset];
-
                 // Run FISTA iteration
                 println!("Starting iteration {}", iter);
-                solver.run_subset(subset, &[]).expect("Error running FISTA iteration").wait()
+                solver.run_subset(iter % nsubset, &[]).expect("Error running FISTA iteration").wait()
                     .expect("Error waiting for FISTA iteration to complete");
 
                 // Get image
