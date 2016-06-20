@@ -55,3 +55,7 @@ path = "rs/bin/camera_tool.rs"
 [[bin]]
 name = 'recon_fista'
 path = 'rs/bin/recon_fista.rs'
+
+[[bin]]
+name = 'recon_fbp'
+path = 'rs/bin/recon_fbp.rs'
