@@ -55,6 +55,7 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
     pub fn new(geometry: LightVolume<F>,
                imagers: Vec<Box<Imager<F, LightVolume<F>>>>,
                measurements: &[&[F]],
+               initial_image: Option<&[F]>,
                sparsifying_regularizer: &Option<PotentialFunction<F>>,
                num_subsets: usize,
                box_min: Option<F>,
@@ -110,8 +111,19 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
         let vecmath = try!(VectorMath::new(queue.clone()));
 
         // create blank x object
-        let x = try!(geometry.zeros_buf(&queue));
-        let m = try!(geometry.zeros_buf(&queue));
+        let (x, m) = match initial_image {
+            Some(x0) => {
+                let x = try!(queue.create_buffer_from_slice(x0));
+                let m = try!(queue.create_buffer_from_slice(x0));
+                (x, m)
+            },
+            None => {
+                let x = try!(geometry.zeros_buf(&queue));
+                let m = try!(geometry.zeros_buf(&queue));
+                (x, m)
+            },
+        };
+
         let denom = try!(geometry.zeros_buf(&queue));
         let mask3 = try!(geometry.zeros_buf(&queue));
 
@@ -163,7 +175,6 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
             t: F::one()
         };
         try!(volume_solver.compute_denominator());
-        //try!(volume_solver.compute_mask3());
 
         Ok(volume_solver)
     }

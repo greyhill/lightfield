@@ -108,12 +108,19 @@ fn main() {
                 imagers.push(imager);
             }
 
+            // load initial image
+            let x0 = match geom.load(&scene.object.data_path) {
+                Ok(x0) => x0,
+                Err(_) => geom.zeros(),
+            };
+
             // create fista solver
             let measurement_slices: Vec<&[f32]> = measurements.iter().map(|m| &m[..]).collect();
             println!("Initializing FISTA solver");
             let mut solver = FistaVolumeSolver::new(geom.clone(),
                                                     imagers,
                                                     &measurement_slices,
+                                                    Some(&x0),
                                                     &scene.object.sparsifying,
                                                     nsubset,
                                                     scene.object.box_min,
