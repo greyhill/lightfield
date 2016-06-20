@@ -38,6 +38,8 @@ pub struct FistaVolumeSolver<F: Float + FromPrimitive + ToPrimitive + BaseFloat>
     box_min: Option<F>,
     box_max: Option<F>,
 
+    gain_estimation: bool,
+
     queue: CommandQueue,
 
     t: F,
@@ -57,6 +59,7 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
                num_subsets: usize,
                box_min: Option<F>,
                box_max: Option<F>,
+               gain_estimation: bool,
                queue: CommandQueue) -> Result<Self, Error> {
         // get opencl objects
         let context = try!(queue.context());
@@ -153,6 +156,8 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
             measurements_host: measurements_host,
             ynorm2s: ynorm2s,
 
+            gain_estimation: gain_estimation,
+
             queue: queue,
 
             t: F::one()
@@ -217,7 +222,7 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
             // project and backproject volume of ones into tmp
             evt = try!(imager.forw(&ones, proj_buf, &[evt]));
 
-            if camera_id == 0 {
+            if camera_id == 0 || !self.gain_estimation {
                 // first camera has camera_scale == 1
                 self.camera_scales.push(F::one());
             } else {
@@ -332,7 +337,7 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
                                       subset_angles,
                                       &[evt]));
 
-        if camera > 0 {
+        if self.gain_estimation && camera > 0 {
             // for all cameras but the first, update the camera_scale
             try!(evt.wait());
             let mut proj_host = vec![F::zero(); np_det];
@@ -340,7 +345,7 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
             let iprod = proj_host.iter().zip(self.measurements_host[camera].iter()).fold(
                 F::zero(), |l, (&a, &b)| l + a*b);
             self.camera_scales[camera] = iprod / self.ynorm2s[camera];
-            println!("Camera {} scale: {}", camera, F::to_f32(&self.camera_scales[camera]).unwrap());
+            println!("Camera {} gain: {}", camera, F::to_f32(&self.camera_scales[camera]).unwrap());
         }
 
         // compute subset scaling

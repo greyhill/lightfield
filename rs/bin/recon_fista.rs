@@ -28,6 +28,8 @@ fn main() {
     opts.optopt("i", "interval", "Save an image every N iterations (default 1)", "INT");
     opts.optopt("n", "niter", "Maximum number of iterations (default none)", "INT");
     opts.optopt("u", "subsets", "Number of view subsets for acceleration (default 1)", "INT");
+    opts.optflag("m", "mask", "Use conformal mask");
+    opts.optflag("g", "gain", "Use gain estimation for multiple cameras");
     opts.optflag("h", "help", "Print help and exit");
 
     // parse options
@@ -52,6 +54,8 @@ fn main() {
         "pillbox" => AngularBasis::Pillbox,
         _ => panic!("Invalid angular basis"),
     };
+
+    let gain_estimation = matches.opt_present("gain");
 
     // create opencl environment
     let env = Environment::new_easy().expect("Error starting OpenCL environment");
@@ -114,7 +118,12 @@ fn main() {
                                                     nsubset,
                                                     scene.object.box_min,
                                                     scene.object.box_max,
+                                                    gain_estimation,
                                                     queue.clone()).expect("Error creating FISTA solver");
+
+            if matches.opt_present("mask") {
+                solver.compute_mask3().expect("Error computing conformal mask");
+            }
 
             // loop iterations
             for iter in 0 .. {
