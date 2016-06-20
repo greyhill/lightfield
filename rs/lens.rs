@@ -35,13 +35,12 @@ impl<F: Float + FromPrimitive> Lens<F> {
         loop {
             let mut s = s0;
             loop {
-                s = s + lens.radius_s + lens.radius_s;
-
                 let mut li = lens.clone();
                 li.center_s = s;
                 li.center_t = t;
                 tr.push(li);
 
+                s = s + lens.radius_s + lens.radius_s;
                 if s > s1 {
                     break
                 }
@@ -71,9 +70,6 @@ impl<F: Float + FromPrimitive> Lens<F> {
             let mut s = s0;
             let mut is = 0;
             loop {
-                s = s + lens1.radius_s + lens1.radius_s;
-                is += 1;
-
                 let mut li = if is + it % 2 == 0 {
                     lens1.clone()
                 } else {
@@ -83,6 +79,8 @@ impl<F: Float + FromPrimitive> Lens<F> {
                 li.center_t = t;
                 tr.push(li);
 
+                s = s + lens1.radius_s + lens1.radius_s;
+                is += 1;
                 if s > s1 {
                     break
                 }
@@ -99,12 +97,91 @@ impl<F: Float + FromPrimitive> Lens<F> {
 
     pub fn tesselate_hex_1(ig: &ImageGeometry<F>,
                            lens: &Self) -> Vec<Self> {
-        unimplemented!()
+        assert!(lens.radius_s == lens.radius_t);
+        let mut tr = Vec::new();
+
+        let (s0, s1, t0, t1) = ig.spatial_bounds();
+        let mut t = t0;
+        let mut it = 0;
+
+        let stride_s = lens.radius_s + lens.radius_s;
+        let stride_t = (F::one() + F::one() + F::one()).sqrt() * lens.radius_s;
+
+        loop {
+            let mut s = s0;
+            if it % 2 == 0 {
+                s = s + stride_s / (F::one() + F::one());
+            }
+
+            loop {
+                let mut li = lens.clone();
+
+                li.center_s = s;
+                li.center_t = t;
+                tr.push(li);
+
+                s = s + stride_s;
+                if s > s1 {
+                    break
+                }
+            }
+
+            t = t + stride_t;
+            it += 1;
+            if t > t1 {
+                break
+            }
+        }
+        tr
     }
 
     pub fn tesselate_hex_3(ig: &ImageGeometry<F>,
                            lens1: &Self, lens2: &Self, lens3: &Self) -> Vec<Self> {
-        unimplemented!()
+        assert!(lens1.radius_s == lens1.radius_t);
+        assert!(lens2.radius_s == lens1.radius_t);
+        assert!(lens3.radius_s == lens1.radius_t);
+        let mut tr = Vec::new();
+
+        let (s0, s1, t0, t1) = ig.spatial_bounds();
+        let mut t = t0;
+        let mut it = 0;
+
+        let stride_s = lens1.radius_s + lens1.radius_s;
+        let stride_t = (F::one() + F::one() + F::one()).sqrt() * lens1.radius_s;
+
+        loop {
+            let mut s = s0;
+            if it % 2 == 1 {
+                s = s + stride_s / (F::one() + F::one());
+            }
+            let mut is = 0;
+
+            loop {
+                let mut li = match (2*(it % 2) + is) % 3 {
+                    0 => lens1.clone(),
+                    1 => lens2.clone(),
+                    2 => lens3.clone(),
+                    _ => panic!(), // safe by modulus range
+                };
+
+                li.center_s = s;
+                li.center_t = t;
+                tr.push(li);
+
+                s = s + stride_s;
+                is += 1;
+                if s > s1 {
+                    break
+                }
+            }
+
+            t = t + stride_t;
+            it += 1;
+            if t > t1 {
+                break
+            }
+        }
+        tr
     }
 }
 

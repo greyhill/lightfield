@@ -25,7 +25,7 @@ fn main() {
     // set up command line options parser
     let mut opts = Options::new();
     opts.reqopt("g", "geometry", "TOML file describing plane geometry", "FILE");
-    opts.reqopt("p", "pattern", "Pattern for lenses on the plane", "[quad]");
+    opts.reqopt("p", "pattern", "Pattern for lenses on the plane", "[quad | hex]");
     opts.reqopt("o", "out", "Output TOML path", "FILE");
     opts.optflag("h", "help", "Print help and exit");
 
