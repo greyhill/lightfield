@@ -206,7 +206,7 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
 
         let np_geom = self.geom.dimension();
 
-        for (imager, proj_buf) in self.imagers.iter_mut().zip(self.projections.iter_mut()) {
+        for (camera_id, (imager, proj_buf)) in self.imagers.iter_mut().zip(self.projections.iter_mut()).enumerate() {
             // clear tmp buf
             let mut evt = try!(self.vecmath.set(np_geom, &mut tmp, F::zero(), &[]));
 
@@ -217,7 +217,33 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
             // project and backproject volume of ones into tmp
             evt = try!(imager.forw(&ones, proj_buf, &[evt]));
 
-            self.camera_scales.push(F::one());
+            if camera_id == 0 {
+                // first camera has camera_scale == 1
+                self.camera_scales.push(F::one());
+            } else {
+                // secondary cameras use gain estimation; this changes
+                // the way their contribution to the SQS majorizer
+                // is computed
+                try!(evt.wait());
+
+                // read projection of 1s
+                let mut proj_host = vec![F::zero(); np_meas];
+                try!(try!(self.queue.read_buffer(proj_buf, &mut proj_host)).wait());
+
+                // compute y'p
+                let iprod = proj_host.iter().zip(self.measurements_host[camera_id].iter()).fold(F::zero(), |l, (&a, &b)| l + a*b);
+
+                // p <- p - y * y'p/y'y
+                for (it_p, it_y) in proj_host.iter_mut().zip(self.measurements_host[camera_id].iter()) {
+                    *it_p = *it_p - *it_y * iprod / self.ynorm2s[camera_id];
+                }
+
+                // send modified p back into proj_buf
+                try!(try!(self.queue.write_buffer(proj_buf, &proj_host)).wait());
+
+                // use iprod as a guess of the scale factor
+                self.camera_scales.push(iprod);
+            }
 
             // backproject
             evt = try!(imager.back(proj_buf, &mut tmp, &[evt]));
