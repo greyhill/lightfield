@@ -306,7 +306,7 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
                                       subset_angles,
                                       &[evt]));
 
-        if false && camera > 0 {
+        if camera > 0 {
             // for all cameras but the first, update the camera_scale
             try!(evt.wait());
             let mut proj_host = vec![F::zero(); np_det];
