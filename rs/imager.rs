@@ -36,6 +36,31 @@ where F: Float + FromPrimitive,
                   ia: usize,
                   wait_for: &[Event]) -> Result<Event, Error>;
 
+    /// Project an object stored on the host
+    ///
+    /// This routine is provided for convenience for non-performant code.
+    fn forw_host(self: &mut Self, object: &[F], queue: &CommandQueue) -> Result<Vec<F>, Error> {
+        let obj = try!(queue.create_buffer_from_slice(object));
+        let det_ig = self.detector().image_geometry();
+        let mut img = try!(det_ig.zeros_buf(queue));
+        let mut img_host = det_ig.zeros();
+        try!(try!(self.forw(&obj, &mut img, &[])).wait());
+        try!(try!(queue.read_buffer(&img, &mut img_host)).wait());
+        Ok(img_host)
+    }
+
+    /// Backproject an object stored on the host
+    ///
+    /// This routine is provided for convenience for non-performant code.
+    fn back_host(self: &mut Self, image: &[F], queue: &CommandQueue) -> Result<Vec<F>, Error> {
+        let img = try!(queue.create_buffer_from_slice(image));
+        let mut obj = try!(self.geometry().zeros_buf(queue));
+        let mut obj_host = self.geometry().zeros();
+        try!(try!(self.back(&img, &mut obj, &[])).wait());
+        try!(try!(queue.read_buffer(&obj, &mut obj_host)).wait());
+        Ok(obj_host)
+    }
+
     /// Project all the angles in the discretization
     fn forw(self: &mut Self,
             object: &Mem,
