@@ -21,7 +21,7 @@ fn volume_fbp<F: Float + FromPrimitive + ToPrimitive>(geom: &LightVolume<F>,
                         mut imagers: Vec<Box<Imager<F, LightVolume<F>>>>,
                         measurements: &[&[F]],
                         queue: &CommandQueue) -> Result<Vec<F>, Error> {
-    let mut tr = geom.ones();
+    let mut tr = geom.zeros();
 
     // TODO - filter measurements
     let mut filtered_measurements = Vec::new();
@@ -35,10 +35,20 @@ fn volume_fbp<F: Float + FromPrimitive + ToPrimitive>(geom: &LightVolume<F>,
         backprojected_images.push(try!(im.back_host(m, queue)));
     }
 
-    // multiply-accumulate backprojected measurements
+    // add backprojected measurements
     for m in backprojected_images.iter() {
         for (tr_i, m_i) in tr.iter_mut().zip(m.iter()) {
-            *tr_i = *tr_i * *m_i;
+            *tr_i = *tr_i + *m_i;
+        }
+    }
+
+    // mask zero backprojections
+    // (this is a crude sort of support estimation)
+    for m in backprojected_images.iter() {
+        for (tr_i, m_i) in tr.iter_mut().zip(m.iter()) {
+            if *m_i == F::zero() {
+                *tr_i = F::zero();
+            }
         }
     }
 

@@ -56,6 +56,9 @@ fn main() {
     };
 
     let gain_estimation = matches.opt_present("gain");
+    if gain_estimation {
+        println!("Using gain estimation");
+    }
 
     // create opencl environment
     let env = Environment::new_easy().expect("Error starting OpenCL environment");
@@ -70,18 +73,21 @@ fn main() {
         Some(s) => s.parse().expect("Error parsing interval"),
         None => 1usize,
     };
+    println!("Saving every {} iteration", interval);
 
     // parse maximum number of iterations
     let niter: Option<usize> = match matches.opt_str("niter") {
         Some(s) => Some(s.parse().expect("Error parsing niter")),
         None => None,
     };
+    println!("Maximum number of iterations: {:?}", niter);
 
     // parse number of subsets
     let nsubset = match matches.opt_str("subsets") {
         Some(s) => s.parse().expect("Error parsing number of subsets"),
         None => 1usize
     };
+    println!("Number of subsets: {}", nsubset);
 
     // branch based on the type of object given
     match object_config {
@@ -110,8 +116,14 @@ fn main() {
 
             // load initial image
             let x0 = match geom.load(&scene.object.data_path) {
-                Ok(x0) => x0,
-                Err(_) => geom.zeros(),
+                Ok(x0) => {
+                    println!("Loaded initial image form {:?}", &scene.object.data_path);
+                    x0
+                },
+                Err(_) => {
+                    println!("Initializing image with zeros");
+                    geom.zeros()
+                }
             };
 
             // create fista solver
@@ -129,6 +141,7 @@ fn main() {
                                                     queue.clone()).expect("Error creating FISTA solver");
 
             if matches.opt_present("mask") {
+                println!("Using conformal mask");
                 solver.compute_mask3().expect("Error computing conformal mask");
             }
 
@@ -140,7 +153,7 @@ fn main() {
                 }
 
                 // Run FISTA iteration
-                println!("Starting iteration {}", iter);
+                println!("Starting iteration {}", iter+1);
                 solver.run_subset(iter % nsubset, &[]).expect("Error running FISTA iteration").wait()
                     .expect("Error waiting for FISTA iteration to complete");
 

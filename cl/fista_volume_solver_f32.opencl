@@ -35,6 +35,9 @@ kernel void FistaVolumeSolver_update(
     }
 
     float new_val = xi - gi / di;
+    if(di == 0.f) {
+        new_val = 0.f;
+    }
 
     if(sparsifying != NULL) {
         new_val = PotentialFunction_shrink(sparsifying, di, new_val);

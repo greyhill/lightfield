@@ -278,16 +278,18 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
         }
 
         // keep all entries within 1000 of one another
-        let mut denom_host = self.geom.zeros();
-        try!(self.queue.read_buffer(&self.denom, &mut denom_host));
-        let max_val = denom_host.iter().fold(F::one(), |l, &r| if l > r { l } else { r });
-        let c1000 = F::from_f32(1000f32).unwrap();
-        for m in denom_host.iter_mut() {
-            if *m < max_val / c1000 {
-                *m = max_val / c1000;
+        if false {
+            let mut denom_host = self.geom.zeros();
+            try!(self.queue.read_buffer(&self.denom, &mut denom_host));
+            let max_val = denom_host.iter().fold(F::one(), |l, &r| if l > r { l } else { r });
+            let c1000 = F::from_f32(1000f32).unwrap();
+            for m in denom_host.iter_mut() {
+                if *m < max_val / c1000 {
+                    *m = max_val / c1000;
+                }
             }
+            try!(self.queue.write_buffer(&mut self.denom, &denom_host));
         }
-        try!(self.queue.write_buffer(&mut self.denom, &denom_host));
 
         Ok(())
     }
@@ -437,7 +439,7 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
     }
 
     pub fn image_buffer(self: &Self) -> Mem {
-        self.x.clone()
+        self.m.clone()
     }
 }
 
