@@ -1,6 +1,6 @@
 array_path = "../lenses/raytrix_1_0_array.toml"
-distance_detector_array = 0.28999999165534973
-distance_lens_array = 121.81172943115234
+distance_detector_array = 2.9000000953674316
+distance_lens_array = 130.83531188964844
 
 [detector]
 ds = 0.005499999970197678
