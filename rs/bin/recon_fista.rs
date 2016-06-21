@@ -30,6 +30,7 @@ fn main() {
     opts.optopt("u", "subsets", "Number of view subsets for acceleration (default 1)", "INT");
     opts.optflag("m", "mask", "Use conformal mask");
     opts.optflag("g", "gain", "Use gain estimation for multiple cameras");
+    opts.optopt("d", "device", "OpenCL device to use (default: 0)", "INT");
     opts.optflag("h", "help", "Print help and exit");
 
     // parse options
@@ -62,7 +63,18 @@ fn main() {
 
     // create opencl environment
     let env = Environment::new_easy().expect("Error starting OpenCL environment");
-    let queue = &env.queues[0];
+
+    // use selected device
+    let device_id = match matches.opt_str("device") {
+        Some(s) => s.parse().expect("Error parsing device number"),
+        None => 0usize
+    };
+
+    let queue = &env.queues[device_id];
+    println!("Using device id {} (of {}): {}",
+        device_id, env.queues.len(),
+        queue.device().expect("Error getting device info").name()
+                      .expect("Error getting device name"));
 
     // load scene description, object descriptions
     let scene = Scene::<f32>::read(matches.opt_str("s").unwrap()).expect("Error loading scene file");

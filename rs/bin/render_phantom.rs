@@ -28,6 +28,7 @@ fn main() {
     opts.reqopt("p", "phantom", "TOML file describing phantom", "FILE");
     opts.reqopt("g", "geometry", "TOML file describing geometry", "FILE");
     opts.reqopt("o", "out", "Output path", "FILE");
+    opts.optopt("d", "device", "OpenCL device to use (default: 0)", "INT");
     opts.optflag("h", "help", "Print help and exit");
 
     // parse options
@@ -58,7 +59,18 @@ fn main() {
 
     // create environment
     let env = lf::Environment::new_easy().expect("Error creating OpenCL environment");
-    let queue = &env.queues[0];
+
+    // use selected device
+    let device_id = match matches.opt_str("device") {
+        Some(s) => s.parse().expect("Error parsing device number"),
+        None => 0usize
+    };
+
+    let queue = &env.queues[device_id];
+    println!("Using device id {} (of {}): {}",
+        device_id, env.queues.len(),
+        queue.device().expect("Error getting device info").name()
+                      .expect("Error getting device name"));
 
     // create renderer, put things on the GPU
     let mut renderer = lf::PhantomRenderer::new(geom.clone(), queue.clone())
