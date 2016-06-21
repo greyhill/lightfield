@@ -8,3 +8,17 @@ config = 'cameras/raytrix.toml'
 position = { x = 0.0, y = 0.0, z = -500.0 }
 data = 'raytrix.png'
 
+[[camera]]
+name = 'standard_30'
+config = 'cameras/test_simple.toml'
+position = { x = 0.0, y = 0.0, z = -500.0 }
+rotation = { rot_x = -5.0, rot_y = 30.0, rot_z = 0.1 }
+data = 'standard_30.png'
+
+[[camera]]
+name = 'coded_m30'
+config = 'cameras/test_coded.toml'
+position = { x = 0.0, y = 0.0, z = -500.0 }
+rotation = { rot_x = -0.1, rot_y = -30.0, rot_z = 0.1 }
+data = "coded_m30.png"
+

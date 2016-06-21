@@ -2,23 +2,43 @@
 data = './torch_recon.fld'
 config = 'geometries/100mm3.toml'
 
-[[camera]]
-name = 'central_camera'
-config = 'cameras/test_simple.toml'
-position = { x = 0.0, y = 0.0, z = -500.0 }
-data = 'center.png'
+[object.box_constraints]
+min = 0.0
+
+#   [object.sparsifying]
+#   type = 'abs'
+#   weight = 0.01
+
+[object.edge_preserving]
+type = 'quad'
+weight = 0.000000000001
+
+#   [[camera]]
+#   name = 'central_camera'
+#   config = 'cameras/test_simple.toml'
+#   position = { x = 0.0, y = 0.0, z = -600.0 }
+#   data = 'center.png'
 
 [[camera]]
-name = 'left_camera'
-config = 'cameras/test_simple.toml'
-position = { x = 0.0, y = 0.0, z = -500.0 }
-rotation = { rot_x = 0.0, rot_y = 30.0, rot_z = 0.1 }
-data = 'left.png'
+name = 'raytrix'
+config = 'cameras/raytrix.toml'
+#config = 'cameras/test_simple.toml'
+position = { x = 0.0, y = 0.0, z = -700.0 }
+data = 'center_raytrix.png'
 
-[[camera]]
-name = 'right_camera'
-config = 'cameras/test_simple.toml'
-position = { x = 0.0, y = 0.0, z = -500.0 }
-rotation = { rot_x = 0.0, rot_y = -30.0, rot_z = 0.1 }
-data = 'right.png'
+#   [[camera]]
+#   name = 'left_camera'
+#   config = 'cameras/test_simple.toml'
+#   #config = 'cameras/raytrix.toml'
+#   position = { x = 0.0, y = 0.0, z = -700.0 }
+#   rotation = { rot_x = 0.1, rot_y = 30.0, rot_z = 0.1 }
+#   data = 'left.png'
+
+#   [[camera]]
+#   name = 'right_camera'
+#   config = 'cameras/test_simple.toml'
+#   #config = 'cameras/raytrix.toml'
+#   position = { x = 0.0, y = 0.0, z = -700.0 }
+#   rotation = { rot_x = 0.1, rot_y = -30.0, rot_z = 0.1 }
+#   data = 'right.png'
 
