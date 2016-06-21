@@ -1,0 +1,19 @@
+array_path = "../lenses/raytrix_1_0_array.toml"
+distance_detector_array = 0.28999999165534973
+distance_lens_array = 121.81172943115234
+
+[detector]
+ds = 0.005499999970197678
+dt = 0.005499999970197678
+ns = 2400
+nt = 2400
+offset_s = 0.0
+offset_t = 0.0
+
+[lens]
+center_s = 0.0
+center_t = 0.0
+focal_length_s = 110.0
+focal_length_t = 110.0
+radius_s = 4.5
+radius_t = 4.5
