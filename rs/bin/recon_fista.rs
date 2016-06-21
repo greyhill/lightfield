@@ -134,6 +134,7 @@ fn main() {
                                                     &measurement_slices,
                                                     Some(&x0),
                                                     &scene.object.sparsifying,
+                                                    &scene.object.edge_preserving,
                                                     nsubset,
                                                     scene.object.box_min,
                                                     scene.object.box_max,

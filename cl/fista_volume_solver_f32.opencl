@@ -11,7 +11,9 @@ kernel void FistaVolumeSolver_update(
         global float* m,
         float t0,
         float t1,
-        global float* mask3) {
+        global float* mask3,
+        PotentialFunction edge_preserving,
+        global float* x_off) {
     const int ix = get_global_id(0);
     const int iy = get_global_id(1);
     const int iz = get_global_id(2);
@@ -22,9 +24,9 @@ kernel void FistaVolumeSolver_update(
 
     const int idx = ix + geom->nx*(iy + geom->ny*iz);
 
-    const float xi = x[idx];
-    const float gi = data_gradient[idx];
-    const float di = denom[idx];
+    const float xi = x_off[idx];
+    float gi = data_gradient[idx];
+    float di = denom[idx];
     const float mi = m[idx];
     float m3i = mask3[idx];
 
@@ -32,6 +34,20 @@ kernel void FistaVolumeSolver_update(
         m3i = 0.f;
     } else {
         m3i = 1.f;
+    }
+
+    if(edge_preserving != NULL) {
+        for(int iiz=max(iz-1, 0); iiz<min(iz+2, geom->nz); ++iiz) {
+            for(int iiy=max(iy-1, 0); iiy<min(iy+2, geom->ny); ++iiy) {
+                for(int iix=max(ix-1, 0); iix<min(ix+2, geom->nx); ++iix) {
+                    const int iidx = iix + geom->nx*(iiy + geom->ny*iiz);
+                    const float xii = x_off[iidx];
+                    const float h = PotentialFunction_huber(edge_preserving, xi - xii);
+                    di += h;
+                    gi += h*(xi - xii);
+                }
+            }
+        }
     }
 
     float new_val = xi - gi / di;

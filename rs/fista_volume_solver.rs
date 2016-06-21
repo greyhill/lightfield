@@ -22,6 +22,7 @@ pub struct FistaVolumeSolver<F: Float + FromPrimitive + ToPrimitive + BaseFloat>
 
     x: Mem,
     m: Mem,
+    x_off: Mem,
     denom: Mem,
     mask3: Mem,
     measurements: Vec<Mem>,
@@ -34,6 +35,7 @@ pub struct FistaVolumeSolver<F: Float + FromPrimitive + ToPrimitive + BaseFloat>
 
     update: Kernel,
     sparsifying_buf: Option<Mem>,
+    edge_preserving_buf: Option<Mem>,
     geom_buf: Mem,
     box_min: Option<F>,
     box_max: Option<F>,
@@ -57,6 +59,7 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
                measurements: &[&[F]],
                initial_image: Option<&[F]>,
                sparsifying_regularizer: &Option<PotentialFunction<F>>,
+               edge_preserving_regularizer: &Option<PotentialFunction<F>>,
                num_subsets: usize,
                box_min: Option<F>,
                box_max: Option<F>,
@@ -111,16 +114,18 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
         let vecmath = try!(VectorMath::new(queue.clone()));
 
         // create blank x object
-        let (x, m) = match initial_image {
+        let (x, m, x_off) = match initial_image {
             Some(x0) => {
                 let x = try!(queue.create_buffer_from_slice(x0));
                 let m = try!(queue.create_buffer_from_slice(x0));
-                (x, m)
+                let x_off = try!(queue.create_buffer_from_slice(x0));
+                (x, m, x_off)
             },
             None => {
                 let x = try!(geometry.zeros_buf(&queue));
                 let m = try!(geometry.zeros_buf(&queue));
-                (x, m)
+                let x_off = try!(geometry.zeros_buf(&queue));
+                (x, m, x_off)
             },
         };
 
@@ -129,6 +134,13 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
 
         // create sparsifying buffer
         let sparsifying_buf = if let &Some(ref pf) = sparsifying_regularizer {
+            Some(try!(pf.as_cl_buffer(&queue)))
+        } else {
+            None
+        };
+
+        // create edge-preserving buffer
+        let edge_preserving_buf = if let &Some(ref pf) = edge_preserving_regularizer {
             Some(try!(pf.as_cl_buffer(&queue)))
         } else {
             None
@@ -151,6 +163,7 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
 
             x: x,
             m: m,
+            x_off: x_off,
             denom: denom,
             mask3: mask3,
             tmp_buffers: tmp_buffers,
@@ -160,6 +173,7 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
             update: update,
 
             sparsifying_buf: sparsifying_buf,
+            edge_preserving_buf: edge_preserving_buf,
             geom_buf: geom_buf,
             box_min: box_min,
             box_max: box_max,
@@ -222,7 +236,7 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
 
         let np_geom = self.geom.dimension();
 
-        for (camera_id, (imager, proj_buf)) in self.imagers.iter_mut().zip(self.projections.iter_mut()).enumerate() {
+        for (imager, proj_buf) in self.imagers.iter_mut().zip(self.projections.iter_mut()) {
             // clear tmp buf
             let mut evt = try!(self.vecmath.set(np_geom, &mut tmp, F::zero(), &[]));
 
@@ -233,33 +247,7 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
             // project and backproject volume of ones into tmp
             evt = try!(imager.forw(&ones, proj_buf, &[evt]));
 
-            if camera_id == 0 || !self.gain_estimation {
-                // first camera has camera_scale == 1
-                self.camera_scales.push(F::one());
-            } else {
-                // secondary cameras use gain estimation; this changes
-                // the way their contribution to the SQS majorizer
-                // is computed
-                try!(evt.wait());
-
-                // read projection of 1s
-                let mut proj_host = vec![F::zero(); np_meas];
-                try!(try!(self.queue.read_buffer(proj_buf, &mut proj_host)).wait());
-
-                // compute y'p
-                let iprod = proj_host.iter().zip(self.measurements_host[camera_id].iter()).fold(F::zero(), |l, (&a, &b)| l + a*b);
-
-                // p <- p - y * y'p/y'y
-                for (it_p, it_y) in proj_host.iter_mut().zip(self.measurements_host[camera_id].iter()) {
-                    *it_p = *it_p - *it_y * iprod / self.ynorm2s[camera_id];
-                }
-
-                // send modified p back into proj_buf
-                try!(try!(self.queue.write_buffer(proj_buf, &proj_host)).wait());
-
-                // use iprod as a guess of the scale factor
-                self.camera_scales.push(iprod);
-            }
+            self.camera_scales.push(F::one());
 
             // backproject
             evt = try!(imager.back(proj_buf, &mut tmp, &[evt]));
@@ -388,6 +376,13 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
     }
 
     fn update_image(self: &mut Self, wait_for: &[Event]) -> Result<Event, Error> {
+        // update back-buffer x_off
+        let np = self.geom.dimension();
+        let evt = try!(self.vecmath.mix(np, &self.x, &self.x,
+                              F::one(), F::zero(),
+                              &mut self.x_off,
+                              wait_for));
+
         // compute t1
         let c2 = F::from_f32(2f32).unwrap();
         let c4 = F::from_f32(4f32).unwrap();
@@ -414,6 +409,11 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
         try!(self.update.bind_scalar(8, &self.t));
         try!(self.update.bind_scalar(9, &t1));
         try!(self.update.bind(10, &self.mask3));
+        match self.edge_preserving_buf {
+            Some(ref buf) => try!(self.update.bind(11, buf)),
+            None => try!(self.update.bind_null(11)),
+        };
+        try!(self.update.bind(12, &self.x_off));
 
         let local_size = (32, 8, 1);
         let global_size = (self.geom.nx, self.geom.ny, self.geom.nz);
@@ -423,7 +423,7 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
         self.queue.run_with_events(&mut self.update,
                                    local_size,
                                    global_size,
-                                   wait_for)
+                                   &[evt])
     }
 
     /// Run one subset of the FISTA iteration using the given subset of 

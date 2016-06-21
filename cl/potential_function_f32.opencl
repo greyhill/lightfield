@@ -47,5 +47,17 @@ float PotentialFunction_grad(PotentialFunction pf,
 
 float PotentialFunction_huber(PotentialFunction pf,
                               float x) {
+    switch(pf->type) {
+        case PF_QUAD: 
+            return pf->params.quadratic.weight;
+
+        case PF_ABS: 
+            return 1.f / fabs(x);
+
+        case PF_FAIR: {
+            const float axd = fabs(x / pf->params.fair.delta);
+            return pf->params.fair.weight / (1.f + axd);
+        };
+    }
 }
 
