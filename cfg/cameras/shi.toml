@@ -1,4 +1,4 @@
-array_path = "../lenses/raytrix_1_0_array.toml"
+array_path = "../lenses/shi_array.toml"
 distance_detector_array = 0.308
 distance_lens_array = 100.0
 
