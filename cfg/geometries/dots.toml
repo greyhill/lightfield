@@ -1,0 +1,14 @@
+nx = 448
+ny = 448
+nz = 106
+
+dx = 0.5
+dy = 0.5
+dz = 3.5
+
+offset_x = 0.0
+offset_y = 0.0
+offset_z = 0.0
+
+opaque = false
+

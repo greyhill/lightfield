@@ -1,0 +1,14 @@
+nx = 896
+ny = 896
+nz = 121
+
+dx = 0.25
+dy = 0.25
+dz = 1.75
+
+offset_x = 0.0
+offset_y = 0.0
+offset_z = 0.0
+
+opaque = false
+
