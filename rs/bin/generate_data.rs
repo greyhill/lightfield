@@ -27,6 +27,7 @@ fn main() {
     opts.reqopt("a", "angles", "Angular discretization", "INT");
     opts.reqopt("b", "basis", "Angular basis function", "pillbox | dirac");
     opts.optopt("d", "device", "OpenCL device to use (default: 0)", "INT");
+    opts.optopt("v", "view", "Project only a single view", "INT");
     opts.optflag("h", "help", "Print help and exit");
 
     // parse options
@@ -89,8 +90,23 @@ fn main() {
                                                       queue.clone()).expect("Error creating Imager for camera");
                 let mut img = imager.detector().zeros_buf(&queue).expect("Error creating GPU detector buffer");
 
+                let views = match matches.opt_str("view") {
+                    Some(view_str) => {
+                        let view = view_str.parse().expect("Error parsing view");
+                        println!("Only projecting view {}", view);
+                        vec![view]
+                    },
+                    None => {
+                        let mut tr = Vec::new();
+                        for ia in 0 .. imager.angular_plane().na() {
+                            tr.push(ia);
+                        }
+                        tr
+                    },
+                };
+
                 // Perform projection
-                imager.forw(&object, &mut img, &[])
+                imager.forw_subset(&object, &mut img, &views, &[])
                     .expect("Error projecting").wait()
                     .expect("Error waiting for projection to complete");
 
