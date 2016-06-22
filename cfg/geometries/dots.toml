@@ -2,9 +2,9 @@ nx = 448
 ny = 448
 nz = 106
 
-dx = 0.5
-dy = 0.5
-dz = 3.5
+dx = 0.006
+dy = 0.006
+dz = 0.04
 
 offset_x = 0.0
 offset_y = 0.0

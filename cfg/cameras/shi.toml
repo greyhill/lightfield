@@ -5,8 +5,8 @@ distance_lens_array = 100.0
 [detector]
 ds = 0.005499999970197678
 dt = 0.005499999970197678
-ns = 2400
-nt = 2400
+ns = 448
+nt = 448
 offset_s = 0.0
 offset_t = 0.0
 

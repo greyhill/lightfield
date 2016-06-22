@@ -1,0 +1,17 @@
+[object]
+data = './dots_recon.fld'
+config = 'geometries/dots.toml'
+
+[object.box_constraints]
+min = 0.0
+
+[object.sparsifying]
+type = 'abs'
+weight = 0.000001
+
+[[camera]]
+name = 'shi plenoptic 1.0 camera'
+config = 'cameras/shi.toml'
+position = { x = 0.0, y = 0.0, z = -100.0 }
+data = 'shi.png'
+
