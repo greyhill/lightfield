@@ -6,4 +6,3 @@ use image_geom::*;
 pub trait BoundingGeometry<F: Float> {
     fn bounding_geometry(self: &Self, ns: usize, nt: usize) -> ImageGeometry<F>;
 }
-

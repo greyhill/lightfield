@@ -42,17 +42,17 @@ fn fmax<F: Float>(x: F, y: F) -> F {
 
 impl<F: Float + ToPrimitive + FromPrimitive> ImageGeometry<F> {
     pub fn ws(self: &Self) -> F {
-        (F::from_usize(self.ns).unwrap() - F::one())/F::from_f32(2f32).unwrap() + self.offset_s
+        (F::from_usize(self.ns).unwrap() - F::one()) / F::from_f32(2f32).unwrap() + self.offset_s
     }
 
     pub fn wt(self: &Self) -> F {
-        (F::from_usize(self.nt).unwrap() - F::one())/F::from_f32(2f32).unwrap() + self.offset_t
+        (F::from_usize(self.nt).unwrap() - F::one()) / F::from_f32(2f32).unwrap() + self.offset_t
     }
 
     /// Returns pixel spatial bounds (s0, s1, t0, t1)
     pub fn pixel_bounds(self: &Self, is: usize, it: usize) -> (F, F, F, F) {
-        let s = (F::from_usize(is).unwrap() - self.ws())*self.ds;
-        let t = (F::from_usize(it).unwrap() - self.wt())*self.dt;
+        let s = (F::from_usize(is).unwrap() - self.ws()) * self.ds;
+        let t = (F::from_usize(it).unwrap() - self.wt()) * self.dt;
         let ds2 = self.ds / F::from_f32(2f32).unwrap();
         let dt2 = self.dt / F::from_f32(2f32).unwrap();
         (s - ds2, s + ds2, t - dt2, t + dt2)
@@ -60,8 +60,8 @@ impl<F: Float + ToPrimitive + FromPrimitive> ImageGeometry<F> {
 
     /// Returns the spatial center of a pixel
     pub fn pixel_center(self: &Self, is: usize, it: usize) -> (F, F) {
-        let s = (F::from_usize(is).unwrap() - self.ws())*self.ds;
-        let t = (F::from_usize(it).unwrap() - self.wt())*self.dt;
+        let s = (F::from_usize(is).unwrap() - self.ws()) * self.ds;
+        let t = (F::from_usize(it).unwrap() - self.wt()) * self.dt;
         (s, t)
     }
 
@@ -73,19 +73,19 @@ impl<F: Float + ToPrimitive + FromPrimitive> ImageGeometry<F> {
     }
 
     pub fn is2s(self: &Self, is: usize) -> F {
-        (F::from_usize(is).unwrap() - self.ws())*self.ds
+        (F::from_usize(is).unwrap() - self.ws()) * self.ds
     }
 
     pub fn it2t(self: &Self, it: usize) -> F {
-        (F::from_usize(it).unwrap() - self.wt())*self.dt
+        (F::from_usize(it).unwrap() - self.wt()) * self.dt
     }
 
     pub fn s2is(self: &Self, s: F) -> F {
-        s/self.ds + self.ws() + F::from_f32(0.5f32).unwrap()
+        s / self.ds + self.ws() + F::from_f32(0.5f32).unwrap()
     }
 
     pub fn t2it(self: &Self, t: F) -> F {
-        t/self.dt + self.wt() + F::from_f32(0.5f32).unwrap()
+        t / self.dt + self.wt() + F::from_f32(0.5f32).unwrap()
     }
 
     /// Returns (is0, is1, it0, it1) bounds for the pixel rectangular region
@@ -120,7 +120,7 @@ impl<F: Float + ToPrimitive + FromPrimitive> ImageGeometry<F> {
         let mut file = if let Ok(f) = self::avsfld::AVSFile::open(&path) {
             f
         } else {
-            return Err(())
+            return Err(());
         };
         match file.read() {
             Ok(tr) => Ok(tr),
@@ -140,14 +140,19 @@ impl<F: Float + ToPrimitive + FromPrimitive> ImageGeometry<F> {
             }
         }
 
-        let image_f32 = buf.iter().map(|&f| {
-            let v = (f - min_val)/(max_val - min_val)*F::from_u8(255).unwrap();
-            F::to_u8(&v).unwrap()
-        }).collect();
+        let image_f32 = buf.iter()
+                           .map(|&f| {
+                               let v = (f - min_val) / (max_val - min_val) *
+                                       F::from_u8(255).unwrap();
+                               F::to_u8(&v).unwrap()
+                           })
+                           .collect();
 
-        let image: ImageBuffer<Luma<u8>, Vec<u8>> = 
-            ImageBuffer::from_raw(self.ns as u32, self.nt as u32, image_f32)
-                .expect("logic error -- buffer not big enough");
+        let image: ImageBuffer<Luma<u8>, Vec<u8>> = ImageBuffer::from_raw(self.ns as u32,
+                                                                          self.nt as u32,
+                                                                          image_f32)
+                                                        .expect("logic error -- buffer not big \
+                                                                 enough");
         match image.save(path) {
             Ok(()) => Ok(()),
             Err(_) => Err(()),
@@ -229,19 +234,21 @@ impl<F: Float + FromPrimitive + ToPrimitive> Serialize for ImageGeometry<F> {
         let offset_t = map.get("offset_t");
 
         match (ns, nt, ds, dt, offset_s, offset_t) {
-            (Some(&Value::Integer(ns)), 
+            (Some(&Value::Integer(ns)),
              Some(&Value::Integer(nt)),
              Some(&Value::Float(ds)),
              Some(&Value::Float(dt)),
              Some(&Value::Float(offset_s)),
-             Some(&Value::Float(offset_t))) => Some(ImageGeometry{
-                ns: ns as usize,
-                nt: nt as usize,
-                ds: F::from_f64(ds).unwrap(),
-                dt: F::from_f64(dt).unwrap(),
-                offset_s: F::from_f64(offset_s).unwrap(),
-                offset_t: F::from_f64(offset_t).unwrap(),
-            }),
+             Some(&Value::Float(offset_t))) => {
+                Some(ImageGeometry {
+                    ns: ns as usize,
+                    nt: nt as usize,
+                    ds: F::from_f64(ds).unwrap(),
+                    dt: F::from_f64(dt).unwrap(),
+                    offset_s: F::from_f64(offset_s).unwrap(),
+                    offset_t: F::from_f64(offset_t).unwrap(),
+                })
+            }
             _ => None,
         }
     }
@@ -252,8 +259,10 @@ impl<F: Float + FromPrimitive + ToPrimitive> Serialize for ImageGeometry<F> {
         tr.insert("nt".to_string(), Value::Integer(self.nt as i64));
         tr.insert("ds".to_string(), Value::Float(F::to_f64(&self.ds).unwrap()));
         tr.insert("dt".to_string(), Value::Float(F::to_f64(&self.dt).unwrap()));
-        tr.insert("offset_s".to_string(), Value::Float(F::to_f64(&self.offset_s).unwrap()));
-        tr.insert("offset_t".to_string(), Value::Float(F::to_f64(&self.offset_t).unwrap()));
+        tr.insert("offset_s".to_string(),
+                  Value::Float(F::to_f64(&self.offset_s).unwrap()));
+        tr.insert("offset_t".to_string(),
+                  Value::Float(F::to_f64(&self.offset_t).unwrap()));
         tr
     }
 }
@@ -280,4 +289,3 @@ fn test_read_image_geom() {
     assert_eq!(ig.offset_s, 0.1);
     assert_eq!(ig.offset_t, 0.2);
 }
-

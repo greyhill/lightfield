@@ -14,10 +14,14 @@ pub trait Occluder<F: Float + FromPrimitive> {
     fn rasterize(self: &Self, s0: F, s1: F, t0: F, t1: F, discretization: usize) -> F {
         let mut tr = F::zero();
         let mut denom = F::zero();
-        for it in 0 .. discretization {
-            let t = t0 + (t1 - t0) * F::from_usize(it).unwrap() / F::from_usize(discretization - 1).unwrap();
-            for is in 0 .. discretization {
-                let s = s0 + (s1 - s0) * F::from_usize(is).unwrap() / F::from_usize(discretization - 1).unwrap();
+        for it in 0..discretization {
+            let t = t0 +
+                    (t1 - t0) * F::from_usize(it).unwrap() /
+                    F::from_usize(discretization - 1).unwrap();
+            for is in 0..discretization {
+                let s = s0 +
+                        (s1 - s0) * F::from_usize(is).unwrap() /
+                        F::from_usize(discretization - 1).unwrap();
                 if self.occludes(s, t) {
                     tr = tr + F::one();
                 }
@@ -30,8 +34,8 @@ pub trait Occluder<F: Float + FromPrimitive> {
     /// Rasterize every pixel in the given geometry
     fn rasterize_geom(self: &Self, geom: &ImageGeometry<F>, discretization: usize) -> Vec<F> {
         let mut tr = Vec::with_capacity(geom.ns * geom.nt);
-        for it in 0 .. geom.nt {
-            for is in 0 .. geom.ns {
+        for it in 0..geom.nt {
+            for is in 0..geom.ns {
                 let (s0, s1, t0, t1) = geom.pixel_bounds(is, it);
                 tr.push(self.rasterize(s0, s1, t0, t1, discretization));
             }
@@ -39,4 +43,3 @@ pub trait Occluder<F: Float + FromPrimitive> {
         tr
     }
 }
-

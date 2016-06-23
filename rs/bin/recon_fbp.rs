@@ -18,9 +18,11 @@ fn print_usage(name: &String, opt: Options) {
 }
 
 fn volume_fbp<F: Float + FromPrimitive + ToPrimitive>(geom: &LightVolume<F>,
-                        mut imagers: Vec<Box<Imager<F, LightVolume<F>>>>,
-                        measurements: &[&[F]],
-                        queue: &CommandQueue) -> Result<Vec<F>, Error> {
+                                                      mut imagers: Vec<Box<Imager<F,
+                                                                                  LightVolume<F>>>>,
+                                                      measurements: &[&[F]],
+                                                      queue: &CommandQueue)
+                                                      -> Result<Vec<F>, Error> {
     let mut tr = geom.zeros();
 
     // TODO - filter measurements
@@ -108,7 +110,10 @@ fn main() {
     }
 
     // parse number of angles, basis function
-    let na: usize = matches.opt_str("angles").unwrap().parse().expect("Error parsing number of angles");
+    let na: usize = matches.opt_str("angles")
+                           .unwrap()
+                           .parse()
+                           .expect("Error parsing number of angles");
     let basis = match &matches.opt_str("basis").unwrap()[..] {
         "dirac" => AngularBasis::Dirac,
         "pillbox" => AngularBasis::Pillbox,
@@ -121,18 +126,24 @@ fn main() {
     // use selected device
     let device_id = match matches.opt_str("device") {
         Some(s) => s.parse().expect("Error parsing device number"),
-        None => 0usize
+        None => 0usize,
     };
 
     let queue = &env.queues[device_id];
     println!("Using device id {} (of {}): {}",
-        device_id, env.queues.len(),
-        queue.device().expect("Error getting device info").name()
-                      .expect("Error getting device name"));
+             device_id,
+             env.queues.len(),
+             queue.device()
+                  .expect("Error getting device info")
+                  .name()
+                  .expect("Error getting device name"));
 
     // load scene description, object descriptions
-    let scene = Scene::<f32>::read(matches.opt_str("s").unwrap()).expect("Error loading scene file");
-    let object_config: ObjectConfig<f32> = scene.object.get_config().expect("Error reading object configuration");
+    let scene = Scene::<f32>::read(matches.opt_str("s").unwrap())
+                    .expect("Error loading scene file");
+    let object_config: ObjectConfig<f32> = scene.object
+                                                .get_config()
+                                                .expect("Error reading object configuration");
 
     // branch based on the type of object given
     match object_config {
@@ -149,11 +160,13 @@ fn main() {
                                                   scene_cam.rotation.clone(),
                                                   na,
                                                   basis.clone(),
-                                                  queue.clone()).expect("Error creating Imager for camera");
+                                                  queue.clone())
+                                   .expect("Error creating Imager for camera");
 
                 // load data
                 let detector_ig = imager.detector().image_geometry();
-                let meas = detector_ig.load(&scene_cam.data_path).expect("Error reading measurements");
+                let meas = detector_ig.load(&scene_cam.data_path)
+                                      .expect("Error reading measurements");
 
                 measurements.push(meas);
                 imagers.push(imager);
@@ -162,12 +175,12 @@ fn main() {
             let measurement_slices: Vec<&[f32]> = measurements.iter().map(|m| &m[..]).collect();
             println!("Running \"FBP\"");
 
-            let x_fbp = volume_fbp(&geom, imagers, &measurement_slices, queue).expect("Error computing FBP");
+            let x_fbp = volume_fbp(&geom, imagers, &measurement_slices, queue)
+                            .expect("Error computing FBP");
 
             geom.save(&x_fbp, &scene.object.data_path).expect("Error saving image");
 
             println!("Done!");
-        },
+        }
     }
 }
-

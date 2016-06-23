@@ -27,12 +27,13 @@ impl<F: Float + FromPrimitive> SingleLensVolumeImager<F> {
                position: Vector3<F>,
                na: usize,
                basis: AngularBasis,
-               queue: CommandQueue) -> Result<Self, Error> {
+               queue: CommandQueue)
+               -> Result<Self, Error> {
         // angular plane on main lens
         let plane = camera.lens.as_angular_plane(basis, na);
 
         // light field geometry on detector
-        let detector_lfg = LightFieldGeometry{
+        let detector_lfg = LightFieldGeometry {
             geom: camera.detector.image_geometry(),
             plane: plane.clone(),
             to_plane: Optics::translation(&camera.distance_detector_lens),
@@ -47,8 +48,10 @@ impl<F: Float + FromPrimitive> SingleLensVolumeImager<F> {
         frame_geom.offset_x = frame_geom.offset_x + camera_ox;
         frame_geom.offset_y = frame_geom.offset_y + camera_oy;
 
-        let optics_object_to_plane = camera.lens.optics().then(
-            &Optics::translation(&distance_to_object)).invert();
+        let optics_object_to_plane = camera.lens
+                                           .optics()
+                                           .then(&Optics::translation(&distance_to_object))
+                                           .invert();
 
         // transport from object to detector
         let xport = try!(VolumeTransport::new(frame_geom,
@@ -59,7 +62,7 @@ impl<F: Float + FromPrimitive> SingleLensVolumeImager<F> {
                                               true, // onto_detector
                                               queue.clone()));
 
-        Ok(SingleLensVolumeImager{
+        Ok(SingleLensVolumeImager {
             geom: geom,
             xport: xport,
             plane: plane,
@@ -69,8 +72,7 @@ impl<F: Float + FromPrimitive> SingleLensVolumeImager<F> {
 }
 
 
-impl<F: Float + FromPrimitive> Imager<F, LightVolume<F>>
-for SingleLensVolumeImager<F> {
+impl<F: Float + FromPrimitive> Imager<F, LightVolume<F>> for SingleLensVolumeImager<F> {
     fn na(self: &Self) -> usize {
         self.plane.s.len()
     }
@@ -91,7 +93,8 @@ for SingleLensVolumeImager<F> {
                   object: &Mem,
                   view: &mut Mem,
                   ia: usize,
-                  wait_for: &[Event]) -> Result<Event, Error> {
+                  wait_for: &[Event])
+                  -> Result<Event, Error> {
         self.xport.forw(object, view, ia, wait_for)
     }
 
@@ -99,8 +102,8 @@ for SingleLensVolumeImager<F> {
                   view: &Mem,
                   object: &mut Mem,
                   ia: usize,
-                  wait_for: &[Event]) -> Result<Event, Error> {
+                  wait_for: &[Event])
+                  -> Result<Event, Error> {
         self.xport.back(view, object, ia, wait_for)
     }
 }
-

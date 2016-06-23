@@ -54,7 +54,7 @@ fn trap_weight<F: Float>(mut step0: F, mut step1: F, mut ds: F) -> F {
     let c2 = F::one() + F::one();
     step0 = (step0 / c2).abs();
     step1 = (step1 / c2).abs();
-    ds = (ds/c2).abs();
+    ds = (ds / c2).abs();
 
     let min_step = fmin(step0, step1);
     let max_step = fmax(step0, step1);
@@ -62,7 +62,8 @@ fn trap_weight<F: Float>(mut step0: F, mut step1: F, mut ds: F) -> F {
     let tau1 = fmin(ds, max_step - min_step);
     let tau2 = fmin(fmax(ds, max_step - min_step), max_step + min_step);
 
-    let tw = tau2 - (max_step - min_step) - (tau2 - (max_step - min_step)).powi(2) / (c2*c2*min_step);
+    let tw = tau2 - (max_step - min_step) -
+             (tau2 - (max_step - min_step)).powi(2) / (c2 * c2 * min_step);
 
     c2 * (tw + tau1)
 }
@@ -76,17 +77,16 @@ impl<F: Float> ClHeader for VolumeRotation<F> {
 impl<F: Float + BaseFloat + ApproxEq<F> + FromPrimitive> VolumeRotation<F> {
     pub fn new(rotation: &Rotation3<F>,
                src_geom: LightVolume<F>,
-               queue: CommandQueue) -> Result<Self, Error> {
+               queue: CommandQueue)
+               -> Result<Self, Error> {
         // get OpenCL objects and source code
         let context = try!(queue.context());
         let device = try!(queue.device());
-        let sources = &[
-            Optics::<F>::header(),
-            ImageGeometry::<F>::header(),
-            LightVolume::<F>::header(),
-            SplineKernel::<F>::header(),
-            Self::header(),
-        ];
+        let sources = &[Optics::<F>::header(),
+                        ImageGeometry::<F>::header(),
+                        LightVolume::<F>::header(),
+                        SplineKernel::<F>::header(),
+                        Self::header()];
 
         // compile program
         let unbuilt = try!(Program::new_from_source(context.clone(), sources));
@@ -118,16 +118,16 @@ impl<F: Float + BaseFloat + ApproxEq<F> + FromPrimitive> VolumeRotation<F> {
 
         // z splines
         // TRICK: we use "1" for the height of the rotation kernels because
-        // multi-camera calibration is a wash anyway and it removes a 
+        // multi-camera calibration is a wash anyway and it removes a
         // degeracy at >= 40 degree rotations.
         let hx_z = fmin(dst_geom.dx.abs(), (dst_geom.dz / shear_decomp.zx).abs());
-        let hy_z = trap_weight(dst_geom.dz / shear_decomp.zy, 
-                               dst_geom.dx * shear_decomp.zx / shear_decomp.zy, 
+        let hy_z = trap_weight(dst_geom.dz / shear_decomp.zy,
+                               dst_geom.dx * shear_decomp.zx / shear_decomp.zy,
                                dst_geom.dy);
         let hz = hx_z * hy_z / dst_geom.voxel_volume();
-        for iy in 0 .. dst_geom.ny {
+        for iy in 0..dst_geom.ny {
             let y = dst_geom.iy2y(iy);
-            for ix in 0 .. dst_geom.nx {
+            for ix in 0..dst_geom.nx {
                 let x = dst_geom.ix2x(ix);
 
                 let taus_forw = vec![
@@ -164,9 +164,9 @@ impl<F: Float + BaseFloat + ApproxEq<F> + FromPrimitive> VolumeRotation<F> {
                                dst_geom.dx * shear_decomp.yx / shear_decomp.yz,
                                dst_geom.dz);
         let hy = hx_y * hz_y / dst_geom.voxel_volume();
-        for iz in 0 .. dst_geom.nz {
+        for iz in 0..dst_geom.nz {
             let z = dst_geom.iz2z(iz);
-            for ix in 0 .. dst_geom.nx {
+            for ix in 0..dst_geom.nx {
                 let x = dst_geom.ix2x(ix);
 
                 let taus_forw = vec![
@@ -203,9 +203,9 @@ impl<F: Float + BaseFloat + ApproxEq<F> + FromPrimitive> VolumeRotation<F> {
                                dst_geom.dy * shear_decomp.xy / shear_decomp.xz,
                                dst_geom.dx);
         let hx = hz_x * hy_x / dst_geom.voxel_volume();
-        for iz in 0 .. dst_geom.nz {
+        for iz in 0..dst_geom.nz {
             let z = dst_geom.iz2z(iz);
-            for iy in 0 .. dst_geom.ny {
+            for iy in 0..dst_geom.ny {
                 let y = dst_geom.iy2y(iy);
 
                 let taus_forw = vec![
@@ -244,7 +244,7 @@ impl<F: Float + BaseFloat + ApproxEq<F> + FromPrimitive> VolumeRotation<F> {
         let back_y = try!(queue.create_buffer_from_slice(&back_y_buf));
         let back_z = try!(queue.create_buffer_from_slice(&back_z_buf));
 
-        Ok(VolumeRotation{
+        Ok(VolumeRotation {
             src_geom: src_geom,
             dst_geom: dst_geom,
 
@@ -269,7 +269,8 @@ impl<F: Float + BaseFloat + ApproxEq<F> + FromPrimitive> VolumeRotation<F> {
     fn forw_z(self: &mut Self,
               vol: &Mem,
               out: &mut Mem,
-              wait_for: &[Event]) -> Result<Event, Error> {
+              wait_for: &[Event])
+              -> Result<Event, Error> {
         try!(self.filter_z.bind(0, &self.dst_geom_buf));
         try!(self.filter_z.bind(1, &self.spline_forw_z));
         try!(self.filter_z.bind(2, vol));
@@ -278,15 +279,10 @@ impl<F: Float + BaseFloat + ApproxEq<F> + FromPrimitive> VolumeRotation<F> {
         let local_size = (32, 8, 1);
         let global_size = (self.dst_geom.nx, self.dst_geom.ny, self.dst_geom.nz);
 
-        self.queue.run_with_events(&mut self.filter_z,
-                                   local_size,
-                                   global_size,
-                                   wait_for)
+        self.queue.run_with_events(&mut self.filter_z, local_size, global_size, wait_for)
     }
 
-    fn forw_x(self: &mut Self,
-              out: &Mem,
-              wait_for: &[Event]) -> Result<Event, Error> {
+    fn forw_x(self: &mut Self, out: &Mem, wait_for: &[Event]) -> Result<Event, Error> {
         try!(self.filter_x.bind(0, &self.dst_geom_buf));
         try!(self.filter_x.bind(1, &self.spline_forw_x));
         try!(self.filter_x.bind(2, &out));
@@ -295,15 +291,10 @@ impl<F: Float + BaseFloat + ApproxEq<F> + FromPrimitive> VolumeRotation<F> {
         let local_size = (32, 8, 1);
         let global_size = (self.dst_geom.nx, self.dst_geom.ny, self.dst_geom.nz);
 
-        self.queue.run_with_events(&mut self.filter_x,
-                                   local_size,
-                                   global_size,
-                                   wait_for)
+        self.queue.run_with_events(&mut self.filter_x, local_size, global_size, wait_for)
     }
 
-    fn forw_y(self: &mut Self,
-              out: &mut Mem,
-              wait_for: &[Event]) -> Result<Event, Error> {
+    fn forw_y(self: &mut Self, out: &mut Mem, wait_for: &[Event]) -> Result<Event, Error> {
         try!(self.filter_y.bind(0, &self.dst_geom_buf));
         try!(self.filter_y.bind(1, &self.spline_forw_y));
         try!(self.filter_y.bind(2, &self.tmp));
@@ -312,16 +303,14 @@ impl<F: Float + BaseFloat + ApproxEq<F> + FromPrimitive> VolumeRotation<F> {
         let local_size = (32, 8, 1);
         let global_size = (self.dst_geom.nx, self.dst_geom.ny, self.dst_geom.nz);
 
-        self.queue.run_with_events(&mut self.filter_y,
-                                   local_size,
-                                   global_size,
-                                   wait_for)
+        self.queue.run_with_events(&mut self.filter_y, local_size, global_size, wait_for)
     }
 
     pub fn forw(self: &mut Self,
                 vol: &Mem,
                 out: &mut Mem,
-                wait_for: &[Event]) -> Result<Event, Error> {
+                wait_for: &[Event])
+                -> Result<Event, Error> {
         let mut evt = try!(self.forw_z(vol, out, wait_for));
         evt = try!(self.forw_x(out, &[evt]));
         self.forw_y(out, &[evt])
@@ -330,7 +319,8 @@ impl<F: Float + BaseFloat + ApproxEq<F> + FromPrimitive> VolumeRotation<F> {
     fn back_y(self: &mut Self,
               vol: &Mem,
               out: &mut Mem,
-              wait_for: &[Event]) -> Result<Event, Error> {
+              wait_for: &[Event])
+              -> Result<Event, Error> {
         try!(self.filter_y.bind(0, &self.dst_geom_buf));
         try!(self.filter_y.bind(1, &self.spline_back_y));
         try!(self.filter_y.bind(2, vol));
@@ -339,15 +329,10 @@ impl<F: Float + BaseFloat + ApproxEq<F> + FromPrimitive> VolumeRotation<F> {
         let local_size = (32, 8, 1);
         let global_size = (self.dst_geom.nx, self.dst_geom.ny, self.dst_geom.nz);
 
-        self.queue.run_with_events(&mut self.filter_y,
-                                   local_size,
-                                   global_size,
-                                   wait_for)
+        self.queue.run_with_events(&mut self.filter_y, local_size, global_size, wait_for)
     }
 
-    fn back_x(self: &mut Self,
-              out: &Mem,
-              wait_for: &[Event]) -> Result<Event, Error> {
+    fn back_x(self: &mut Self, out: &Mem, wait_for: &[Event]) -> Result<Event, Error> {
         try!(self.filter_x.bind(0, &self.dst_geom_buf));
         try!(self.filter_x.bind(1, &self.spline_back_x));
         try!(self.filter_x.bind(2, &out));
@@ -356,15 +341,10 @@ impl<F: Float + BaseFloat + ApproxEq<F> + FromPrimitive> VolumeRotation<F> {
         let local_size = (32, 8, 1);
         let global_size = (self.dst_geom.nx, self.dst_geom.ny, self.dst_geom.nz);
 
-        self.queue.run_with_events(&mut self.filter_x,
-                                   local_size,
-                                   global_size,
-                                   wait_for)
+        self.queue.run_with_events(&mut self.filter_x, local_size, global_size, wait_for)
     }
 
-    fn back_z(self: &mut Self,
-              out: &mut Mem,
-              wait_for: &[Event]) -> Result<Event, Error> {
+    fn back_z(self: &mut Self, out: &mut Mem, wait_for: &[Event]) -> Result<Event, Error> {
         try!(self.filter_z.bind(0, &self.dst_geom_buf));
         try!(self.filter_z.bind(1, &self.spline_back_z));
         try!(self.filter_z.bind(2, &self.tmp));
@@ -373,16 +353,14 @@ impl<F: Float + BaseFloat + ApproxEq<F> + FromPrimitive> VolumeRotation<F> {
         let local_size = (32, 8, 1);
         let global_size = (self.dst_geom.nx, self.dst_geom.ny, self.dst_geom.nz);
 
-        self.queue.run_with_events(&mut self.filter_z,
-                                   local_size,
-                                   global_size,
-                                   wait_for)
+        self.queue.run_with_events(&mut self.filter_z, local_size, global_size, wait_for)
     }
 
     pub fn back(self: &mut Self,
                 vol: &Mem,
                 out: &mut Mem,
-                wait_for: &[Event]) -> Result<Event, Error> {
+                wait_for: &[Event])
+                -> Result<Event, Error> {
         let mut evt = try!(self.back_y(vol, out, wait_for));
         evt = try!(self.back_x(out, &[evt]));
         self.back_z(out, &[evt])
@@ -397,7 +375,7 @@ fn test_volume_rotation() {
     let env = Environment::new_easy().unwrap();
     let queue = &env.queues[0];
 
-    let src_geom = LightVolume{
+    let src_geom = LightVolume {
         nx: 100,
         ny: 100,
         nz: 100,
@@ -430,8 +408,8 @@ fn test_volume_rotation() {
     queue.read_buffer(&rot_u, &mut rot_u_vec).unwrap().wait().unwrap();
     queue.read_buffer(&v_rot, &mut v_rot_vec).unwrap().wait().unwrap();
 
-    let v1 = rot_u_vec.iter().zip(v_vec.iter()).fold(0f32, |s, (ui, vi)| s + ui*vi);
-    let v2 = v_rot_vec.iter().zip(u_vec.iter()).fold(0f32, |s, (vi, ui)| s + ui*vi);
+    let v1 = rot_u_vec.iter().zip(v_vec.iter()).fold(0f32, |s, (ui, vi)| s + ui * vi);
+    let v2 = v_rot_vec.iter().zip(u_vec.iter()).fold(0f32, |s, (vi, ui)| s + ui * vi);
     let nrmse = (v1 - v2).abs() / v1.abs().max(v2.abs());
 
     println!("Adjoint NRMSE for Volume Rotation: {}", nrmse);
@@ -439,4 +417,3 @@ fn test_volume_rotation() {
     println!("(T'v)'u: {}", v2);
     assert!(nrmse < 1e-4);
 }
-

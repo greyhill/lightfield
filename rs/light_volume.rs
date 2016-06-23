@@ -32,32 +32,32 @@ pub struct LightVolume<F: Float> {
 
 impl<F: Float + FromPrimitive> LightVolume<F> {
     pub fn wx(self: &Self) -> F {
-        (F::from_usize(self.nx).unwrap() - F::one())/F::from_f32(2f32).unwrap() + self.offset_x
+        (F::from_usize(self.nx).unwrap() - F::one()) / F::from_f32(2f32).unwrap() + self.offset_x
     }
 
     pub fn wy(self: &Self) -> F {
-        (F::from_usize(self.ny).unwrap() - F::one())/F::from_f32(2f32).unwrap() + self.offset_y
+        (F::from_usize(self.ny).unwrap() - F::one()) / F::from_f32(2f32).unwrap() + self.offset_y
     }
 
     pub fn wz(self: &Self) -> F {
-        (F::from_usize(self.nz).unwrap() - F::one())/F::from_f32(2f32).unwrap() + self.offset_z
+        (F::from_usize(self.nz).unwrap() - F::one()) / F::from_f32(2f32).unwrap() + self.offset_z
     }
 
     pub fn ix2x(self: &Self, ix: usize) -> F {
-        (F::from_usize(ix).unwrap() - self.wx())*self.dx
+        (F::from_usize(ix).unwrap() - self.wx()) * self.dx
     }
 
     pub fn iy2y(self: &Self, iy: usize) -> F {
-        (F::from_usize(iy).unwrap() - self.wy())*self.dy
+        (F::from_usize(iy).unwrap() - self.wy()) * self.dy
     }
 
     pub fn iz2z(self: &Self, iz: usize) -> F {
-        (F::from_usize(iz).unwrap() - self.wz())*self.dz
+        (F::from_usize(iz).unwrap() - self.wz()) * self.dz
     }
 
     /// Returns the image geometry for this slice
     pub fn transaxial_image_geometry(self: &Self) -> ImageGeometry<F> {
-        ImageGeometry{
+        ImageGeometry {
             ns: self.nx,
             nt: self.ny,
             ds: self.dx,
@@ -69,7 +69,7 @@ impl<F: Float + FromPrimitive> LightVolume<F> {
 
     /// Returns the optical transform from a slice to the `z=0` plane in this volume
     pub fn optics_to_z0(self: &Self, iz: usize) -> Optics<F> {
-        let z = (F::from_usize(iz).unwrap() - self.wz())*self.dz;
+        let z = (F::from_usize(iz).unwrap() - self.wz()) * self.dz;
         Optics::translation(&-z)
     }
 
@@ -78,11 +78,12 @@ impl<F: Float + FromPrimitive> LightVolume<F> {
     /// `iz` is the slice number.  Angles are defined on `plane`, and the
     /// optical transformation from the `z=0` plane of this volume to the 
     /// angular plane is given by `to_plane_from_z0`.
-    pub fn slice_light_field_geometry(self: &Self, 
+    pub fn slice_light_field_geometry(self: &Self,
                                       iz: usize,
                                       plane: AngularPlane<F>,
-                                      to_plane_from_z0: Optics<F>) -> LightFieldGeometry<F> {
-        LightFieldGeometry{
+                                      to_plane_from_z0: Optics<F>)
+                                      -> LightFieldGeometry<F> {
+        LightFieldGeometry {
             geom: self.transaxial_image_geometry(),
             plane: plane,
             to_plane: to_plane_from_z0.compose(&self.optics_to_z0(iz)),
@@ -91,7 +92,7 @@ impl<F: Float + FromPrimitive> LightVolume<F> {
 
     /// Returns a LightVolume with voxel dimensions scaled by the given factors
     pub fn scale(self: &Self, sx: F, sy: F, sz: F) -> Self {
-        LightVolume{
+        LightVolume {
             nx: self.nx,
             ny: self.ny,
             nz: self.nz,
@@ -104,7 +105,7 @@ impl<F: Float + FromPrimitive> LightVolume<F> {
             offset_y: self.offset_y,
             offset_z: self.offset_z,
 
-            opaque: self.opaque
+            opaque: self.opaque,
         }
     }
 
@@ -136,7 +137,7 @@ impl<F: Float + FromPrimitive> Geometry<F> for LightVolume<F> {
         let mut file = if let Ok(f) = self::avsfld::AVSFile::open(&path) {
             f
         } else {
-            return Err(())
+            return Err(());
         };
         match file.read() {
             Ok(tr) => Ok(tr),
@@ -196,19 +197,20 @@ impl<F: Float + FromPrimitive + ToPrimitive> Serialize for LightVolume<F> {
              Some(&Value::Float(offset_x)),
              Some(&Value::Float(offset_y)),
              Some(&Value::Float(offset_z)),
-             Some(&Value::Boolean(opaque)),
-             ) => Some(LightVolume{
-                nx: nx as usize,
-                ny: ny as usize,
-                nz: nz as usize,
-                dx: F::from_f64(dx).unwrap(),
-                dy: F::from_f64(dy).unwrap(),
-                dz: F::from_f64(dz).unwrap(),
-                offset_x: F::from_f64(offset_x).unwrap(),
-                offset_y: F::from_f64(offset_y).unwrap(),
-                offset_z: F::from_f64(offset_z).unwrap(),
-                opaque: opaque,
-            }),
+             Some(&Value::Boolean(opaque))) => {
+                Some(LightVolume {
+                    nx: nx as usize,
+                    ny: ny as usize,
+                    nz: nz as usize,
+                    dx: F::from_f64(dx).unwrap(),
+                    dy: F::from_f64(dy).unwrap(),
+                    dz: F::from_f64(dz).unwrap(),
+                    offset_x: F::from_f64(offset_x).unwrap(),
+                    offset_y: F::from_f64(offset_y).unwrap(),
+                    offset_z: F::from_f64(offset_z).unwrap(),
+                    opaque: opaque,
+                })
+            }
             _ => None,
         }
     }
@@ -221,9 +223,12 @@ impl<F: Float + FromPrimitive + ToPrimitive> Serialize for LightVolume<F> {
         tr.insert("dx".to_string(), Value::Float(F::to_f64(&self.dx).unwrap()));
         tr.insert("dy".to_string(), Value::Float(F::to_f64(&self.dy).unwrap()));
         tr.insert("dz".to_string(), Value::Float(F::to_f64(&self.dz).unwrap()));
-        tr.insert("offset_x".to_string(), Value::Float(F::to_f64(&self.offset_x).unwrap()));
-        tr.insert("offset_y".to_string(), Value::Float(F::to_f64(&self.offset_y).unwrap()));
-        tr.insert("offset_z".to_string(), Value::Float(F::to_f64(&self.offset_z).unwrap()));
+        tr.insert("offset_x".to_string(),
+                  Value::Float(F::to_f64(&self.offset_x).unwrap()));
+        tr.insert("offset_y".to_string(),
+                  Value::Float(F::to_f64(&self.offset_y).unwrap()));
+        tr.insert("offset_z".to_string(),
+                  Value::Float(F::to_f64(&self.offset_z).unwrap()));
         tr.insert("opaque".to_string(), Value::Boolean(self.opaque));
         tr
     }
@@ -272,4 +277,3 @@ fn test_light_volume() {
     assert_eq!(v.offset_z, vv.offset_z);
     assert_eq!(v.opaque, vv.opaque);
 }
-

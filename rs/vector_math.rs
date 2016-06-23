@@ -36,7 +36,7 @@ impl<F: Float + ToPrimitive + FromPrimitive> VectorMath<F> {
         let mix = try!(built.create_kernel("VectorMath_mix"));
         let div = try!(built.create_kernel("VectorMath_div"));
 
-        Ok(VectorMath{
+        Ok(VectorMath {
             queue: queue,
             set: set,
             mix: mix,
@@ -50,7 +50,8 @@ impl<F: Float + ToPrimitive + FromPrimitive> VectorMath<F> {
                np: usize,
                vec: &mut Mem,
                val: F,
-               wait_for: &[Event]) -> Result<Event, Error> {
+               wait_for: &[Event])
+               -> Result<Event, Error> {
         try!(self.set.bind_scalar(0, &(np as i32)));
         try!(self.set.bind_mut(1, vec));
         try!(self.set.bind_scalar(2, &F::to_f32(&val).unwrap()));
@@ -58,10 +59,7 @@ impl<F: Float + ToPrimitive + FromPrimitive> VectorMath<F> {
         let local_size = (256, 1, 1);
         let global_size = (np, 1, 1);
 
-        self.queue.run_with_events(&mut self.set,
-                                   local_size,
-                                   global_size,
-                                   wait_for)
+        self.queue.run_with_events(&mut self.set, local_size, global_size, wait_for)
     }
 
     /// Implements `out[i] = ax*x[i] + ay*y[i]`
@@ -72,7 +70,8 @@ impl<F: Float + ToPrimitive + FromPrimitive> VectorMath<F> {
                ax: F,
                ay: F,
                out: &mut Mem,
-               wait_for: &[Event]) -> Result<Event, Error> {
+               wait_for: &[Event])
+               -> Result<Event, Error> {
         try!(self.mix.bind_scalar(0, &(np as i32)));
         try!(self.mix.bind(1, x));
         try!(self.mix.bind(2, y));
@@ -83,10 +82,7 @@ impl<F: Float + ToPrimitive + FromPrimitive> VectorMath<F> {
         let local_size = (256, 1, 1);
         let global_size = (np, 1, 1);
 
-        self.queue.run_with_events(&mut self.mix,
-                                   local_size,
-                                   global_size,
-                                   wait_for)
+        self.queue.run_with_events(&mut self.mix, local_size, global_size, wait_for)
     }
 
     /// Implements `out[i] = x[i] / y[i]`
@@ -95,7 +91,8 @@ impl<F: Float + ToPrimitive + FromPrimitive> VectorMath<F> {
                x: &Mem,
                y: &Mem,
                out: &mut Mem,
-               wait_for: &[Event]) -> Result<Event, Error> {
+               wait_for: &[Event])
+               -> Result<Event, Error> {
         try!(self.div.bind_scalar(0, &(np as i32)));
         try!(self.div.bind(1, x));
         try!(self.div.bind(2, y));
@@ -104,10 +101,7 @@ impl<F: Float + ToPrimitive + FromPrimitive> VectorMath<F> {
         let local_size = (256, 1, 1);
         let global_size = (np, 1, 1);
 
-        self.queue.run_with_events(&mut self.div,
-                                   local_size,
-                                   global_size,
-                                   wait_for)
+        self.queue.run_with_events(&mut self.div, local_size, global_size, wait_for)
     }
 }
 
@@ -120,4 +114,3 @@ fn test_vector_math() {
 
     let vm = VectorMath::<f32>::new(queue.clone()).unwrap();
 }
-

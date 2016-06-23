@@ -27,22 +27,21 @@ impl<F: Float + ToPrimitive> ClBuffer for PotentialFunction<F> {
             &PotentialFunction::Quad(ref weight) => {
                 buf.write_i32::<LittleEndian>(0i32).unwrap();
                 buf.write_f32::<LittleEndian>(F::to_f32(weight).unwrap()).unwrap();
-            },
+            }
             &PotentialFunction::Abs(ref weight) => {
                 buf.write_i32::<LittleEndian>(1i32).unwrap();
                 buf.write_f32::<LittleEndian>(F::to_f32(weight).unwrap()).unwrap();
-            },
+            }
             &PotentialFunction::Fair(ref weight, ref delta) => {
                 buf.write_i32::<LittleEndian>(2i32).unwrap();
                 buf.write_f32::<LittleEndian>(F::to_f32(weight).unwrap()).unwrap();
                 buf.write_f32::<LittleEndian>(F::to_f32(delta).unwrap()).unwrap();
-            },
+            }
         }
     }
 }
 
-impl<F: Float + FromPrimitive + ToPrimitive> Serialize 
-for PotentialFunction<F> {
+impl<F: Float + FromPrimitive + ToPrimitive> Serialize for PotentialFunction<F> {
     fn from_map(map: &Table) -> Option<Self> {
         let weight = if let Some(&Value::Float(f)) = map.get("weight") {
             F::from_f64(f).unwrap()
@@ -59,7 +58,7 @@ for PotentialFunction<F> {
                     } else {
                         None
                     }
-                },
+                }
                 _ => None,
             }
         } else {
@@ -72,16 +71,19 @@ for PotentialFunction<F> {
         match self {
             &PotentialFunction::Quad(ref weight) => {
                 tr.insert("type".to_string(), Value::String("quad".to_string()));
-                tr.insert("weight".to_string(), Value::Float(F::to_f64(weight).unwrap()));
-            },
+                tr.insert("weight".to_string(),
+                          Value::Float(F::to_f64(weight).unwrap()));
+            }
             &PotentialFunction::Abs(ref weight) => {
                 tr.insert("type".to_string(), Value::String("abs".to_string()));
-                tr.insert("weight".to_string(), Value::Float(F::to_f64(weight).unwrap()));
-            },
+                tr.insert("weight".to_string(),
+                          Value::Float(F::to_f64(weight).unwrap()));
+            }
             &PotentialFunction::Fair(ref weight, ref delta) => {
                 tr.insert("type".to_string(), Value::String("fair".to_string()));
                 tr.insert("delta".to_string(), Value::Float(F::to_f64(delta).unwrap()));
-                tr.insert("weight".to_string(), Value::Float(F::to_f64(weight).unwrap()));
+                tr.insert("weight".to_string(),
+                          Value::Float(F::to_f64(weight).unwrap()));
             }
         };
         tr
@@ -128,4 +130,3 @@ fn test_read_potential_function() {
         assert!(false);
     }
 }
-

@@ -19,21 +19,21 @@ pub struct RotatedVolumeImager<F: Float + FromPrimitive> {
     tmp: Option<Mem>,
 }
 
-impl<F: Float + BaseFloat + ApproxEq<F> + FromPrimitive> 
-RotatedVolumeImager<F> {
+impl<F: Float + BaseFloat + ApproxEq<F> + FromPrimitive> RotatedVolumeImager<F> {
     pub fn new(rotator: Option<VolumeRotation<F>>,
                imager: Box<Imager<F, LightVolume<F>>>,
-               queue: CommandQueue) -> Result<Self, Error> {
+               queue: CommandQueue)
+               -> Result<Self, Error> {
         if let Some(rotator) = rotator {
             let tmp = try!(rotator.dst_geom.zeros_buf(&queue));
-            Ok(RotatedVolumeImager{
+            Ok(RotatedVolumeImager {
                 rotator: Some(rotator),
                 tmp: Some(tmp),
                 imager: imager,
                 vecmath: try!(VectorMath::new(queue)),
             })
         } else {
-            Ok(RotatedVolumeImager{
+            Ok(RotatedVolumeImager {
                 rotator: None,
                 tmp: None,
                 imager: imager,
@@ -43,7 +43,7 @@ RotatedVolumeImager<F> {
     }
 }
 
-impl<F: Float + BaseFloat + ApproxEq<F> + FromPrimitive> 
+impl<F: Float + BaseFloat + ApproxEq<F> + FromPrimitive>
 Imager<F, LightVolume<F>> for RotatedVolumeImager<F> {
     fn na(self: &Self) -> usize {
         self.imager.na()
@@ -134,4 +134,3 @@ Imager<F, LightVolume<F>> for RotatedVolumeImager<F> {
     }
 
 }
-

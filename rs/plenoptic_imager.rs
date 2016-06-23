@@ -30,12 +30,13 @@ impl<F: Float + FromPrimitive> PlenopticVolumeImager<F> {
                position: Vector3<F>,
                na: usize,
                basis: AngularBasis,
-               queue: CommandQueue) -> Result<Self, Error> {
+               queue: CommandQueue)
+               -> Result<Self, Error> {
         // angular plane on main lens
         let plane = camera.lens.as_angular_plane(basis, na);
 
         // light field geometry on ulens array
-        let array_lfg = LightFieldGeometry{
+        let array_lfg = LightFieldGeometry {
             geom: camera.detector.image_geometry(),
             plane: plane.clone(),
             to_plane: Optics::translation(&camera.distance_lens_array),
@@ -58,8 +59,10 @@ impl<F: Float + FromPrimitive> PlenopticVolumeImager<F> {
         frame_geom.offset_x = frame_geom.offset_x + camera_ox;
         frame_geom.offset_y = frame_geom.offset_y + camera_oy;
 
-        let optics_object_to_plane = camera.lens.optics().then(
-            &Optics::translation(&distance_to_object)).invert();
+        let optics_object_to_plane = camera.lens
+                                           .optics()
+                                           .then(&Optics::translation(&distance_to_object))
+                                           .invert();
 
         let xport = try!(VolumeTransport::new(frame_geom,
                                               array_lfg.clone(),
@@ -75,7 +78,7 @@ impl<F: Float + FromPrimitive> PlenopticVolumeImager<F> {
                                         lenses,
                                         queue.clone()));
 
-        Ok(PlenopticVolumeImager{
+        Ok(PlenopticVolumeImager {
             geom: geom,
             xport: xport,
             array: array,
@@ -86,8 +89,7 @@ impl<F: Float + FromPrimitive> PlenopticVolumeImager<F> {
     }
 }
 
-impl<F: Float + FromPrimitive> Imager<F, LightVolume<F>>
-for PlenopticVolumeImager<F> {
+impl<F: Float + FromPrimitive> Imager<F, LightVolume<F>> for PlenopticVolumeImager<F> {
     fn na(self: &Self) -> usize {
         self.plane.s.len()
     }
@@ -108,7 +110,8 @@ for PlenopticVolumeImager<F> {
                   object: &Mem,
                   view: &mut Mem,
                   ia: usize,
-                  wait_for: &[Event]) -> Result<Event, Error> {
+                  wait_for: &[Event])
+                  -> Result<Event, Error> {
         let mut tmp_copy = self.tmp.clone();
         let evt = try!(self.xport.forw(object, &mut tmp_copy, ia, wait_for));
         self.array.forw(&tmp_copy, view, ia, &[evt])
@@ -118,10 +121,10 @@ for PlenopticVolumeImager<F> {
                   view: &Mem,
                   object: &mut Mem,
                   ia: usize,
-                  wait_for: &[Event]) -> Result<Event, Error> {
+                  wait_for: &[Event])
+                  -> Result<Event, Error> {
         let mut tmp_copy = self.tmp.clone();
         let evt = try!(self.array.back(view, &mut tmp_copy, ia, wait_for));
         self.xport.back(&tmp_copy, object, ia, &[evt])
     }
 }
-

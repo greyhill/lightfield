@@ -12,7 +12,10 @@ pub enum AngularBasis {
 
 /// Objects that can produce angular planes
 pub trait AsAngularPlane<F: Float> {
-    fn as_angular_plane(self: &Self, basis: AngularBasis, discretization: usize) -> AngularPlane<F>;
+    fn as_angular_plane(self: &Self,
+                        basis: AngularBasis,
+                        discretization: usize)
+                        -> AngularPlane<F>;
 }
 
 /// Angular discretization by space using pillbox basis function
@@ -31,7 +34,7 @@ impl<F: Float> AngularPlane<F> {
     pub fn subsets_strided(self: &Self, num_subsets: usize) -> Vec<Vec<usize>> {
         assert!(num_subsets > 0);
         let mut tr = Vec::with_capacity(num_subsets);
-        for mut ia in 0 .. num_subsets {
+        for mut ia in 0..num_subsets {
             let mut sub = Vec::new();
             loop {
                 if ia >= self.na() {
@@ -50,17 +53,21 @@ impl<F: Float> AngularPlane<F> {
     }
 }
 
-impl<F, T> AsAngularPlane<F> for T 
-where F: Float + FromPrimitive,
-      T: BoundingGeometry<F> + Occluder<F> {
-    fn as_angular_plane(self: &Self, basis: AngularBasis, discretization: usize) -> AngularPlane<F> {
+impl<F, T> AsAngularPlane<F> for T
+    where F: Float + FromPrimitive,
+          T: BoundingGeometry<F> + Occluder<F>
+{
+    fn as_angular_plane(self: &Self,
+                        basis: AngularBasis,
+                        discretization: usize)
+                        -> AngularPlane<F> {
         let geom = self.bounding_geometry(discretization, discretization);
         let mut s = Vec::new();
         let mut t = Vec::new();
         let mut w = Vec::new();
 
-        for it in 0 .. geom.nt {
-            for is in 0 .. geom.ns {
+        for it in 0..geom.nt {
+            for is in 0..geom.ns {
                 let (s0, s1, t0, t1) = geom.pixel_bounds(is, it);
                 let wk = F::one() - self.rasterize(s0, s1, t0, t1, 10); // 10 provides reasonable accuracy
                 if wk > F::zero() {
@@ -72,7 +79,7 @@ where F: Float + FromPrimitive,
             }
         }
 
-        AngularPlane{
+        AngularPlane {
             ds: geom.ds,
             dt: geom.dt,
             basis: basis,
@@ -82,4 +89,3 @@ where F: Float + FromPrimitive,
         }
     }
 }
-

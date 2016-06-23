@@ -31,18 +31,20 @@ impl<F: Float + FromPrimitive + ToPrimitive> Serialize for SingleLensCamera<F> {
         let distance_detector_lens = map.get("distance_detector_lens");
 
         match (lens, detector, distance_detector_lens) {
-            (Some(&Value::Table(ref lens_tab)), 
+            (Some(&Value::Table(ref lens_tab)),
              Some(&Value::Table(ref det_tab)),
-             Some(&Value::Float(distance_detector_lens))) => match (Lens::from_map(lens_tab), Detector::from_map(det_tab)) {
-                (Some(lens), Some(det)) => {
-                    Some(SingleLensCamera{
-                        lens: lens,
-                        detector: det,
-                        distance_detector_lens: F::from_f64(distance_detector_lens).unwrap(),
-                    })
-                },
-                _ => None,
-            },
+             Some(&Value::Float(distance_detector_lens))) => {
+                match (Lens::from_map(lens_tab), Detector::from_map(det_tab)) {
+                    (Some(lens), Some(det)) => {
+                        Some(SingleLensCamera {
+                            lens: lens,
+                            detector: det,
+                            distance_detector_lens: F::from_f64(distance_detector_lens).unwrap(),
+                        })
+                    }
+                    _ => None,
+                }
+            }
             _ => None,
         }
     }
@@ -50,8 +52,10 @@ impl<F: Float + FromPrimitive + ToPrimitive> Serialize for SingleLensCamera<F> {
     fn into_map(self: &Self) -> Table {
         let mut tr = Table::new();
         tr.insert("lens".to_string(), Value::Table(self.lens.into_map()));
-        tr.insert("detector".to_string(), Value::Table(self.detector.into_map()));
-        tr.insert("distance_detector_lens".to_string(), Value::Float(F::to_f64(&self.distance_detector_lens).unwrap()));
+        tr.insert("detector".to_string(),
+                  Value::Table(self.detector.into_map()));
+        tr.insert("distance_detector_lens".to_string(),
+                  Value::Float(F::to_f64(&self.distance_detector_lens).unwrap()));
         tr
     }
 }
@@ -97,4 +101,3 @@ fn test_read_camera() {
     assert_eq!(camera.lens.focal_length_s, 12.0);
     assert_eq!(camera.lens.focal_length_t, 24.0);
 }
-

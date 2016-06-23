@@ -64,17 +64,16 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
                box_min: Option<F>,
                box_max: Option<F>,
                gain_estimation: bool,
-               queue: CommandQueue) -> Result<Self, Error> {
+               queue: CommandQueue)
+               -> Result<Self, Error> {
         // get opencl objects
         let context = try!(queue.context());
         let device = try!(queue.device());
-        let sources = &[
-            Optics::<F>::header(),
-            ImageGeometry::<F>::header(),
-            LightVolume::<F>::header(),
-            PotentialFunction::<F>::header(),
-            Self::header(),
-        ];
+        let sources = &[Optics::<F>::header(),
+                        ImageGeometry::<F>::header(),
+                        LightVolume::<F>::header(),
+                        PotentialFunction::<F>::header(),
+                        Self::header()];
 
         // build opencl kernels
         let unbuilt = try!(Program::new_from_source(context, sources));
@@ -94,7 +93,7 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
         let mut ynorm2s = Vec::new();
         let mut measurements_host = Vec::new();
         for &m in measurements.iter() {
-            ynorm2s.push(m.iter().fold(F::zero(), |l, &r| l + r*r));
+            ynorm2s.push(m.iter().fold(F::zero(), |l, &r| l + r * r));
             measurements_host.push(m.to_owned());
         }
 
@@ -120,13 +119,13 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
                 let m = try!(queue.create_buffer_from_slice(x0));
                 let x_off = try!(queue.create_buffer_from_slice(x0));
                 (x, m, x_off)
-            },
+            }
             None => {
                 let x = try!(geometry.zeros_buf(&queue));
                 let m = try!(geometry.zeros_buf(&queue));
                 let x_off = try!(geometry.zeros_buf(&queue));
                 (x, m, x_off)
-            },
+            }
         };
 
         let denom = try!(geometry.zeros_buf(&queue));
@@ -154,7 +153,7 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
         // create geometry buffer
         let geom_buf = try!(geometry.as_cl_buffer(&queue));
 
-        let mut volume_solver = FistaVolumeSolver{
+        let mut volume_solver = FistaVolumeSolver {
             geom: geometry,
             imagers: imagers,
             subsets: subsets,
@@ -186,7 +185,7 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
 
             queue: queue,
 
-            t: F::one()
+            t: F::one(),
         };
         try!(volume_solver.compute_denominator());
 
@@ -198,9 +197,12 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
         let np_geom = self.geom.dimension();
         try!(try!(self.vecmath.set(np_geom, &mut self.mask3, F::zero(), &[])).wait());
 
-        for (imager, (proj_buf, (meas, tmp_buffer))) in self.imagers.iter_mut().zip(self.projections.iter_mut()
-                                                                 .zip(self.measurements_host.iter()
-                                                                 .zip(self.tmp_buffers.iter_mut()))) {
+        for (imager, (proj_buf, (meas, tmp_buffer))) in
+            self.imagers.iter_mut().zip(self.projections
+                                            .iter_mut()
+                                            .zip(self.measurements_host
+                                                     .iter()
+                                                     .zip(self.tmp_buffers.iter_mut()))) {
             let mut tmp = vec![F::zero(); meas.len()];
             for (tmp_i, meas_i) in tmp.iter_mut().zip(meas.iter()) {
                 if *meas_i == F::zero() {
@@ -221,7 +223,8 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
                                        F::one(),
                                        F::one(),
                                        &mut m3_clone,
-                                       &[])).wait());
+                                       &[]))
+                     .wait());
         }
 
         Ok(())
@@ -269,7 +272,13 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
         if false {
             let mut denom_host = self.geom.zeros();
             try!(self.queue.read_buffer(&self.denom, &mut denom_host));
-            let max_val = denom_host.iter().fold(F::one(), |l, &r| if l > r { l } else { r });
+            let max_val = denom_host.iter().fold(F::one(), |l, &r| {
+                if l > r {
+                    l
+                } else {
+                    r
+                }
+            });
             let c1000 = F::from_f32(1000f32).unwrap();
             for m in denom_host.iter_mut() {
                 if *m < max_val / c1000 {
@@ -286,13 +295,14 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
     /// gradient in `self.tmp_buffers[0]`
     fn compute_data_gradient(self: &mut Self,
                              subset: usize,
-                             wait_for: &[Event]) -> Result<Event, Error> {
+                             wait_for: &[Event])
+                             -> Result<Event, Error> {
         let num_cam = self.imagers.len();
         let np_obj = self.geom.dimension();
 
         // loop through cameras and compute gradient for each
         let mut camera_events = Vec::new();
-        for camera in 0 .. num_cam {
+        for camera in 0..num_cam {
             let evt = try!(self.compute_camera_gradient(camera, subset, wait_for));
             camera_events.push(evt);
         }
@@ -306,8 +316,10 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
         for (evt_i, tmp_i) in evts_iter.zip(tmp_iter) {
             let wait = vec![evt, evt_i.clone()];
             evt = try!(self.vecmath.mix(np_obj,
-                                        tmp0, tmp_i,
-                                        F::one(), F::one(),
+                                        tmp0,
+                                        tmp_i,
+                                        F::one(),
+                                        F::one(),
                                         &mut tmp0_copy,
                                         &wait));
         }
@@ -318,7 +330,8 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
     fn compute_camera_gradient(self: &mut Self,
                                camera: usize,
                                subset: usize,
-                               wait_for: &[Event]) -> Result<Event, Error> {
+                               wait_for: &[Event])
+                               -> Result<Event, Error> {
         let imager = &mut self.imagers[camera];
         let tmp = &mut self.tmp_buffers[camera];
         let proj = &mut self.projections[camera];
@@ -333,24 +346,25 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
         let mut evt = try!(self.vecmath.set(np_det, proj, F::zero(), wait_for));
 
         // project x
-        evt = try!(imager.forw_subset(&self.x,
-                                      proj,
-                                      subset_angles,
-                                      &[evt]));
+        evt = try!(imager.forw_subset(&self.x, proj, subset_angles, &[evt]));
 
         if self.gain_estimation && camera > 0 {
             // for all cameras but the first, update the camera_scale
             try!(evt.wait());
             let mut proj_host = vec![F::zero(); np_det];
             try!(try!(self.queue.read_buffer(proj, &mut proj_host)).wait());
-            let iprod = proj_host.iter().zip(self.measurements_host[camera].iter()).fold(
-                F::zero(), |l, (&a, &b)| l + a*b);
+            let iprod = proj_host.iter()
+                                 .zip(self.measurements_host[camera].iter())
+                                 .fold(F::zero(), |l, (&a, &b)| l + a * b);
             self.camera_scales[camera] = iprod / self.ynorm2s[camera];
-            println!("Camera {} gain: {}", camera, F::to_f32(&self.camera_scales[camera]).unwrap());
+            println!("Camera {} gain: {}",
+                     camera,
+                     F::to_f32(&self.camera_scales[camera]).unwrap());
         }
 
         // compute subset scaling
-        let subset_scaling = F::from_usize(imager.na()).unwrap() / F::from_usize(subset_angles.len()).unwrap();
+        let subset_scaling = F::from_usize(imager.na()).unwrap() /
+                             F::from_usize(subset_angles.len()).unwrap();
         let scaling = subset_scaling;
 
         // compute residual
@@ -361,8 +375,8 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
         evt = try!(self.vecmath.mix(np_det,
                                     proj,
                                     meas,
-                                    scaling*scaling,
-                                    -scaling*self.camera_scales[camera],
+                                    scaling * scaling,
+                                    -scaling * self.camera_scales[camera],
                                     &mut proj_copy,
                                     &[evt]));
 
@@ -378,15 +392,18 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
     fn update_image(self: &mut Self, wait_for: &[Event]) -> Result<Event, Error> {
         // update back-buffer x_off
         let np = self.geom.dimension();
-        let evt = try!(self.vecmath.mix(np, &self.x, &self.x,
-                              F::one(), F::zero(),
-                              &mut self.x_off,
-                              wait_for));
+        let evt = try!(self.vecmath.mix(np,
+                                        &self.x,
+                                        &self.x,
+                                        F::one(),
+                                        F::zero(),
+                                        &mut self.x_off,
+                                        wait_for));
 
         // compute t1
         let c2 = F::from_f32(2f32).unwrap();
         let c4 = F::from_f32(4f32).unwrap();
-        let t1 = (F::one() + (F::one() + c4*self.t*self.t).sqrt())/c2;
+        let t1 = (F::one() + (F::one() + c4 * self.t * self.t).sqrt()) / c2;
 
         // bind arguments
         try!(self.update.bind(0, &self.geom_buf));
@@ -420,17 +437,12 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
 
         self.t = t1;
 
-        self.queue.run_with_events(&mut self.update,
-                                   local_size,
-                                   global_size,
-                                   &[evt])
+        self.queue.run_with_events(&mut self.update, local_size, global_size, &[evt])
     }
 
     /// Run one subset of the FISTA iteration using the given subset of 
     /// angles to compute the data-fidelity gradients
-    pub fn run_subset(self: &mut Self,
-                      subset: usize,
-                      wait_for: &[Event]) -> Result<Event, Error> {
+    pub fn run_subset(self: &mut Self, subset: usize, wait_for: &[Event]) -> Result<Event, Error> {
         // compute the data gradient into self.tmp_buffers[0]
         let evt = try!(self.compute_data_gradient(subset, wait_for));
 
@@ -442,4 +454,3 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
         self.m.clone()
     }
 }
-

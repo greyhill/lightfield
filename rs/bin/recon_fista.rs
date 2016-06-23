@@ -25,9 +25,18 @@ fn main() {
     opts.reqopt("s", "scene", "TOML file describing scene", "FILE");
     opts.reqopt("a", "angles", "Angular discretization", "INT");
     opts.reqopt("b", "basis", "Angular basis function", "pillbox | dirac");
-    opts.optopt("i", "interval", "Save an image every N iterations (default 1)", "INT");
-    opts.optopt("n", "niter", "Maximum number of iterations (default none)", "INT");
-    opts.optopt("u", "subsets", "Number of view subsets for acceleration (default 1)", "INT");
+    opts.optopt("i",
+                "interval",
+                "Save an image every N iterations (default 1)",
+                "INT");
+    opts.optopt("n",
+                "niter",
+                "Maximum number of iterations (default none)",
+                "INT");
+    opts.optopt("u",
+                "subsets",
+                "Number of view subsets for acceleration (default 1)",
+                "INT");
     opts.optflag("m", "mask", "Use conformal mask");
     opts.optflag("g", "gain", "Use gain estimation for multiple cameras");
     opts.optopt("d", "device", "OpenCL device to use (default: 0)", "INT");
@@ -49,7 +58,10 @@ fn main() {
     }
 
     // parse number of angles, basis function
-    let na: usize = matches.opt_str("angles").unwrap().parse().expect("Error parsing number of angles");
+    let na: usize = matches.opt_str("angles")
+                           .unwrap()
+                           .parse()
+                           .expect("Error parsing number of angles");
     let basis = match &matches.opt_str("basis").unwrap()[..] {
         "dirac" => AngularBasis::Dirac,
         "pillbox" => AngularBasis::Pillbox,
@@ -67,18 +79,24 @@ fn main() {
     // use selected device
     let device_id = match matches.opt_str("device") {
         Some(s) => s.parse().expect("Error parsing device number"),
-        None => 0usize
+        None => 0usize,
     };
 
     let queue = &env.queues[device_id];
     println!("Using device id {} (of {}): {}",
-        device_id, env.queues.len(),
-        queue.device().expect("Error getting device info").name()
-                      .expect("Error getting device name"));
+             device_id,
+             env.queues.len(),
+             queue.device()
+                  .expect("Error getting device info")
+                  .name()
+                  .expect("Error getting device name"));
 
     // load scene description, object descriptions
-    let scene = Scene::<f32>::read(matches.opt_str("s").unwrap()).expect("Error loading scene file");
-    let object_config: ObjectConfig<f32> = scene.object.get_config().expect("Error reading object configuration");
+    let scene = Scene::<f32>::read(matches.opt_str("s").unwrap())
+                    .expect("Error loading scene file");
+    let object_config: ObjectConfig<f32> = scene.object
+                                                .get_config()
+                                                .expect("Error reading object configuration");
 
     // read iteration save interval
     let interval = match matches.opt_str("interval") {
@@ -97,7 +115,7 @@ fn main() {
     // parse number of subsets
     let nsubset = match matches.opt_str("subsets") {
         Some(s) => s.parse().expect("Error parsing number of subsets"),
-        None => 1usize
+        None => 1usize,
     };
     println!("Number of subsets: {}", nsubset);
 
@@ -116,11 +134,13 @@ fn main() {
                                                   scene_cam.rotation.clone(),
                                                   na,
                                                   basis.clone(),
-                                                  queue.clone()).expect("Error creating Imager for camera");
+                                                  queue.clone())
+                                   .expect("Error creating Imager for camera");
 
                 // load data
                 let detector_ig = imager.detector().image_geometry();
-                let meas = detector_ig.load(&scene_cam.data_path).expect("Error reading measurements");
+                let meas = detector_ig.load(&scene_cam.data_path)
+                                      .expect("Error reading measurements");
 
                 measurements.push(meas);
                 imagers.push(imager);
@@ -131,7 +151,7 @@ fn main() {
                 Ok(x0) => {
                     println!("Loaded initial image form {:?}", &scene.object.data_path);
                     x0
-                },
+                }
                 Err(_) => {
                     println!("Initializing image with zeros");
                     geom.zeros()
@@ -151,7 +171,8 @@ fn main() {
                                                     scene.object.box_min,
                                                     scene.object.box_max,
                                                     gain_estimation,
-                                                    queue.clone()).expect("Error creating FISTA solver");
+                                                    queue.clone())
+                                 .expect("Error creating FISTA solver");
 
             if matches.opt_present("mask") {
                 println!("Using conformal mask");
@@ -159,23 +180,31 @@ fn main() {
             }
 
             // loop iterations
-            for iter in 0 .. {
+            for iter in 0.. {
                 match niter {
-                    Some(niter) => if niter == iter { break },
-                    None => {},
+                    Some(niter) => {
+                        if niter == iter {
+                            break;
+                        }
+                    }
+                    None => {}
                 }
 
                 // Run FISTA iteration
-                println!("Starting iteration {}", iter+1);
-                solver.run_subset(iter % nsubset, &[]).expect("Error running FISTA iteration").wait()
-                    .expect("Error waiting for FISTA iteration to complete");
+                println!("Starting iteration {}", iter + 1);
+                solver.run_subset(iter % nsubset, &[])
+                      .expect("Error running FISTA iteration")
+                      .wait()
+                      .expect("Error waiting for FISTA iteration to complete");
 
                 // Get image
                 if iter % interval == 0 {
                     let x_buf = solver.image_buffer();
                     let mut x = geom.zeros();
-                    queue.read_buffer(&x_buf, &mut x).expect("Error reading image buffer").wait()
-                        .expect("Error waiting waiting for image buffer transfer to complete");
+                    queue.read_buffer(&x_buf, &mut x)
+                         .expect("Error reading image buffer")
+                         .wait()
+                         .expect("Error waiting waiting for image buffer transfer to complete");
 
                     geom.save(&x, &scene.object.data_path).expect("Error saving image");
                     println!("Saved image");
@@ -183,7 +212,6 @@ fn main() {
             }
 
             println!("Done!");
-        },
+        }
     }
 }
-

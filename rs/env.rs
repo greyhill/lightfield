@@ -15,14 +15,16 @@ impl Environment {
     pub fn new_easy() -> Result<Environment, Error> {
         let platforms = try!(Platform::platforms());
         let devices = try!(platforms[0].devices());
-        let gpu_devices: Vec<Device> = devices.into_iter().filter(
-            |d| {
-                if let DeviceType::GPU = d.device_type().unwrap() { 
-                    true 
-                } else { 
-                    false 
-                }
-            }).collect();
+        let gpu_devices: Vec<Device> = devices.into_iter()
+                                              .filter(|d| {
+                                                  if let DeviceType::GPU = d.device_type()
+                                                                            .unwrap() {
+                                                      true
+                                                  } else {
+                                                      false
+                                                  }
+                                              })
+                                              .collect();
 
         let context = try!(Context::new(&gpu_devices));
         let mut queues = Vec::new();
@@ -31,7 +33,7 @@ impl Environment {
             queues.push(q);
         }
 
-        Ok(Environment{
+        Ok(Environment {
             ctx: context,
             devices: gpu_devices,
             queues: queues,
@@ -44,4 +46,3 @@ fn test_new_easy() {
     let env = Environment::new_easy().unwrap();
     assert!(env.devices.len() > 0);
 }
-

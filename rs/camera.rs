@@ -8,7 +8,7 @@ use serialize::*;
 use single_lens_camera::*;
 use self::toml::*;
 use light_volume::*;
-use self::proust::{CommandQueue};
+use self::proust::CommandQueue;
 use self::proust::Error as PError;
 use angular_plane::*;
 use imager::*;
@@ -43,43 +43,42 @@ impl<F: 'static + Float + FromPrimitive + BaseFloat + ApproxEq<F>> CameraConfig<
                          camera_rotation: Option<Rotation3<F>>,
                          na: usize,
                          basis: AngularBasis,
-                         queue: CommandQueue) -> Result<Box<Imager<F, LightVolume<F>>>, PError> {
+                         queue: CommandQueue)
+                         -> Result<Box<Imager<F, LightVolume<F>>>, PError> {
         let (rotator, geom) = match camera_rotation {
             Some(rot) => {
                 let rotator = try!(VolumeRotation::new(&rot, light_volume, queue.clone()));
                 let geom = rotator.dst_geom.clone();
                 (Some(rotator), geom)
-            },
-            None => {
-                (None, light_volume)
-            },
+            }
+            None => (None, light_volume),
         };
 
         let internal_imager: Box<Imager<F, LightVolume<F>>> = match self {
-            &CameraConfig::SingleLensCamera(ref slc) => Box::new(try!(SingleLensVolumeImager::new(
-                            geom,
-                            slc.clone(),
-                            camera_position,
-                            na,
-                            basis,
-                            queue.clone(),
-            ))),
-            &CameraConfig::CodedApertureCamera(ref cac) => Box::new(try!(CodedApertureVolumeImager::new(
-                            geom,
-                            cac.clone(),
-                            camera_position,
-                            na,
-                            basis,
-                            queue.clone(),
-            ))),
-            &CameraConfig::PlenopticCamera(ref pc) => Box::new(try!(PlenopticVolumeImager::new(
-                            geom,
-                            pc.clone(),
-                            camera_position,
-                            na,
-                            basis,
-                            queue.clone(),
-            ))),
+            &CameraConfig::SingleLensCamera(ref slc) => {
+                Box::new(try!(SingleLensVolumeImager::new(geom,
+                                                          slc.clone(),
+                                                          camera_position,
+                                                          na,
+                                                          basis,
+                                                          queue.clone())))
+            }
+            &CameraConfig::CodedApertureCamera(ref cac) => {
+                Box::new(try!(CodedApertureVolumeImager::new(geom,
+                                                             cac.clone(),
+                                                             camera_position,
+                                                             na,
+                                                             basis,
+                                                             queue.clone())))
+            }
+            &CameraConfig::PlenopticCamera(ref pc) => {
+                Box::new(try!(PlenopticVolumeImager::new(geom,
+                                                         pc.clone(),
+                                                         camera_position,
+                                                         na,
+                                                         basis,
+                                                         queue.clone())))
+            }
         };
         Ok(Box::new(try!(RotatedVolumeImager::new(rotator, internal_imager, queue))))
     }
@@ -114,4 +113,3 @@ impl<F: Float + FromPrimitive + ToPrimitive> Serialize for CameraConfig<F> {
         }
     }
 }
-

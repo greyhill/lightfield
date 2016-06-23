@@ -27,15 +27,12 @@ impl<F: Float> ClHeader for PhantomRenderer<F> {
 }
 
 impl<F: Float + FromPrimitive> PhantomRenderer<F> {
-    pub fn new(geom: LightVolume<F>,
-               queue: CommandQueue) -> Result<Self, Error> {
-        let sources = &[
-            ImageGeometry::<F>::header(),
-            Optics::<F>::header(),
-            LightVolume::<F>::header(),
-            Ellipsoid::<F>::header(),
-            Self::header(),
-        ];
+    pub fn new(geom: LightVolume<F>, queue: CommandQueue) -> Result<Self, Error> {
+        let sources = &[ImageGeometry::<F>::header(),
+                        Optics::<F>::header(),
+                        LightVolume::<F>::header(),
+                        Ellipsoid::<F>::header(),
+                        Self::header()];
 
         // compile opencl code
         let context = try!(queue.context());
@@ -49,31 +46,30 @@ impl<F: Float + FromPrimitive> PhantomRenderer<F> {
         // geometry buffer
         let geom_buf = try!(geom.as_cl_buffer(&queue));
 
-        Ok(PhantomRenderer{
+        Ok(PhantomRenderer {
             geom: geom,
             geom_buf: geom_buf,
             render_ellipsoid: render_ellipsoid,
-            queue: queue
+            queue: queue,
         })
     }
 
     pub fn render_ellipsoid(self: &mut Self,
                             vol: &mut Mem,
                             ellipsoid: &Ellipsoid<F>,
-                            wait_for: &[Event]) -> Result<Event, Error> {
+                            wait_for: &[Event])
+                            -> Result<Event, Error> {
         // create ellipsoid info buffer
         let ellipsoid_buf = try!(ellipsoid.as_cl_buffer(&self.queue));
-        self.render_ellipsoids(1, 
-                               &ellipsoid_buf,
-                               vol,
-                               wait_for)
+        self.render_ellipsoids(1, &ellipsoid_buf, vol, wait_for)
     }
 
     pub fn render_ellipsoids(self: &mut Self,
                              num_ellipsoids: usize,
                              ellipsoids: &Mem,
                              vol: &mut Mem,
-                             wait_for: &[Event]) -> Result<Event, Error> {
+                             wait_for: &[Event])
+                             -> Result<Event, Error> {
         // bind arguments
         try!(self.render_ellipsoid.bind(0, &self.geom_buf));
         try!(self.render_ellipsoid.bind(1, ellipsoids));
@@ -99,7 +95,7 @@ fn test_phantom_renderer() {
     let env = Environment::new_easy().unwrap();
     let queue = &env.queues[0];
 
-    let vg = LightVolume{
+    let vg = LightVolume {
         nx: 100,
         ny: 200,
         nz: 300,
@@ -121,7 +117,12 @@ fn test_phantom_renderer() {
     let mut v = vg.zeros();
     queue.read_buffer(&v_buf, &mut v).unwrap();
 
-    let max_val = v.iter().fold(0f32, |l, &x| if x > l { x } else { l });
+    let max_val = v.iter().fold(0f32, |l, &x| {
+        if x > l {
+            x
+        } else {
+            l
+        }
+    });
     assert_eq!(max_val, 1f32);
 }
-

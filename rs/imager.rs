@@ -27,14 +27,16 @@ where F: Float + FromPrimitive,
                   object: &Mem,
                   view: &mut Mem,
                   ia: usize,
-                  wait_for: &[Event]) -> Result<Event, Error>;
+                  wait_for: &[Event])
+                  -> Result<Event, Error>;
 
     /// Backproject a single angle out of the discretization
     fn back_angle(self: &mut Self,
                   view: &Mem,
                   object: &mut Mem,
                   ia: usize,
-                  wait_for: &[Event]) -> Result<Event, Error>;
+                  wait_for: &[Event])
+                  -> Result<Event, Error>;
 
     /// Project an object stored on the host
     ///
@@ -65,17 +67,15 @@ where F: Float + FromPrimitive,
     fn forw(self: &mut Self,
             object: &Mem,
             view: &mut Mem,
-            wait_for: &[Event]) -> Result<Event, Error> {
-        let angles: Vec<usize> = (0 .. self.na()).collect();
+            wait_for: &[Event])
+            -> Result<Event, Error> {
+        let angles: Vec<usize> = (0..self.na()).collect();
         self.forw_subset(object, view, &angles, wait_for)
     }
 
     /// Backproject all of the angles in the discretization
-    fn back(&mut self,
-            view: &Mem,
-            object: &mut Mem,
-            wait_for: &[Event]) -> Result<Event, Error> {
-        let angles: Vec<usize> = (0 .. self.na()).collect();
+    fn back(&mut self, view: &Mem, object: &mut Mem, wait_for: &[Event]) -> Result<Event, Error> {
+        let angles: Vec<usize> = (0..self.na()).collect();
         self.back_subset(view, object, &angles, wait_for)
     }
 
@@ -84,7 +84,8 @@ where F: Float + FromPrimitive,
                    object: &Mem,
                    view: &mut Mem,
                    angles: &[usize],
-                   wait_for: &[Event]) -> Result<Event, Error> {
+                   wait_for: &[Event])
+                   -> Result<Event, Error> {
         let mut evt = try!(self.forw_angle(object, view, 0, wait_for));
         for &ia in angles.iter() {
             evt = try!(self.forw_angle(object, view, ia, &[evt]));
@@ -97,7 +98,8 @@ where F: Float + FromPrimitive,
                    view: &Mem,
                    object: &mut Mem,
                    angles: &[usize],
-                   wait_for: &[Event]) -> Result<Event, Error> {
+                   wait_for: &[Event])
+                   -> Result<Event, Error> {
         let mut evt = try!(self.back_angle(view, object, 0, wait_for));
         for &ia in angles.iter() {
             evt = try!(self.back_angle(view, object, ia, &[evt]));
@@ -105,4 +107,3 @@ where F: Float + FromPrimitive,
         Ok(evt)
     }
 }
-

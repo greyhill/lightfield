@@ -33,22 +33,24 @@ impl<F: Float + FromPrimitive> CodedApertureVolumeImager<F> {
                position: Vector3<F>,
                na: usize,
                basis: AngularBasis,
-               queue: CommandQueue) -> Result<Self, Error> {
+               queue: CommandQueue)
+               -> Result<Self, Error> {
         // angular plane on main lens
         let plane = camera.lens.as_angular_plane(basis, na);
 
         // light field geometry on mask plane
-        let mask_lfg = LightFieldGeometry{
+        let mask_lfg = LightFieldGeometry {
             geom: camera.mask_geometry.clone(),
             plane: plane.clone(),
             to_plane: Optics::translation(&camera.distance_lens_mask),
         };
 
         // light field geometry on detector plane
-        let det_lfg = LightFieldGeometry{
+        let det_lfg = LightFieldGeometry {
             geom: camera.detector.image_geometry(),
             plane: plane.clone(),
-            to_plane: Optics::translation(&(camera.distance_lens_mask + camera.distance_detector_mask)),
+            to_plane: Optics::translation(&(camera.distance_lens_mask +
+                                            camera.distance_detector_mask)),
         };
 
         // maybe this isn't good design?
@@ -57,7 +59,7 @@ impl<F: Float + FromPrimitive> CodedApertureVolumeImager<F> {
             None => panic!("CodedApertureVolumeImager::new called with unloaded mask"),
         };
 
-        // intermediate buffer 
+        // intermediate buffer
         let tmp_buf = try!(camera.mask_geometry.zeros_buf(&queue));
 
         // geometry of the object in the camera's optical frame
@@ -70,8 +72,10 @@ impl<F: Float + FromPrimitive> CodedApertureVolumeImager<F> {
         frame_geom.offset_x = frame_geom.offset_x + camera_ox;
         frame_geom.offset_y = frame_geom.offset_y + camera_oy;
 
-        let optics_object_to_plane = camera.lens.optics().then(
-            &Optics::translation(&distance_to_object)).invert();
+        let optics_object_to_plane = camera.lens
+                                           .optics()
+                                           .then(&Optics::translation(&distance_to_object))
+                                           .invert();
 
         // transport from object to mask
         let volume_xport = try!(VolumeTransport::new(frame_geom,
@@ -82,7 +86,7 @@ impl<F: Float + FromPrimitive> CodedApertureVolumeImager<F> {
                                                      false, // onto_detector
                                                      queue.clone()));
 
-        let xport = try!(Transport::new(mask_lfg, 
+        let xport = try!(Transport::new(mask_lfg,
                                         det_lfg,
                                         None, // src bounds
                                         None, // dst bounds
@@ -93,7 +97,7 @@ impl<F: Float + FromPrimitive> CodedApertureVolumeImager<F> {
                                         true, // onto_detector
                                         queue.clone()));
 
-        Ok(CodedApertureVolumeImager{
+        Ok(CodedApertureVolumeImager {
             geom: geom,
             volume_xport: volume_xport,
             tmp_buf: tmp_buf,
@@ -105,8 +109,7 @@ impl<F: Float + FromPrimitive> CodedApertureVolumeImager<F> {
     }
 }
 
-impl<F: Float + FromPrimitive> Imager<F, LightVolume<F>> 
-for CodedApertureVolumeImager<F> {
+impl<F: Float + FromPrimitive> Imager<F, LightVolume<F>> for CodedApertureVolumeImager<F> {
     fn na(self: &Self) -> usize {
         self.plane.s.len()
     }
@@ -127,7 +130,8 @@ for CodedApertureVolumeImager<F> {
                   object: &Mem,
                   view: &mut Mem,
                   ia: usize,
-                  wait_for: &[Event]) -> Result<Event, Error> {
+                  wait_for: &[Event])
+                  -> Result<Event, Error> {
         let mut tmp_copy = self.tmp_buf.clone();
         let mut evt = try!(self.volume_xport.forw(object, &mut tmp_copy, ia, wait_for));
         evt = try!(self.mask.apply_mask(&mut tmp_copy, &[evt]));
@@ -138,11 +142,11 @@ for CodedApertureVolumeImager<F> {
                   view: &Mem,
                   object: &mut Mem,
                   ia: usize,
-                  wait_for: &[Event]) -> Result<Event, Error> {
+                  wait_for: &[Event])
+                  -> Result<Event, Error> {
         let mut tmp_copy = self.tmp_buf.clone();
         let mut evt = try!(self.xport.back(view, &mut tmp_copy, ia, wait_for));
         evt = try!(self.mask.apply_mask(&mut tmp_copy, &[evt]));
         self.volume_xport.back(&tmp_copy, object, ia, &[evt])
     }
 }
-

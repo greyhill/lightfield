@@ -22,8 +22,10 @@ pub struct Lens<F: Float> {
 impl<F: Float + FromPrimitive> Lens<F> {
     /// Returns the optical transformation from this lens
     pub fn optics(self: &Self) -> Optics<F> {
-        Optics::anisotropic_lens(&self.center_s, &self.center_t,
-                                 &self.focal_length_s, &self.focal_length_t)
+        Optics::anisotropic_lens(&self.center_s,
+                                 &self.center_t,
+                                 &self.focal_length_s,
+                                 &self.focal_length_t)
     }
 
     pub fn tesselate_quad_1(ig: &ImageGeometry<F>, lens: &Self) -> Vec<Self> {
@@ -42,21 +44,19 @@ impl<F: Float + FromPrimitive> Lens<F> {
 
                 s = s + lens.radius_s + lens.radius_s;
                 if s > s1 {
-                    break
+                    break;
                 }
             }
 
             t = t + lens.radius_t + lens.radius_t;
             if t > t1 {
-                break
+                break;
             }
         }
         tr
     }
 
-    pub fn tesselate_quad_2(ig: &ImageGeometry<F>, 
-                            lens1: &Self,
-                            lens2: &Self,) -> Vec<Self> {
+    pub fn tesselate_quad_2(ig: &ImageGeometry<F>, lens1: &Self, lens2: &Self) -> Vec<Self> {
         assert!(lens1.radius_s == lens2.radius_s);
         assert!(lens1.radius_t == lens2.radius_t);
 
@@ -82,21 +82,20 @@ impl<F: Float + FromPrimitive> Lens<F> {
                 s = s + lens1.radius_s + lens1.radius_s;
                 is += 1;
                 if s > s1 {
-                    break
+                    break;
                 }
             }
 
             t = t + lens1.radius_t + lens1.radius_t;
             it += 1;
             if t > t1 {
-                break
+                break;
             }
         }
         tr
     }
 
-    pub fn tesselate_hex_1(ig: &ImageGeometry<F>,
-                           lens: &Self) -> Vec<Self> {
+    pub fn tesselate_hex_1(ig: &ImageGeometry<F>, lens: &Self) -> Vec<Self> {
         assert!(lens.radius_s == lens.radius_t);
         let mut tr = Vec::new();
 
@@ -122,21 +121,24 @@ impl<F: Float + FromPrimitive> Lens<F> {
 
                 s = s + stride_s;
                 if s > s1 {
-                    break
+                    break;
                 }
             }
 
             t = t + stride_t;
             it += 1;
             if t > t1 {
-                break
+                break;
             }
         }
         tr
     }
 
     pub fn tesselate_hex_3(ig: &ImageGeometry<F>,
-                           lens1: &Self, lens2: &Self, lens3: &Self) -> Vec<Self> {
+                           lens1: &Self,
+                           lens2: &Self,
+                           lens3: &Self)
+                           -> Vec<Self> {
         assert!(lens1.radius_s == lens1.radius_t);
         assert!(lens2.radius_s == lens1.radius_t);
         assert!(lens3.radius_s == lens1.radius_t);
@@ -157,7 +159,7 @@ impl<F: Float + FromPrimitive> Lens<F> {
             let mut is = 0;
 
             loop {
-                let mut li = match (2*(it % 2) + is) % 3 {
+                let mut li = match (2 * (it % 2) + is) % 3 {
                     0 => lens1.clone(),
                     1 => lens2.clone(),
                     2 => lens3.clone(),
@@ -171,14 +173,14 @@ impl<F: Float + FromPrimitive> Lens<F> {
                 s = s + stride_s;
                 is += 1;
                 if s > s1 {
-                    break
+                    break;
                 }
             }
 
             t = t + stride_t;
             it += 1;
             if t > t1 {
-                break
+                break;
             }
         }
         tr
@@ -191,7 +193,7 @@ impl<F: Float + FromPrimitive> BoundingGeometry<F> for Lens<F> {
         let dt = F::from_f32(2f32).unwrap() * self.radius_t / F::from_usize(nt).unwrap();
         let offset_s = -self.center_s / ds;
         let offset_t = -self.center_t / dt;
-        ImageGeometry{
+        ImageGeometry {
             ns: ns,
             nt: nt,
             ds: ds,
@@ -219,32 +221,45 @@ impl<F: Float + FromPrimitive + ToPrimitive> Serialize for Lens<F> {
         let focal_length_s = map.get("focal_length_s");
         let focal_length_t = map.get("focal_length_t");
 
-        match (center_s, center_t, radius_s, radius_t, focal_length_s, focal_length_t) {
+        match (center_s,
+               center_t,
+               radius_s,
+               radius_t,
+               focal_length_s,
+               focal_length_t) {
             (Some(&Value::Float(center_s)),
              Some(&Value::Float(center_t)),
              Some(&Value::Float(radius_s)),
              Some(&Value::Float(radius_t)),
              Some(&Value::Float(focal_length_s)),
-             Some(&Value::Float(focal_length_t))) => Some(Lens{
-                center_s: F::from_f64(center_s).unwrap(),
-                center_t: F::from_f64(center_t).unwrap(),
-                radius_s: F::from_f64(radius_s).unwrap(),
-                radius_t: F::from_f64(radius_t).unwrap(),
-                focal_length_s: F::from_f64(focal_length_s).unwrap(),
-                focal_length_t: F::from_f64(focal_length_t).unwrap(),
-            }),
+             Some(&Value::Float(focal_length_t))) => {
+                Some(Lens {
+                    center_s: F::from_f64(center_s).unwrap(),
+                    center_t: F::from_f64(center_t).unwrap(),
+                    radius_s: F::from_f64(radius_s).unwrap(),
+                    radius_t: F::from_f64(radius_t).unwrap(),
+                    focal_length_s: F::from_f64(focal_length_s).unwrap(),
+                    focal_length_t: F::from_f64(focal_length_t).unwrap(),
+                })
+            }
             _ => None,
         }
     }
 
     fn into_map(self: &Self) -> Table {
         let mut tr = Table::new();
-        tr.insert("center_s".to_string(), Value::Float(F::to_f64(&self.center_s).unwrap()));
-        tr.insert("center_t".to_string(), Value::Float(F::to_f64(&self.center_t).unwrap()));
-        tr.insert("radius_s".to_string(), Value::Float(F::to_f64(&self.radius_s).unwrap()));
-        tr.insert("radius_t".to_string(), Value::Float(F::to_f64(&self.radius_t).unwrap()));
-        tr.insert("focal_length_s".to_string(), Value::Float(F::to_f64(&self.focal_length_s).unwrap()));
-        tr.insert("focal_length_t".to_string(), Value::Float(F::to_f64(&self.focal_length_t).unwrap()));
+        tr.insert("center_s".to_string(),
+                  Value::Float(F::to_f64(&self.center_s).unwrap()));
+        tr.insert("center_t".to_string(),
+                  Value::Float(F::to_f64(&self.center_t).unwrap()));
+        tr.insert("radius_s".to_string(),
+                  Value::Float(F::to_f64(&self.radius_s).unwrap()));
+        tr.insert("radius_t".to_string(),
+                  Value::Float(F::to_f64(&self.radius_t).unwrap()));
+        tr.insert("focal_length_s".to_string(),
+                  Value::Float(F::to_f64(&self.focal_length_s).unwrap()));
+        tr.insert("focal_length_t".to_string(),
+                  Value::Float(F::to_f64(&self.focal_length_t).unwrap()));
         tr
     }
 }
@@ -337,4 +352,3 @@ fn test_read_lens() {
     assert_eq!(lens.focal_length_s, 12.0);
     assert_eq!(lens.focal_length_t, 24.0);
 }
-

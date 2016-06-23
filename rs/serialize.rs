@@ -14,4 +14,3 @@ pub trait Serialize where Self: Sized {
         Ok(())
     }
 }
-

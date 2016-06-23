@@ -16,9 +16,7 @@ pub struct Mask<F: Float> {
 }
 
 impl<F: Float + FromPrimitive + ToPrimitive> Mask<F> {
-    pub fn new(geometry: ImageGeometry<F>,
-               mask: &[F],
-               queue: CommandQueue) -> Result<Self, Error> {
+    pub fn new(geometry: ImageGeometry<F>, mask: &[F], queue: CommandQueue) -> Result<Self, Error> {
         let context = try!(queue.context());
         let device = try!(queue.device());
         let source = &[ImageGeometry::<F>::header()];
@@ -29,7 +27,7 @@ impl<F: Float + FromPrimitive + ToPrimitive> Mask<F> {
         let mask_buf = try!(queue.create_buffer_from_slice(mask));
         let geom_buffer = try!(geometry.as_cl_buffer(&queue));
 
-        Ok(Mask{
+        Ok(Mask {
             geom: geometry,
             geom_buffer: geom_buffer,
             apply_mask: apply_mask,
@@ -40,39 +38,31 @@ impl<F: Float + FromPrimitive + ToPrimitive> Mask<F> {
     }
 
     /// Apply mask in place
-    pub fn apply_mask(self: &mut Self,
-                      img: &mut Mem,
-                      wait_for: &[Event]) -> Result<Event, Error> {
+    pub fn apply_mask(self: &mut Self, img: &mut Mem, wait_for: &[Event]) -> Result<Event, Error> {
         try!(self.apply_mask.bind(0, &self.geom_buffer));
         try!(self.apply_mask.bind(1, &self.mask));
         try!(self.apply_mask.bind_mut(2, img));
-        
+
         let local_size = (32, 8, 1);
         let global_size = (self.geom.ns, self.geom.nt, 1);
 
-        self.queue.run_with_events(&mut self.apply_mask,
-                                   local_size,
-                                   global_size,
-                                   wait_for)
+        self.queue.run_with_events(&mut self.apply_mask, local_size, global_size, wait_for)
     }
 
     /// Apply mask out-of-place
     pub fn apply_mask_to(self: &mut Self,
-                      img: &Mem,
-                      out: &mut Mem,
-                      wait_for: &[Event]) -> Result<Event, Error> {
+                         img: &Mem,
+                         out: &mut Mem,
+                         wait_for: &[Event])
+                         -> Result<Event, Error> {
         try!(self.apply_mask_to.bind(0, &self.geom_buffer));
         try!(self.apply_mask_to.bind(1, &self.mask));
         try!(self.apply_mask_to.bind(2, img));
         try!(self.apply_mask_to.bind_mut(3, out));
-        
+
         let local_size = (32, 8, 1);
         let global_size = (self.geom.ns, self.geom.nt, 1);
 
-        self.queue.run_with_events(&mut self.apply_mask_to,
-                                   local_size,
-                                   global_size,
-                                   wait_for)
+        self.queue.run_with_events(&mut self.apply_mask_to, local_size, global_size, wait_for)
     }
 }
-

@@ -47,15 +47,16 @@ fn main() {
     }
 
     // read configuration
-    let geom: lf::LightVolume<f32> = lf::LightVolume::from_map(
-        &lf::table_from_file(matches.opt_str("geometry").unwrap())
-            .expect("Error reading geometry configuration")
-        ).expect("Error parsing geometry configuration");
+    let geom: lf::LightVolume<f32> =
+        lf::LightVolume::from_map(&lf::table_from_file(matches.opt_str("geometry").unwrap())
+                                       .expect("Error reading geometry configuration"))
+            .expect("Error parsing geometry configuration");
 
-    let ellipses: Vec<lf::Ellipsoid<f32>> = Vec::<lf::Ellipsoid<_>>::from_map(
-        &lf::table_from_file(matches.opt_str("phantom").unwrap())
-            .expect("Error reading phantom configuration")
-        ).expect("Error parsing phantom configuration");
+    let ellipses: Vec<lf::Ellipsoid<f32>> =
+        Vec::<lf::Ellipsoid<_>>::from_map(&lf::table_from_file(matches.opt_str("phantom")
+                                                                      .unwrap())
+                                               .expect("Error reading phantom configuration"))
+            .expect("Error parsing phantom configuration");
 
     // create environment
     let env = lf::Environment::new_easy().expect("Error creating OpenCL environment");
@@ -63,31 +64,36 @@ fn main() {
     // use selected device
     let device_id = match matches.opt_str("device") {
         Some(s) => s.parse().expect("Error parsing device number"),
-        None => 0usize
+        None => 0usize,
     };
 
     let queue = &env.queues[device_id];
     println!("Using device id {} (of {}): {}",
-        device_id, env.queues.len(),
-        queue.device().expect("Error getting device info").name()
-                      .expect("Error getting device name"));
+             device_id,
+             env.queues.len(),
+             queue.device()
+                  .expect("Error getting device info")
+                  .name()
+                  .expect("Error getting device name"));
 
     // create renderer, put things on the GPU
     let mut renderer = lf::PhantomRenderer::new(geom.clone(), queue.clone())
-        .expect("Error creating phantom renderer");
+                           .expect("Error creating phantom renderer");
     let ell_buf = ellipses.as_cl_buffer(&queue).expect("Error loading ellipses onto GPU");
     let mut vol = geom.zeros_buf(&queue).expect("Error creating zero buffer");
 
     // render ellipses
     renderer.render_ellipsoids(ellipses.len(), &ell_buf, &mut vol, &[])
-        .expect("Error rendering ellipses")
-        .wait().expect("Error waiting for render");
+            .expect("Error rendering ellipses")
+            .wait()
+            .expect("Error waiting for render");
 
     // read rendered ellipses
     let mut rendered_vol = geom.zeros();
     queue.read_buffer(&vol, &mut rendered_vol).expect("Error reading rendered phantom");
-    geom.save(&rendered_vol, matches.opt_str("out").unwrap()).expect("Error writing rendered phantom");
+    geom.save(&rendered_vol, matches.opt_str("out").unwrap())
+        .expect("Error writing rendered phantom");
 
-    println!("Rendered phantom written to {}", matches.opt_str("out").unwrap());
+    println!("Rendered phantom written to {}",
+             matches.opt_str("out").unwrap());
 }
-

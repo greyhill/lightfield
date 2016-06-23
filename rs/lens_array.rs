@@ -30,7 +30,8 @@ impl<F: Float + FromPrimitive + ToPrimitive> LensArray<F> {
                detector: Detector<F>,
                distance_detector_array: F,
                lenses: &[Lens<F>],
-               queue: CommandQueue) -> Result<Self, Error> {
+               queue: CommandQueue)
+               -> Result<Self, Error> {
         let array_geometry = &array_lfg.geom;
 
         // create ulens array mask and transports for each ulens array
@@ -38,7 +39,7 @@ impl<F: Float + FromPrimitive + ToPrimitive> LensArray<F> {
         let mut xports = Vec::new();
         for lens in lenses.iter() {
             // get the pixels on the ulens plane that this lens touches
-            let lens_geom = lens.bounding_geometry(1,1);
+            let lens_geom = lens.bounding_geometry(1, 1);
             let (s0, s1, t0, t1) = lens_geom.spatial_bounds();
             let (is0, is1, it0, it1) = array_geometry.region_pixels(s0, s1, t0, t1);
 
@@ -46,12 +47,12 @@ impl<F: Float + FromPrimitive + ToPrimitive> LensArray<F> {
                 continue;
             }
 
-            // update mask 
-            for it in it0 .. it1 {
-                for is in is0 .. is1 {
+            // update mask
+            for it in it0..it1 {
+                for is in is0..is1 {
                     let (ss0, ss1, tt0, tt1) = array_geometry.pixel_bounds(is, it);
                     let mask_val = F::one() - lens.rasterize(ss0, ss1, tt0, tt1, 10); // TODO magic number
-                    let mask_index = is + array_geometry.ns*it;
+                    let mask_index = is + array_geometry.ns * it;
 
                     // in case over overlap between two lenses, use the maximum
                     // mask value
@@ -63,12 +64,12 @@ impl<F: Float + FromPrimitive + ToPrimitive> LensArray<F> {
             }
 
             // light field geometry on the detector behind this lens
-            let lens_detector_lfg = LightFieldGeometry{
+            let lens_detector_lfg = LightFieldGeometry {
                 geom: detector.image_geometry(),
                 plane: array_lfg.plane.clone(),
                 to_plane: Optics::translation(&distance_detector_array)
-                                .then(&lens.optics())
-                                .then(&array_lfg.to_plane),
+                              .then(&lens.optics())
+                              .then(&array_lfg.to_plane),
             };
 
             // TODO use a less magical dilation
@@ -107,7 +108,7 @@ impl<F: Float + FromPrimitive + ToPrimitive> LensArray<F> {
 
         let vecmath = try!(VectorMath::new(queue.clone()));
 
-        Ok(LensArray{
+        Ok(LensArray {
             mask: mask,
             mask_buf: mask_buf,
             xports: xports,
@@ -119,9 +120,10 @@ impl<F: Float + FromPrimitive + ToPrimitive> LensArray<F> {
                 view: &Mem,
                 det: &mut Mem,
                 ia: usize,
-                wait_for: &[Event]) -> Result<Event, Error> {
+                wait_for: &[Event])
+                -> Result<Event, Error> {
         let mut tmp = self.mask_buf.clone();
-        
+
         // apply the microlens array mask
         let evt = try!(self.mask.apply_mask_to(view, &mut tmp, wait_for));
         let mut evts: Vec<Event> = Vec::new();
@@ -139,7 +141,8 @@ impl<F: Float + FromPrimitive + ToPrimitive> LensArray<F> {
                 det: &Mem,
                 view: &mut Mem,
                 ia: usize,
-                wait_for: &[Event]) -> Result<Event, Error> {
+                wait_for: &[Event])
+                -> Result<Event, Error> {
         let np = self.mask.geom.dimension();
         let evt = try!(self.vecmath.set(np, view, F::zero(), wait_for));
 
@@ -154,4 +157,3 @@ impl<F: Float + FromPrimitive + ToPrimitive> LensArray<F> {
         self.mask.apply_mask(view, &evts)
     }
 }
-

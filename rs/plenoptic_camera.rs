@@ -25,7 +25,8 @@ impl<F: Float + FromPrimitive> PlenopticCamera<F> {
         let mut denom = F::zero();
         if let Some(ref array) = self.array {
             for lens in array.iter() {
-                let pre_optics = Optics::translation(&self.distance_detector_array).then(&lens.optics());
+                let pre_optics = Optics::translation(&self.distance_detector_array)
+                                     .then(&lens.optics());
                 let post_optics = self.lens.optics().then(&Optics::translation(&focus_distance));
                 let (distance_s, distance_t) = Optics::focus_at_distance(&pre_optics, &post_optics);
                 distance = distance + distance_s + distance_t;
@@ -46,7 +47,11 @@ impl<F: Float + FromPrimitive + ToPrimitive> Serialize for PlenopticCamera<F> {
         let distance_detector_array = map.get("distance_detector_array");
         let array_path = map.get("array_path");
 
-        match (lens, detector, distance_lens_array, distance_detector_array, array_path) {
+        match (lens,
+               detector,
+               distance_lens_array,
+               distance_detector_array,
+               array_path) {
             (Some(&Value::Table(ref lens_tab)),
              Some(&Value::Table(ref detector_tab)),
              Some(&Value::Float(distance_lens_array)),
@@ -54,7 +59,7 @@ impl<F: Float + FromPrimitive + ToPrimitive> Serialize for PlenopticCamera<F> {
              Some(&Value::String(ref array_path))) => {
                 match (Lens::from_map(lens_tab), Detector::from_map(detector_tab)) {
                     (Some(lens), Some(detector)) => {
-                        Some(PlenopticCamera{
+                        Some(PlenopticCamera {
                             lens: lens,
                             detector: detector,
                             distance_lens_array: F::from_f64(distance_lens_array).unwrap(),
@@ -62,10 +67,10 @@ impl<F: Float + FromPrimitive + ToPrimitive> Serialize for PlenopticCamera<F> {
                             array_path: array_path.clone(),
                             array: None,
                         })
-                    },
+                    }
                     _ => None,
                 }
-            },
+            }
             _ => None,
         }
     }
@@ -73,10 +78,14 @@ impl<F: Float + FromPrimitive + ToPrimitive> Serialize for PlenopticCamera<F> {
     fn into_map(self: &Self) -> Table {
         let mut tr = Table::new();
         tr.insert("lens".to_string(), Value::Table(self.lens.into_map()));
-        tr.insert("detector".to_string(), Value::Table(self.detector.into_map()));
-        tr.insert("distance_lens_array".to_string(), Value::Float(F::to_f64(&self.distance_lens_array).unwrap()));
-        tr.insert("distance_detector_array".to_string(), Value::Float(F::to_f64(&self.distance_detector_array).unwrap()));
-        tr.insert("array_path".to_string(), Value::String(self.array_path.clone()));
+        tr.insert("detector".to_string(),
+                  Value::Table(self.detector.into_map()));
+        tr.insert("distance_lens_array".to_string(),
+                  Value::Float(F::to_f64(&self.distance_lens_array).unwrap()));
+        tr.insert("distance_detector_array".to_string(),
+                  Value::Float(F::to_f64(&self.distance_detector_array).unwrap()));
+        tr.insert("array_path".to_string(),
+                  Value::String(self.array_path.clone()));
         tr
     }
 
@@ -91,10 +100,10 @@ impl<F: Float + FromPrimitive + ToPrimitive> Serialize for PlenopticCamera<F> {
                         Some(array) => {
                             self.array = Some(array);
                             Ok(())
-                        },
-                        None => Err(())
+                        }
+                        None => Err(()),
                     }
-                },
+                }
                 None => Err(()),
             }
         } else {
@@ -147,4 +156,3 @@ fn test_plenoptic_camera() {
     assert_eq!(camera.lens.focal_length_s, 12.0);
     assert_eq!(camera.lens.focal_length_t, 24.0);
 }
-

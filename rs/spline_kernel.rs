@@ -24,8 +24,9 @@ impl<F: Float> SplineKernel<F> {
     pub fn new_quad(height: F, mag: F, taus: &[F]) -> Self {
         let mut t = taus.to_owned();
         t.sort_by(|l, r| l.partial_cmp(r).unwrap());
-        SplineKernel::Quad(height, mag, [t[0], t[1], t[2], t[3],
-                                         t[4], t[5], t[6], t[7]])
+        SplineKernel::Quad(height,
+                           mag,
+                           [t[0], t[1], t[2], t[3], t[4], t[5], t[6], t[7]])
     }
 
     /// Height of the kernel
@@ -61,7 +62,7 @@ impl<F: Float + ToPrimitive> ClBuffer for SplineKernel<F> {
                 buf.write_f32::<LittleEndian>(F::to_f32(mag).unwrap()).unwrap();
                 buf.write_f32::<LittleEndian>(F::to_f32(&taus[0]).unwrap()).unwrap();
                 buf.write_f32::<LittleEndian>(F::to_f32(&taus[1]).unwrap()).unwrap();
-            },
+            }
             &SplineKernel::Trapezoid(ref height, ref mag, ref taus) => {
                 buf.write_f32::<LittleEndian>(F::to_f32(height).unwrap()).unwrap();
                 buf.write_f32::<LittleEndian>(F::to_f32(mag).unwrap()).unwrap();
@@ -69,7 +70,7 @@ impl<F: Float + ToPrimitive> ClBuffer for SplineKernel<F> {
                 buf.write_f32::<LittleEndian>(F::to_f32(&taus[1]).unwrap()).unwrap();
                 buf.write_f32::<LittleEndian>(F::to_f32(&taus[2]).unwrap()).unwrap();
                 buf.write_f32::<LittleEndian>(F::to_f32(&taus[3]).unwrap()).unwrap();
-            },
+            }
             &SplineKernel::Quad(ref height, ref mag, ref taus) => {
                 buf.write_f32::<LittleEndian>(F::to_f32(height).unwrap()).unwrap();
                 buf.write_f32::<LittleEndian>(F::to_f32(mag).unwrap()).unwrap();
@@ -81,8 +82,7 @@ impl<F: Float + ToPrimitive> ClBuffer for SplineKernel<F> {
                 buf.write_f32::<LittleEndian>(F::to_f32(&taus[5]).unwrap()).unwrap();
                 buf.write_f32::<LittleEndian>(F::to_f32(&taus[6]).unwrap()).unwrap();
                 buf.write_f32::<LittleEndian>(F::to_f32(&taus[7]).unwrap()).unwrap();
-            },
+            }
         }
     }
 }
-

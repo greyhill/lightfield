@@ -25,4 +25,3 @@ impl<F: Float + FromPrimitive + ToPrimitive> Serialize for ObjectConfig<F> {
         }
     }
 }
-

@@ -9,7 +9,7 @@ use self::lightfield::*;
 use self::proust::*;
 
 // usage example:
-// generate_data --scene scene.toml --angles 48 --basis dirac 
+// generate_data --scene scene.toml --angles 48 --basis dirac
 
 fn print_usage(name: &String, opts: Options) {
     let brief = format!("Usage: {} [options]", name);
@@ -46,7 +46,10 @@ fn main() {
     }
 
     // parse number of angles, basis function
-    let na: usize = matches.opt_str("angles").unwrap().parse().expect("Error parsing number of angles");
+    let na: usize = matches.opt_str("angles")
+                           .unwrap()
+                           .parse()
+                           .expect("Error parsing number of angles");
     let basis = match &matches.opt_str("basis").unwrap()[..] {
         "dirac" => AngularBasis::Dirac,
         "pillbox" => AngularBasis::Pillbox,
@@ -59,24 +62,31 @@ fn main() {
     // use selected device
     let device_id = match matches.opt_str("device") {
         Some(s) => s.parse().expect("Error parsing device number"),
-        None => 0usize
+        None => 0usize,
     };
 
     let queue = &env.queues[device_id];
     println!("Using device id {} (of {}): {}",
-        device_id, env.queues.len(),
-        queue.device().expect("Error getting device info").name()
-                      .expect("Error getting device name"));
+             device_id,
+             env.queues.len(),
+             queue.device()
+                  .expect("Error getting device info")
+                  .name()
+                  .expect("Error getting device name"));
 
     // load scene description, object descriptions
-    let scene = Scene::<f32>::read(matches.opt_str("s").unwrap()).expect("Error loading scene file");
-    let object_config: ObjectConfig<f32> = scene.object.get_config().expect("Error reading object configuration");
+    let scene = Scene::<f32>::read(matches.opt_str("s").unwrap())
+                    .expect("Error loading scene file");
+    let object_config: ObjectConfig<f32> = scene.object
+                                                .get_config()
+                                                .expect("Error reading object configuration");
 
     // branch based on the type of object given
     match object_config {
         ObjectConfig::LightVolume(geom) => {
             let object_buf = geom.load(&scene.object.data_path).expect("Error loading object data");
-            let object = queue.create_buffer_from_slice(&object_buf).expect("Error loading object onto GPU");
+            let object = queue.create_buffer_from_slice(&object_buf)
+                              .expect("Error loading object onto GPU");
 
             // loop through cameras
             for scene_cam in scene.cameras.iter() {
@@ -87,37 +97,42 @@ fn main() {
                                                       scene_cam.rotation.clone(),
                                                       na,
                                                       basis.clone(),
-                                                      queue.clone()).expect("Error creating Imager for camera");
-                let mut img = imager.detector().zeros_buf(&queue).expect("Error creating GPU detector buffer");
+                                                      queue.clone())
+                                       .expect("Error creating Imager for camera");
+                let mut img = imager.detector()
+                                    .zeros_buf(&queue)
+                                    .expect("Error creating GPU detector buffer");
 
                 let views = match matches.opt_str("view") {
                     Some(view_str) => {
                         let view = view_str.parse().expect("Error parsing view");
                         println!("Only projecting view {}", view);
                         vec![view]
-                    },
+                    }
                     None => {
                         let mut tr = Vec::new();
-                        for ia in 0 .. imager.angular_plane().na() {
+                        for ia in 0..imager.angular_plane().na() {
                             tr.push(ia);
                         }
                         tr
-                    },
+                    }
                 };
 
                 // Perform projection
                 imager.forw_subset(&object, &mut img, &views, &[])
-                    .expect("Error projecting").wait()
-                    .expect("Error waiting for projection to complete");
+                      .expect("Error projecting")
+                      .wait()
+                      .expect("Error waiting for projection to complete");
 
                 // Read projection to host
                 let mut img_buf = imager.detector().zeros();
                 queue.read_buffer(&img, &mut img_buf).expect("Error reading projection");
 
                 // Save result
-                imager.detector().save(&img_buf, &scene_cam.data_path).expect("Error saving result");
+                imager.detector()
+                      .save(&img_buf, &scene_cam.data_path)
+                      .expect("Error saving result");
             }
-        },
+        }
     }
 }
-

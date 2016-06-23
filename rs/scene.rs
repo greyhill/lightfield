@@ -45,7 +45,7 @@ pub fn table_from_file<P: AsRef<Path>>(path: P) -> Option<Table> {
         None => {
             println!("Error parsing; malformed TOML");
             println!("Errors: {:?}", parser.errors);
-            return None
+            return None;
         }
     };
 
@@ -92,24 +92,20 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> SceneCamera<F> {
                     println!("Error parsing Camera config");
                     return None;
                 }
-            },
-            Some(&Value::Table(ref tab)) => {
-                (tab.clone(), root_path.as_ref().to_path_buf())
-            },
+            }
+            Some(&Value::Table(ref tab)) => (tab.clone(), root_path.as_ref().to_path_buf()),
             _ => {
                 println!("Camera was listed without a valid configuration");
                 return None;
-            },
+            }
         };
 
         let data_path = match table.get("data") {
-            Some(&Value::String(ref data_path_ext)) => {
-                path_from(&root_path, data_path_ext)
-            },
+            Some(&Value::String(ref data_path_ext)) => path_from(&root_path, data_path_ext),
             _ => {
                 println!("No camera data path given");
                 return None;
-            },
+            }
         };
 
         let position = match table.get("position") {
@@ -120,11 +116,11 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> SceneCamera<F> {
                     println!("Malformed camera position");
                     return None;
                 }
-            },
+            }
             _ => {
                 println!("Camera was not given a position");
                 return None;
-            },
+            }
         };
 
         let rotation = match table.get("rotation") {
@@ -135,11 +131,11 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> SceneCamera<F> {
                     println!("Malformed camera rotation");
                     return None;
                 }
-            },
+            }
             _ => None,
         };
 
-        Some(SceneCamera{
+        Some(SceneCamera {
             name: name,
             config: config,
             data_path: data_path,
@@ -183,13 +179,11 @@ impl<F: Float + BaseFloat + FromPrimitive> SceneObject<F> {
                 } else {
                     return None;
                 }
-            },
-            Some(&Value::Table(ref tab)) => {
-                tab.clone()
-            },
+            }
+            Some(&Value::Table(ref tab)) => tab.clone(),
             _ => {
                 return None;
-            },
+            }
         };
 
         let data_path = match table.get("data") {
@@ -197,7 +191,7 @@ impl<F: Float + BaseFloat + FromPrimitive> SceneObject<F> {
             _ => {
                 println!("object.data field was not a String");
                 return None;
-            },
+            }
         };
 
         let (box_min, box_max) = match table.get("box_constraints") {
@@ -215,7 +209,7 @@ impl<F: Float + BaseFloat + FromPrimitive> SceneObject<F> {
                 };
 
                 (box_min, box_max)
-            },
+            }
             None => (None, None),
             _ => {
                 println!("Malformed box constraints");
@@ -231,12 +225,12 @@ impl<F: Float + BaseFloat + FromPrimitive> SceneObject<F> {
                     println!("Malformed sparsifying regularization");
                     return None;
                 }
-            },
+            }
             None => None,
             _ => {
                 println!("Sparsifying regularization must be a table if present");
                 return None;
-            },
+            }
         };
 
         let edge_preserving = match table.get("edge_preserving") {
@@ -247,15 +241,15 @@ impl<F: Float + BaseFloat + FromPrimitive> SceneObject<F> {
                     println!("Malformed edge-preserving regularizer");
                     return None;
                 }
-            },
+            }
             None => None,
             _ => {
                 println!("Edge-preserving regularization must be a table if present");
                 return None;
-            },
+            }
         };
 
-        Some(SceneObject{
+        Some(SceneObject {
             config: config,
             data_path: data_path,
             box_min: box_min,
@@ -289,11 +283,11 @@ impl<F: BaseFloat + Float + FromPrimitive> Scene<F> {
             None => {
                 println!("Config contained no [object] fields");
                 return None;
-            },
+            }
             _ => {
                 println!("Config contained invalid [object] field");
                 return None;
-            },
+            }
         };
 
         // parse object description
@@ -302,7 +296,7 @@ impl<F: BaseFloat + Float + FromPrimitive> Scene<F> {
             None => {
                 println!("Invalid object description in [object] table");
                 return None;
-            },
+            }
         };
 
         // get camera array
@@ -311,11 +305,11 @@ impl<F: BaseFloat + Float + FromPrimitive> Scene<F> {
             None => {
                 println!("Config contained no [[camera]] array");
                 return None;
-            },
+            }
             _ => {
                 println!("Config contained invalid [[camera]] array");
                 return None;
-            },
+            }
         };
 
         // parse camera descriptions, dropping ones that don't parse
@@ -327,14 +321,14 @@ impl<F: BaseFloat + Float + FromPrimitive> Scene<F> {
                 _ => {
                     println!("Camera field was not table?");
                     continue;
-                },
+                }
             };
             let cam_desc = match SceneCamera::from_toml(&path, cam_tab) {
                 Some(cam_desc) => cam_desc,
                 None => {
                     println!("Error parsing camera description; dropping");
                     continue;
-                },
+                }
             };
             camera_descs.push(cam_desc);
         }
@@ -346,7 +340,7 @@ impl<F: BaseFloat + Float + FromPrimitive> Scene<F> {
         }
 
         // if we've gotten this far, we've succeeded :-)
-        Some(Scene{
+        Some(Scene {
             object: object_desc,
             cameras: camera_descs,
         })
@@ -356,9 +350,9 @@ impl<F: BaseFloat + Float + FromPrimitive> Scene<F> {
 #[test]
 fn test_scene() {
     let scene = Scene::<f32>::read("cfg/test_scene.toml").unwrap();
-    
+
     // PathBuf doesn't canonicalize automatically
-    //assert_eq!(scene.object.data_path, Some(PathBuf::from("test_volume.fld")));
+    // assert_eq!(scene.object.data_path, Some(PathBuf::from("test_volume.fld")));
 
     assert_eq!(scene.cameras[0].name, "focal0");
     assert_eq!(scene.cameras[1].name, "focal1");
@@ -402,4 +396,3 @@ fn test_scene() {
         assert!(false);
     }
 }
-

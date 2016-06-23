@@ -31,26 +31,27 @@ pub struct VolumeTransport<F: Float> {
     scale_kernel: Kernel,
     zero_kernel: Kernel,
 
-    tmp: Mem,                   // half-filtered volume
-    scaled: Mem,                // scaled light field
-    volume_geom: Mem,           // LightVolumeGeometry
-    dst_geom: Mem,              // ImageGeometry
-    slice_geom: Mem,            // ImageGeometry
+    tmp: Mem, // half-filtered volume
+    scaled: Mem, // scaled light field
+    volume_geom: Mem, // LightVolumeGeometry
+    dst_geom: Mem, // ImageGeometry
+    slice_geom: Mem, // ImageGeometry
 
-    dst_to_root: Mem,           // Optics
-    dst_to_obj: Mem,            // Optics
+    dst_to_root: Mem, // Optics
+    dst_to_obj: Mem, // Optics
     forw_spline_kernels_s: Mem, // [SplineKernel]*nz*na
     forw_spline_kernels_t: Mem, // [SplineKernel]*nz*na
     back_spline_kernels_s: Mem, // [SplineKernel]*nz*na
     back_spline_kernels_t: Mem, // [SplineKernel]*nz*na
 }
 
-impl<F> VolumeTransport<F>
-where F: Float + FromPrimitive {
+impl<F> VolumeTransport<F> where F: Float + FromPrimitive
+{
     pub fn new_simple(src: LightVolume<F>,
                       dst: LightFieldGeometry<F>,
                       to_plane: Optics<F>,
-                      queue: CommandQueue) -> Result<Self, Error> {
+                      queue: CommandQueue)
+                      -> Result<Self, Error> {
         Self::new(src, dst, to_plane, true, true, false, queue)
     }
 
@@ -61,29 +62,26 @@ where F: Float + FromPrimitive {
                overwrite_forw: bool,
                overwrite_back: bool,
                onto_detector: bool,
-               queue: CommandQueue) -> Result<Self, Error> {
+               queue: CommandQueue)
+               -> Result<Self, Error> {
         // collect opencl sources
         let sources = match &dst.plane.basis {
             &AngularBasis::Pillbox => {
-                [
-                    ImageGeometry::<F>::header(),
-                    Optics::<F>::header(),
-                    LightVolume::<F>::header(),
-                    SplineKernel::<F>::header(),
-                    include_str!("../cl/transport_pillbox_f32.opencl"),
-                    include_str!("../cl/volume_transport_pillbox_f32.opencl"),
-                ]
-            },
+                [ImageGeometry::<F>::header(),
+                 Optics::<F>::header(),
+                 LightVolume::<F>::header(),
+                 SplineKernel::<F>::header(),
+                 include_str!("../cl/transport_pillbox_f32.opencl"),
+                 include_str!("../cl/volume_transport_pillbox_f32.opencl")]
+            }
             &AngularBasis::Dirac => {
-                [
-                    ImageGeometry::<F>::header(),
-                    Optics::<F>::header(),
-                    LightVolume::<F>::header(),
-                    SplineKernel::<F>::header(),
-                    include_str!("../cl/transport_dirac_f32.opencl"),
-                    include_str!("../cl/volume_transport_dirac_f32.opencl"),
-                ]
-            },
+                [ImageGeometry::<F>::header(),
+                 Optics::<F>::header(),
+                 LightVolume::<F>::header(),
+                 SplineKernel::<F>::header(),
+                 include_str!("../cl/transport_dirac_f32.opencl"),
+                 include_str!("../cl/volume_transport_dirac_f32.opencl")]
+            }
         };
 
         // compile opencl code
@@ -124,9 +122,9 @@ where F: Float + FromPrimitive {
         let mut forw_spline_kernels_t_buf: Vec<u8> = Vec::new();
         let mut back_spline_kernels_s_buf: Vec<u8> = Vec::new();
         let mut back_spline_kernels_t_buf: Vec<u8> = Vec::new();
-        for iz in 0 .. src.nz {
+        for iz in 0..src.nz {
             let slice_lfg = src.slice_light_field_geometry(iz, dst.plane.clone(), to_plane.clone());
-            for ia in 0 .. dst.plane.s.len() {
+            for ia in 0..dst.plane.s.len() {
                 let (forw_s, forw_t) = slice_lfg.transport_to(&dst, ia);
                 let (back_s, back_t) = dst.transport_to(&slice_lfg, ia);
 
@@ -138,12 +136,16 @@ where F: Float + FromPrimitive {
         }
 
         // load precomputed values onto the GPU
-        let forw_spline_kernels_s = try!(queue.create_buffer_from_slice(&forw_spline_kernels_s_buf));
-        let forw_spline_kernels_t = try!(queue.create_buffer_from_slice(&forw_spline_kernels_t_buf));
-        let back_spline_kernels_s = try!(queue.create_buffer_from_slice(&back_spline_kernels_s_buf));
-        let back_spline_kernels_t = try!(queue.create_buffer_from_slice(&back_spline_kernels_t_buf));
+        let forw_spline_kernels_s =
+            try!(queue.create_buffer_from_slice(&forw_spline_kernels_s_buf));
+        let forw_spline_kernels_t =
+            try!(queue.create_buffer_from_slice(&forw_spline_kernels_t_buf));
+        let back_spline_kernels_s =
+            try!(queue.create_buffer_from_slice(&back_spline_kernels_s_buf));
+        let back_spline_kernels_t =
+            try!(queue.create_buffer_from_slice(&back_spline_kernels_t_buf));
 
-        Ok(VolumeTransport{
+        Ok(VolumeTransport {
             geom: src,
             dst: dst,
 
@@ -176,12 +178,14 @@ where F: Float + FromPrimitive {
 
     fn forw_t(self: &mut Self,
               vol: &Mem,
-              ia: usize, iz: usize,
-              wait_for: &[Event]) -> Result<Event, Error> {
+              ia: usize,
+              iz: usize,
+              wait_for: &[Event])
+              -> Result<Event, Error> {
         let na = self.dst.plane.s.len();
         let u = self.dst.plane.s[ia];
         let v = self.dst.plane.t[ia];
-        
+
         // bind arguments
         try!(self.forw_t_kernel.bind(0, &self.volume_geom));
         try!(self.forw_t_kernel.bind(1, &self.slice_geom));
@@ -198,16 +202,15 @@ where F: Float + FromPrimitive {
         let local_size = (32, 8, 1);
         let global_size = (self.geom.nx, self.dst.geom.nt, 1);
 
-        self.queue.run_with_events(&mut self.forw_t_kernel,
-                                   local_size,
-                                   global_size,
-                                   wait_for)
+        self.queue.run_with_events(&mut self.forw_t_kernel, local_size, global_size, wait_for)
     }
 
     fn forw_s(self: &mut Self,
               dst: &mut Mem,
-              ia: usize, iz: usize,
-              wait_for: &[Event]) -> Result<Event, Error> {
+              ia: usize,
+              iz: usize,
+              wait_for: &[Event])
+              -> Result<Event, Error> {
         let na = self.dst.plane.s.len();
         let u = self.dst.plane.s[ia];
         let v = self.dst.plane.t[ia];
@@ -234,16 +237,15 @@ where F: Float + FromPrimitive {
         let local_size = (32, 8, 1);
         let global_size = (self.dst.geom.nt, self.dst.geom.ns, 1);
 
-        self.queue.run_with_events(&mut self.forw_s_kernel,
-                                   local_size,
-                                   global_size,
-                                   wait_for)
+        self.queue.run_with_events(&mut self.forw_s_kernel, local_size, global_size, wait_for)
     }
 
     fn back_t(self: &mut Self,
               dst: &Mem,
-              ia: usize, iz: usize,
-              wait_for: &[Event]) -> Result<Event, Error> {
+              ia: usize,
+              iz: usize,
+              wait_for: &[Event])
+              -> Result<Event, Error> {
         let na = self.dst.plane.s.len();
         let u = self.dst.plane.s[ia];
         let v = self.dst.plane.t[ia];
@@ -270,16 +272,15 @@ where F: Float + FromPrimitive {
         let local_size = (32, 8, 1);
         let global_size = (self.dst.geom.ns, self.geom.ny, 1);
 
-        self.queue.run_with_events(&mut self.back_t_kernel,
-                                   local_size,
-                                   global_size,
-                                   wait_for)
+        self.queue.run_with_events(&mut self.back_t_kernel, local_size, global_size, wait_for)
     }
 
     fn back_s(self: &mut Self,
               vol: &mut Mem,
-              ia: usize, iz: usize,
-              wait_for: &[Event]) -> Result<Event, Error> {
+              ia: usize,
+              iz: usize,
+              wait_for: &[Event])
+              -> Result<Event, Error> {
         let na = self.dst.plane.s.len();
         let u = self.dst.plane.s[ia];
         let v = self.dst.plane.t[ia];
@@ -306,10 +307,7 @@ where F: Float + FromPrimitive {
         let local_size = (32, 8, 1);
         let global_size = (self.geom.ny, self.geom.nx, 1);
 
-        self.queue.run_with_events(&mut self.back_s_kernel,
-                                   local_size,
-                                   global_size,
-                                   wait_for)
+        self.queue.run_with_events(&mut self.back_s_kernel, local_size, global_size, wait_for)
     }
 
     fn scale(self: &mut Self,
@@ -317,7 +315,8 @@ where F: Float + FromPrimitive {
              output: &mut Mem,
              ia: usize,
              wait_for: &[Event],
-             overwrite: bool) -> Result<Event, Error> {
+             overwrite: bool)
+             -> Result<Event, Error> {
         let s = self.dst.plane.s[ia];
         let t = self.dst.plane.t[ia];
         let overwrite_flag = if overwrite {
@@ -339,39 +338,32 @@ where F: Float + FromPrimitive {
         let local_size = (32, 8, 1);
         let global_size = (self.dst.geom.ns, self.dst.geom.nt, 1);
 
-        self.queue.run_with_events(&mut self.scale_kernel,
-                                   local_size,
-                                   global_size,
-                                   wait_for)
+        self.queue.run_with_events(&mut self.scale_kernel, local_size, global_size, wait_for)
     }
 
-    fn zero(self: &mut Self,
-            img: &mut Mem,
-            wait_for: &[Event]) -> Result<Event, Error> {
+    fn zero(self: &mut Self, img: &mut Mem, wait_for: &[Event]) -> Result<Event, Error> {
         try!(self.zero_kernel.bind(0, &self.dst_geom));
         try!(self.zero_kernel.bind_mut(1, img));
 
         let local_size = (32, 8, 1);
         let global_size = (self.dst.geom.ns, self.dst.geom.nt, 1);
 
-        self.queue.run_with_events(&mut self.zero_kernel,
-                                   local_size,
-                                   global_size,
-                                   wait_for)
+        self.queue.run_with_events(&mut self.zero_kernel, local_size, global_size, wait_for)
     }
 
     pub fn forw(self: &mut Self,
                 vol: &Mem,
                 dst: &mut Mem,
                 ia: usize,
-                wait_for: &[Event]) -> Result<Event, Error> {
+                wait_for: &[Event])
+                -> Result<Event, Error> {
         let mut tmp_buf = self.scaled.clone();
         let mut evt = try!(self.zero(&mut tmp_buf, wait_for));
 
         evt = try!(self.forw_t(vol, ia, 0, &[evt]));
         evt = try!(self.forw_s(&mut tmp_buf, ia, 0, &[evt]));
 
-        for iz in 1 .. self.geom.nz {
+        for iz in 1..self.geom.nz {
             evt = try!(self.forw_t(vol, ia, iz, &[evt]));
             evt = try!(self.forw_s(&mut tmp_buf, ia, iz, &[evt]));
         }
@@ -384,11 +376,12 @@ where F: Float + FromPrimitive {
                 dst: &Mem,
                 vol: &mut Mem,
                 ia: usize,
-                wait_for: &[Event]) -> Result<Event, Error> {
+                wait_for: &[Event])
+                -> Result<Event, Error> {
         let mut scaled_copy = self.scaled.clone();
         let mut evt = try!(self.scale(dst, &mut scaled_copy, ia, wait_for, true));
 
-        for iz in 0 .. self.geom.nz {
+        for iz in 0..self.geom.nz {
             evt = try!(self.back_t(&scaled_copy, ia, iz, &[evt]));
             evt = try!(self.back_s(vol, ia, iz, &[evt]));
         }
@@ -406,7 +399,7 @@ fn test_volume_dirac() {
     let env = Environment::new_easy().unwrap();
     let queue = &env.queues[0];
 
-   let lens = Lens{
+    let lens = Lens {
         center_s: 1f32,
         center_t: -1.5f32,
         radius_s: 20f32,
@@ -416,7 +409,7 @@ fn test_volume_dirac() {
     };
     let plane = lens.as_angular_plane(AngularBasis::Dirac, 20);
 
-    let vg = LightVolume{
+    let vg = LightVolume {
         nx: 100,
         ny: 200,
         nz: 100,
@@ -429,7 +422,7 @@ fn test_volume_dirac() {
         opaque: false,
     };
 
-    let dst_geom = ImageGeometry{
+    let dst_geom = ImageGeometry {
         ns: 512,
         nt: 768,
         ds: 5e-2,
@@ -438,7 +431,7 @@ fn test_volume_dirac() {
         offset_t: 2.1,
     };
 
-    let dst = LightFieldGeometry{
+    let dst = LightFieldGeometry {
         geom: dst_geom.clone(),
         plane: plane.clone(),
         to_plane: Optics::translation(&40f32),
@@ -446,8 +439,7 @@ fn test_volume_dirac() {
 
     let to_plane = lens.optics().then(&Optics::translation(&500f32)).invert();
 
-    let mut xport = VolumeTransport::new_simple(vg.clone(), 
-                                                dst, to_plane, queue.clone()).unwrap();
+    let mut xport = VolumeTransport::new_simple(vg.clone(), dst, to_plane, queue.clone()).unwrap();
 
     let x = vg.rands();
     let y = dst_geom.rands();
@@ -464,8 +456,8 @@ fn test_volume_dirac() {
     queue.read_buffer(&cx_buf, &mut cx).unwrap();
     queue.read_buffer(&cty_buf, &mut cty).unwrap();
 
-    let v1 = cx.iter().zip(y.iter()).fold(0f32, |s, (ui, vi)| s + ui*vi);
-    let v2 = cty.iter().zip(x.iter()).fold(0f32, |s, (ui, vi)| s + ui*vi);
+    let v1 = cx.iter().zip(y.iter()).fold(0f32, |s, (ui, vi)| s + ui * vi);
+    let v2 = cty.iter().zip(x.iter()).fold(0f32, |s, (ui, vi)| s + ui * vi);
     let nrmse = (v1 - v2).abs() / v1.abs().max(v2.abs());
 
     println!("Adjoint NRMSE for VolumeTransport-Dirac: {}", nrmse);
@@ -484,7 +476,7 @@ fn test_volume_pillbox() {
     let env = Environment::new_easy().unwrap();
     let queue = &env.queues[0];
 
-   let lens = Lens{
+    let lens = Lens {
         center_s: 1f32,
         center_t: -1.5f32,
         radius_s: 20f32,
@@ -494,7 +486,7 @@ fn test_volume_pillbox() {
     };
     let plane = lens.as_angular_plane(AngularBasis::Pillbox, 20);
 
-    let vg = LightVolume{
+    let vg = LightVolume {
         nx: 100,
         ny: 200,
         nz: 100,
@@ -507,7 +499,7 @@ fn test_volume_pillbox() {
         opaque: false,
     };
 
-    let dst_geom = ImageGeometry{
+    let dst_geom = ImageGeometry {
         ns: 512,
         nt: 768,
         ds: 5e-2,
@@ -516,7 +508,7 @@ fn test_volume_pillbox() {
         offset_t: 2.1,
     };
 
-    let dst = LightFieldGeometry{
+    let dst = LightFieldGeometry {
         geom: dst_geom.clone(),
         plane: plane.clone(),
         to_plane: Optics::translation(&40f32),
@@ -524,8 +516,7 @@ fn test_volume_pillbox() {
 
     let to_plane = lens.optics().then(&Optics::translation(&500f32)).invert();
 
-    let mut xport = VolumeTransport::new_simple(vg.clone(), 
-                                                dst, to_plane, queue.clone()).unwrap();
+    let mut xport = VolumeTransport::new_simple(vg.clone(), dst, to_plane, queue.clone()).unwrap();
 
     let x = vg.rands();
     let y = dst_geom.rands();
@@ -542,8 +533,8 @@ fn test_volume_pillbox() {
     queue.read_buffer(&cx_buf, &mut cx).unwrap();
     queue.read_buffer(&cty_buf, &mut cty).unwrap();
 
-    let v1 = cx.iter().zip(y.iter()).fold(0f32, |s, (ui, vi)| s + ui*vi);
-    let v2 = cty.iter().zip(x.iter()).fold(0f32, |s, (ui, vi)| s + ui*vi);
+    let v1 = cx.iter().zip(y.iter()).fold(0f32, |s, (ui, vi)| s + ui * vi);
+    let v2 = cty.iter().zip(x.iter()).fold(0f32, |s, (ui, vi)| s + ui * vi);
     let nrmse = (v1 - v2).abs() / v1.abs().max(v2.abs());
 
     println!("Adjoint NRMSE for VolumeTransport-Pillbox: {}", nrmse);
@@ -552,4 +543,3 @@ fn test_volume_pillbox() {
 
     assert!(nrmse < 1e-2);
 }
-

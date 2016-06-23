@@ -18,7 +18,7 @@ fn reduce_shape(shape: &[usize]) -> usize {
 pub trait Geometry<F: Float + FromPrimitive> {
     /// Returns the number of elements in vectors from this geometry
     fn dimension(self: &Self) -> usize {
-        self.shape().iter().fold(1usize, |l,r| l*r)
+        self.shape().iter().fold(1usize, |l, r| l * r)
     }
 
     /// Returns the dimensions of elements of this type
@@ -40,7 +40,7 @@ pub trait Geometry<F: Float + FromPrimitive> {
     fn rands(self: &Self) -> Vec<F> {
         let np = reduce_shape(&self.shape());
         let mut tr = Vec::with_capacity(np);
-        for _ in 0 .. np {
+        for _ in 0..np {
             tr.push(F::from_f64(thread_rng().next_f64()).unwrap());
         }
         tr

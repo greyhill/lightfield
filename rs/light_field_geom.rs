@@ -25,7 +25,7 @@ impl<F: Float + FromPrimitive> LightFieldGeometry<F> {
                 let vs = (self.plane.ds / self.to_plane.su).abs() * self.geom.ds;
                 let vt = (self.plane.dt / self.to_plane.tv).abs() * self.geom.dt;
                 (vs * vt).abs()
-            },
+            }
             &AngularBasis::Pillbox => {
                 let c2 = F::from_f32(2f32).unwrap();
 
@@ -40,7 +40,7 @@ impl<F: Float + FromPrimitive> LightFieldGeometry<F> {
                 let t_h = self.geom.dt.min(self.plane.dt / self.to_plane.tt.abs());
 
                 (c2 * c2 * s_m * s_h * t_m * t_h).abs()
-            },
+            }
         }
     }
 
@@ -62,39 +62,45 @@ impl<F: Float + FromPrimitive> LightFieldGeometry<F> {
     /// one describes the `t` filtering matrix.
     ///
     /// This is mostly a utility function used by other transport objects.
-    pub fn transport_to(self: &Self, dst: &LightFieldGeometry<F>, ia: usize) -> (SplineKernel<F>, SplineKernel<F>) {
+    pub fn transport_to(self: &Self,
+                        dst: &LightFieldGeometry<F>,
+                        ia: usize)
+                        -> (SplineKernel<F>, SplineKernel<F>) {
         let src_to_dst = self.optics_to(dst);
         match (&self.plane.basis, &dst.plane.basis) {
             (&AngularBasis::Dirac, &AngularBasis::Dirac) => {
                 let xs = self.transport_s_dirac(dst, &src_to_dst, ia);
                 let xt = self.transport_t_dirac(dst, &src_to_dst, ia);
                 (xs, xt)
-            },
+            }
             (&AngularBasis::Pillbox, &AngularBasis::Pillbox) => {
                 let xs = self.transport_s_pillbox(dst, &src_to_dst, ia);
                 let xt = self.transport_t_pillbox(dst, &src_to_dst, ia);
                 (xs, xt)
-            },
+            }
             _ => {
                 panic!("Cannot transport between mismatched angular basis functions");
-            },
+            }
         }
     }
 
-    fn transport_s_dirac(self: &Self, dst: &LightFieldGeometry<F>, 
-                         src2dst: &Optics<F>, ia: usize) -> SplineKernel<F> {
+    fn transport_s_dirac(self: &Self,
+                         dst: &LightFieldGeometry<F>,
+                         src2dst: &Optics<F>,
+                         ia: usize)
+                         -> SplineKernel<F> {
         let plane = &self.plane;
         let s = plane.s[ia];
         let c2 = F::one() + F::one();
         let src2root = &self.to_plane;
 
-        let alpha = src2dst.ss - src2root.ss*src2dst.su/src2root.su;
-        let beta = src2dst.s + src2dst.su*(s - src2root.s)/src2root.su;
+        let alpha = src2dst.ss - src2root.ss * src2dst.su / src2root.su;
+        let beta = src2dst.s + src2dst.su * (s - src2root.s) / src2root.su;
         let h = (plane.ds / src2root.su).abs();
 
-        let mut tau0 = (-dst.geom.ds/c2 - beta)/alpha;
-        let mut tau1 = (dst.geom.ds/c2 - beta)/alpha;
-        if tau0 > tau1  {
+        let mut tau0 = (-dst.geom.ds / c2 - beta) / alpha;
+        let mut tau1 = (dst.geom.ds / c2 - beta) / alpha;
+        if tau0 > tau1 {
             swap(&mut tau0, &mut tau1);
         }
 
@@ -103,20 +109,23 @@ impl<F: Float + FromPrimitive> LightFieldGeometry<F> {
         SplineKernel::Rect(h, mag, [tau0, tau1])
     }
 
-    fn transport_t_dirac(self: &Self, dst: &LightFieldGeometry<F>, 
-                         src2dst: &Optics<F>, ia: usize) -> SplineKernel<F> {
+    fn transport_t_dirac(self: &Self,
+                         dst: &LightFieldGeometry<F>,
+                         src2dst: &Optics<F>,
+                         ia: usize)
+                         -> SplineKernel<F> {
         let plane = &self.plane;
         let t = plane.t[ia];
         let c2 = F::one() + F::one();
         let src2root = &self.to_plane;
 
-        let alpha = src2dst.tt - src2root.tt*src2dst.tv/src2root.tv;
-        let beta = src2dst.t + src2dst.tv*(t - src2root.t)/src2root.tv;
+        let alpha = src2dst.tt - src2root.tt * src2dst.tv / src2root.tv;
+        let beta = src2dst.t + src2dst.tv * (t - src2root.t) / src2root.tv;
         let h = (plane.dt / src2root.tv).abs();
 
-        let mut tau0 = (-dst.geom.dt/c2 - beta)/alpha;
-        let mut tau1 = (dst.geom.dt/c2 - beta)/alpha;
-        if tau0 > tau1  {
+        let mut tau0 = (-dst.geom.dt / c2 - beta) / alpha;
+        let mut tau1 = (dst.geom.dt / c2 - beta) / alpha;
+        if tau0 > tau1 {
             swap(&mut tau0, &mut tau1);
         }
 
@@ -125,16 +134,19 @@ impl<F: Float + FromPrimitive> LightFieldGeometry<F> {
         SplineKernel::Rect(h, mag, [tau0, tau1])
     }
 
-    fn transport_s_pillbox(self: &Self, dst: &LightFieldGeometry<F>, 
-                           src2dst: &Optics<F>, ia: usize) -> SplineKernel<F> {
+    fn transport_s_pillbox(self: &Self,
+                           dst: &LightFieldGeometry<F>,
+                           src2dst: &Optics<F>,
+                           ia: usize)
+                           -> SplineKernel<F> {
         let plane = &self.plane;
         let s = plane.s[ia];
         let c2 = F::one() + F::one();
         let src2root = &self.to_plane;
 
-        let alpha = src2dst.ss - src2dst.su*src2root.ss/src2root.su;
+        let alpha = src2dst.ss - src2dst.su * src2root.ss / src2root.su;
         let beta = src2dst.su / src2root.su;
-        let gamma = src2dst.s - src2dst.su*src2root.s/src2root.su;
+        let gamma = src2dst.s - src2dst.su * src2root.s / src2root.su;
         let h = (plane.ds / src2root.su).abs().min((dst.geom.ds / src2dst.su).abs());
 
         let mut taus = vec![
@@ -143,26 +155,27 @@ impl<F: Float + FromPrimitive> LightFieldGeometry<F> {
             (-dst.geom.ds/c2 - beta*(s + plane.ds/c2) - gamma)/alpha,
             (-dst.geom.ds/c2 - beta*(s - plane.ds/c2) - gamma)/alpha,
         ];
-        taus.sort_by(|l,r| l.partial_cmp(r).unwrap());
-        let taus_array = [
-            taus[0], taus[1], taus[2], taus[3]
-        ];
+        taus.sort_by(|l, r| l.partial_cmp(r).unwrap());
+        let taus_array = [taus[0], taus[1], taus[2], taus[3]];
 
         let mag = F::one() / alpha;
 
         SplineKernel::Trapezoid(h, mag, taus_array)
     }
 
-    fn transport_t_pillbox(self: &Self, dst: &LightFieldGeometry<F>, 
-                           src2dst: &Optics<F>, ia: usize) -> SplineKernel<F> {
+    fn transport_t_pillbox(self: &Self,
+                           dst: &LightFieldGeometry<F>,
+                           src2dst: &Optics<F>,
+                           ia: usize)
+                           -> SplineKernel<F> {
         let plane = &self.plane;
         let t = plane.t[ia];
         let c2 = F::one() + F::one();
         let src2root = &self.to_plane;
 
-        let alpha = src2dst.tt - src2dst.tv*src2root.tt/src2root.tv;
+        let alpha = src2dst.tt - src2dst.tv * src2root.tt / src2root.tv;
         let beta = src2dst.tv / src2root.tv;
-        let gamma = src2dst.t - src2dst.tv*src2root.t/src2root.tv;
+        let gamma = src2dst.t - src2dst.tv * src2root.t / src2root.tv;
         let h = (plane.dt / src2root.tv).abs().min((dst.geom.dt / src2dst.tv).abs());
 
         let mut taus = vec![
@@ -171,14 +184,11 @@ impl<F: Float + FromPrimitive> LightFieldGeometry<F> {
             (-dst.geom.dt/c2 - beta*(t + plane.dt/c2) - gamma)/alpha,
             (-dst.geom.dt/c2 - beta*(t - plane.dt/c2) - gamma)/alpha,
         ];
-        taus.sort_by(|l,r| l.partial_cmp(r).unwrap());
-        let taus_array = [
-            taus[0], taus[1], taus[2], taus[3]
-        ];
+        taus.sort_by(|l, r| l.partial_cmp(r).unwrap());
+        let taus_array = [taus[0], taus[1], taus[2], taus[3]];
 
         let mag = F::one() / alpha;
 
         SplineKernel::Trapezoid(h, mag, taus_array)
     }
 }
-

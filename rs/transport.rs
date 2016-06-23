@@ -49,11 +49,12 @@ pub struct Transport<F: Float> {
 impl<F: Float + FromPrimitive + ToPrimitive> Transport<F> {
     pub fn new_simple(src: LightFieldGeometry<F>,
                       dst: LightFieldGeometry<F>,
-                      queue: CommandQueue) -> Result<Self, Error> {
+                      queue: CommandQueue)
+                      -> Result<Self, Error> {
         Self::new(src, dst, None, None, true, true, false, false, false, queue)
     }
 
-    pub fn new(src: LightFieldGeometry<F>, 
+    pub fn new(src: LightFieldGeometry<F>,
                dst: LightFieldGeometry<F>,
                src_bounds: Option<(usize, usize, usize, usize)>,
                dst_bounds: Option<(usize, usize, usize, usize)>,
@@ -62,26 +63,24 @@ impl<F: Float + FromPrimitive + ToPrimitive> Transport<F> {
                conservative_forw: bool,
                conservative_back: bool,
                onto_detector: bool,
-               queue: CommandQueue) -> Result<Self, Error> {
+               queue: CommandQueue)
+               -> Result<Self, Error> {
         // collect opencl sources
         let sources = match (&src.plane.basis, &dst.plane.basis) {
             (&AngularBasis::Pillbox, &AngularBasis::Pillbox) => {
-                [
-                    ImageGeometry::<F>::header(),
-                    Optics::<F>::header(),
-                    include_str!("../cl/transport_pillbox_f32.opencl"),
-                ]
-            },
+                [ImageGeometry::<F>::header(),
+                 Optics::<F>::header(),
+                 include_str!("../cl/transport_pillbox_f32.opencl")]
+            }
             (&AngularBasis::Dirac, &AngularBasis::Dirac) => {
-                [
-                    ImageGeometry::<F>::header(),
-                    Optics::<F>::header(),
-                    include_str!("../cl/transport_dirac_f32.opencl"),
-                ]
-            },
+                [ImageGeometry::<F>::header(),
+                 Optics::<F>::header(),
+                 include_str!("../cl/transport_dirac_f32.opencl")]
+            }
             _ => {
-                panic!("Cannot transport between light fields with different bases; use a rebin first");
-            },
+                panic!("Cannot transport between light fields with different bases; use a rebin \
+                        first");
+            }
         };
 
         // compile opencl code
@@ -108,16 +107,16 @@ impl<F: Float + FromPrimitive + ToPrimitive> Transport<F> {
 
         // create temporary buffer
         let tmp_np = max(resolved_src_bounds.1 - resolved_src_bounds.0,
-                         resolved_dst_bounds.1 - resolved_dst_bounds.0)
-            * max(resolved_src_bounds.3 - resolved_src_bounds.2,
-                  resolved_dst_bounds.3 - resolved_dst_bounds.2);
+                         resolved_dst_bounds.1 - resolved_dst_bounds.0) *
+                     max(resolved_src_bounds.3 - resolved_src_bounds.2,
+                         resolved_dst_bounds.3 - resolved_dst_bounds.2);
         let tmp_buf = try!(queue.create_buffer(size_of::<F>() * tmp_np));
 
         // create other buffers
         let src_geom_buf = try!(src.geom.as_cl_buffer(&queue));
         let dst_geom_buf = try!(dst.geom.as_cl_buffer(&queue));
 
-        Ok(Transport{
+        Ok(Transport {
             overwrite_forw: overwrite_forw,
             overwrite_back: overwrite_back,
 
@@ -187,9 +186,11 @@ impl<F: Float + FromPrimitive + ToPrimitive> Transport<F> {
 
     #[allow(non_snake_case)] // allow us to break style guide to match docs
     fn transport_dirac_t(self: &mut Self,
-                    forw: bool,
-                    src: &Mem,
-                    ia: usize, wait_for: &[Event]) -> Result<Event, Error> {
+                         forw: bool,
+                         src: &Mem,
+                         ia: usize,
+                         wait_for: &[Event])
+                         -> Result<Event, Error> {
         let Rqp = if forw {
             &self.src_to_dst
         } else {
@@ -210,8 +211,8 @@ impl<F: Float + FromPrimitive + ToPrimitive> Transport<F> {
         let t = plane.t[ia];
         let c2 = F::from_f32(2f32).unwrap();
 
-        let alpha = Rqp.tt - Rp.tt*Rqp.tv/Rp.tv;
-        let beta = Rqp.t + Rqp.tv*(t - Rp.t)/Rp.tv;
+        let alpha = Rqp.tt - Rp.tt * Rqp.tv / Rp.tv;
+        let beta = Rqp.t + Rqp.tv * (t - Rp.t) / Rp.tv;
         let mut h = (plane.dt / Rp.tv).abs();
         if !self.onto_detector {
             h = h / self.dst.pixel_volume();
@@ -219,9 +220,9 @@ impl<F: Float + FromPrimitive + ToPrimitive> Transport<F> {
             h = h / self.dst.pixel_area() * self.dst.plane.w[ia];
         }
 
-        let mut tau0 = (-into_geom.dt/c2 - beta)/alpha;
-        let mut tau1 = (into_geom.dt/c2 - beta)/alpha;
-        if tau0 > tau1  {
+        let mut tau0 = (-into_geom.dt / c2 - beta) / alpha;
+        let mut tau1 = (into_geom.dt / c2 - beta) / alpha;
+        if tau0 > tau1 {
             swap(&mut tau0, &mut tau1);
         }
 
@@ -238,26 +239,21 @@ impl<F: Float + FromPrimitive + ToPrimitive> Transport<F> {
 
         let local_size = (32usize, 8usize, 1usize);
         let global_size = if forw {
-            (self.src_s1 - self.src_s0,
-             self.dst_t1 - self.dst_t0,
-             1)
+            (self.src_s1 - self.src_s0, self.dst_t1 - self.dst_t0, 1)
         } else {
-            (self.dst_s1 - self.dst_s0,
-             self.src_t1 - self.src_t0,
-             1)
+            (self.dst_s1 - self.dst_s0, self.src_t1 - self.src_t0, 1)
         };
 
-        self.queue.run_with_events(&mut kernel,
-                                   local_size,
-                                   global_size,
-                                   wait_for)
+        self.queue.run_with_events(&mut kernel, local_size, global_size, wait_for)
     }
 
     #[allow(non_snake_case)] // allow us to break style guide to match docs
     fn transport_dirac_s(self: &mut Self,
-                    forw: bool,
-                    dst: &mut Mem,
-                    ia: usize, wait_for: &[Event]) -> Result<Event, Error> {
+                         forw: bool,
+                         dst: &mut Mem,
+                         ia: usize,
+                         wait_for: &[Event])
+                         -> Result<Event, Error> {
         let Rqp = if forw {
             &self.src_to_dst
         } else {
@@ -279,7 +275,7 @@ impl<F: Float + FromPrimitive + ToPrimitive> Transport<F> {
             (false, _, true) => 1u32,
             (false, _, false) => 0u32,
         };
-        let overwrite_flag = match(forw, self.overwrite_forw, self.overwrite_back) {
+        let overwrite_flag = match (forw, self.overwrite_forw, self.overwrite_back) {
             (true, true, _) => 1u32,
             (true, false, _) => 0u32,
             (false, _, true) => 1u32,
@@ -290,13 +286,13 @@ impl<F: Float + FromPrimitive + ToPrimitive> Transport<F> {
         let s = plane.s[ia];
         let c2 = F::from_f32(2f32).unwrap();
 
-        let alpha = Rqp.ss - Rp.ss*Rqp.su/Rp.su;
-        let beta = Rqp.s + Rqp.su*(s - Rp.s)/Rp.su;
+        let alpha = Rqp.ss - Rp.ss * Rqp.su / Rp.su;
+        let beta = Rqp.s + Rqp.su * (s - Rp.s) / Rp.su;
         let h = (plane.ds / Rp.su).abs();
 
-        let mut tau0 = (-into_geom.ds/c2 - beta)/alpha;
-        let mut tau1 = (into_geom.ds/c2 - beta)/alpha;
-        if tau0 > tau1  {
+        let mut tau0 = (-into_geom.ds / c2 - beta) / alpha;
+        let mut tau1 = (into_geom.ds / c2 - beta) / alpha;
+        if tau0 > tau1 {
             swap(&mut tau0, &mut tau1);
         }
 
@@ -316,40 +312,41 @@ impl<F: Float + FromPrimitive + ToPrimitive> Transport<F> {
 
         let local_size = (32usize, 8usize, 1usize);
         let global_size = if forw {
-            (self.dst_t1 - self.dst_t0,
-             self.dst_s1 - self.dst_s0,
-             1)
+            (self.dst_t1 - self.dst_t0, self.dst_s1 - self.dst_s0, 1)
         } else {
-            (self.src_t1 - self.src_t0,
-             self.src_s1 - self.src_s0,
-             1)
+            (self.src_t1 - self.src_t0, self.src_s1 - self.src_s0, 1)
         };
 
-        self.queue.run_with_events(&mut kernel,
-                                   local_size,
-                                   global_size,
-                                   wait_for)
+        self.queue.run_with_events(&mut kernel, local_size, global_size, wait_for)
     }
 
     fn forw_dirac(self: &mut Self,
-                  src: &Mem, dst: &mut Mem,
-                  ia: usize, wait_for: &[Event]) -> Result<Event, Error> {
+                  src: &Mem,
+                  dst: &mut Mem,
+                  ia: usize,
+                  wait_for: &[Event])
+                  -> Result<Event, Error> {
         let done_t = try!(self.transport_dirac_t(true, src, ia, wait_for));
         self.transport_dirac_s(true, dst, ia, &[done_t])
     }
 
     fn back_dirac(self: &mut Self,
-                  dst: &Mem, src: &mut Mem,
-                  ia: usize, wait_for: &[Event]) -> Result<Event, Error> {
+                  dst: &Mem,
+                  src: &mut Mem,
+                  ia: usize,
+                  wait_for: &[Event])
+                  -> Result<Event, Error> {
         let done_t = try!(self.transport_dirac_t(false, dst, ia, wait_for));
         self.transport_dirac_s(false, src, ia, &[done_t])
     }
 
     #[allow(non_snake_case)] // allow us to break style guide to match docs
     fn transport_pillbox_t(self: &mut Self,
-                    forw: bool,
-                    src: &Mem,
-                    ia: usize, wait_for: &[Event]) -> Result<Event, Error> {
+                           forw: bool,
+                           src: &Mem,
+                           ia: usize,
+                           wait_for: &[Event])
+                           -> Result<Event, Error> {
         let Rqp = if forw {
             &self.src_to_dst
         } else {
@@ -370,13 +367,13 @@ impl<F: Float + FromPrimitive + ToPrimitive> Transport<F> {
         let t = plane.t[ia];
         let c2 = F::from_f32(2f32).unwrap();
 
-        let alpha = Rqp.tt - Rqp.tv*Rp.tt/Rp.tv;
+        let alpha = Rqp.tt - Rqp.tv * Rp.tt / Rp.tv;
         let beta = Rqp.tv / Rp.tv;
-        let gamma = Rqp.t - Rqp.tv*Rp.t/Rp.tv;
+        let gamma = Rqp.t - Rqp.tv * Rp.t / Rp.tv;
         let mut h = (plane.dt / Rp.tv).abs().min((into_geom.dt / Rqp.tv).abs());
         if !self.onto_detector {
             h = h / self.dst.pixel_volume();
-        } else { 
+        } else {
             h = h / self.dst.pixel_area() * self.dst.plane.w[ia];
         }
 
@@ -386,7 +383,7 @@ impl<F: Float + FromPrimitive + ToPrimitive> Transport<F> {
             (-into_geom.dt/c2 - beta*(t + plane.dt/c2) - gamma)/alpha,
             (-into_geom.dt/c2 - beta*(t - plane.dt/c2) - gamma)/alpha,
         ];
-        taus.sort_by(|l,r| l.partial_cmp(r).unwrap());
+        taus.sort_by(|l, r| l.partial_cmp(r).unwrap());
 
         let mut kernel = self.kernel_t.clone();
         try!(self.bind_common_args(forw, &mut kernel));
@@ -403,26 +400,21 @@ impl<F: Float + FromPrimitive + ToPrimitive> Transport<F> {
 
         let local_size = (32usize, 8usize, 1usize);
         let global_size = if forw {
-            (self.src_s1 - self.src_s0,
-             self.dst_t1 - self.dst_t0,
-             1)
+            (self.src_s1 - self.src_s0, self.dst_t1 - self.dst_t0, 1)
         } else {
-            (self.dst_s1 - self.dst_s0,
-             self.src_t1 - self.src_t0,
-             1)
+            (self.dst_s1 - self.dst_s0, self.src_t1 - self.src_t0, 1)
         };
 
-        self.queue.run_with_events(&mut kernel,
-                                   local_size,
-                                   global_size,
-                                   wait_for)
+        self.queue.run_with_events(&mut kernel, local_size, global_size, wait_for)
     }
 
     #[allow(non_snake_case)] // allow us to break style guide to match docs
     fn transport_pillbox_s(self: &mut Self,
-                    forw: bool,
-                    dst: &mut Mem,
-                    ia: usize, wait_for: &[Event]) -> Result<Event, Error> {
+                           forw: bool,
+                           dst: &mut Mem,
+                           ia: usize,
+                           wait_for: &[Event])
+                           -> Result<Event, Error> {
         let Rqp = if forw {
             &self.src_to_dst
         } else {
@@ -444,7 +436,7 @@ impl<F: Float + FromPrimitive + ToPrimitive> Transport<F> {
             (false, _, true) => 1u32,
             (false, _, false) => 0u32,
         };
-        let overwrite_flag = match(forw, self.overwrite_forw, self.overwrite_back) {
+        let overwrite_flag = match (forw, self.overwrite_forw, self.overwrite_back) {
             (true, true, _) => 1u32,
             (true, false, _) => 0u32,
             (false, _, true) => 1u32,
@@ -455,9 +447,9 @@ impl<F: Float + FromPrimitive + ToPrimitive> Transport<F> {
         let s = plane.s[ia];
         let c2 = F::from_f32(2f32).unwrap();
 
-        let alpha = Rqp.ss - Rqp.su*Rp.ss/Rp.su;
+        let alpha = Rqp.ss - Rqp.su * Rp.ss / Rp.su;
         let beta = Rqp.su / Rp.su;
-        let gamma = Rqp.s - Rqp.su*Rp.s/Rp.su;
+        let gamma = Rqp.s - Rqp.su * Rp.s / Rp.su;
         let h = (plane.ds / Rp.su).abs().min((into_geom.ds / Rqp.su).abs());
 
         let mut taus = vec![
@@ -466,7 +458,7 @@ impl<F: Float + FromPrimitive + ToPrimitive> Transport<F> {
             (-into_geom.ds/c2 - beta*(s + plane.ds/c2) - gamma)/alpha,
             (-into_geom.ds/c2 - beta*(s - plane.ds/c2) - gamma)/alpha,
         ];
-        taus.sort_by(|l,r| l.partial_cmp(r).unwrap());
+        taus.sort_by(|l, r| l.partial_cmp(r).unwrap());
 
         let mut kernel = self.kernel_s.clone();
         try!(self.bind_common_args(forw, &mut kernel));
@@ -486,49 +478,54 @@ impl<F: Float + FromPrimitive + ToPrimitive> Transport<F> {
 
         let local_size = (32usize, 8usize, 1usize);
         let global_size = if forw {
-            (self.dst_t1 - self.dst_t0,
-             self.dst_s1 - self.dst_s0,
-             1)
+            (self.dst_t1 - self.dst_t0, self.dst_s1 - self.dst_s0, 1)
         } else {
-            (self.src_t1 - self.src_t0,
-             self.src_s1 - self.src_s0,
-             1)
+            (self.src_t1 - self.src_t0, self.src_s1 - self.src_s0, 1)
         };
 
-        self.queue.run_with_events(&mut kernel,
-                                   local_size,
-                                   global_size,
-                                   wait_for)
+        self.queue.run_with_events(&mut kernel, local_size, global_size, wait_for)
     }
 
     fn forw_pillbox(self: &mut Self,
-                    src: &Mem, dst: &mut Mem,
-                    ia: usize, wait_for: &[Event])-> Result<Event, Error> {
+                    src: &Mem,
+                    dst: &mut Mem,
+                    ia: usize,
+                    wait_for: &[Event])
+                    -> Result<Event, Error> {
         let done_t = try!(self.transport_pillbox_t(true, src, ia, wait_for));
         self.transport_pillbox_s(true, dst, ia, &[done_t])
     }
 
     fn back_pillbox(self: &mut Self,
-                    dst: &Mem, src: &mut Mem,
-                    ia: usize, wait_for: &[Event]) -> Result<Event, Error> {
+                    dst: &Mem,
+                    src: &mut Mem,
+                    ia: usize,
+                    wait_for: &[Event])
+                    -> Result<Event, Error> {
         let done_t = try!(self.transport_pillbox_t(false, dst, ia, wait_for));
         self.transport_pillbox_s(false, src, ia, &[done_t])
     }
 
     /// Transport from source to destination, overwriting on the destination plane
-    pub fn forw(self: &mut Self, 
-                src: &Mem, dst: &mut Mem,
-                ia: usize, wait_for: &[Event]) -> Result<Event, Error> {
+    pub fn forw(self: &mut Self,
+                src: &Mem,
+                dst: &mut Mem,
+                ia: usize,
+                wait_for: &[Event])
+                -> Result<Event, Error> {
         match &self.src.plane.basis {
             &AngularBasis::Dirac => self.forw_dirac(src, dst, ia, wait_for),
-            &AngularBasis::Pillbox => self.forw_pillbox(src, dst, ia, wait_for)
+            &AngularBasis::Pillbox => self.forw_pillbox(src, dst, ia, wait_for),
         }
     }
 
     /// Transport from destination to source, overwriting on the destination plane
     pub fn back(self: &mut Self,
-                dst: &Mem, src: &mut Mem,
-                ia: usize, wait_for: &[Event]) -> Result<Event, Error> {
+                dst: &Mem,
+                src: &mut Mem,
+                ia: usize,
+                wait_for: &[Event])
+                -> Result<Event, Error> {
         match &self.src.plane.basis {
             &AngularBasis::Dirac => self.back_dirac(dst, src, ia, wait_for),
             &AngularBasis::Pillbox => self.back_pillbox(dst, src, ia, wait_for),
@@ -545,7 +542,7 @@ fn test_transport_dirac() {
     let env = Environment::new_easy().unwrap();
     let queue = &env.queues[0];
 
-    let lens = Lens{
+    let lens = Lens {
         center_s: 1f32,
         center_t: -1.5f32,
         radius_s: 20f32,
@@ -555,7 +552,7 @@ fn test_transport_dirac() {
     };
     let plane = lens.as_angular_plane(AngularBasis::Dirac, 20);
 
-    let src_geom = ImageGeometry{
+    let src_geom = ImageGeometry {
         ns: 100,
         nt: 200,
         ds: 1.0,
@@ -563,7 +560,7 @@ fn test_transport_dirac() {
         offset_s: 0.5,
         offset_t: 2.9,
     };
-    let dst_geom = ImageGeometry{
+    let dst_geom = ImageGeometry {
         ns: 1024,
         nt: 2048,
         ds: 5e-2,
@@ -572,12 +569,12 @@ fn test_transport_dirac() {
         offset_t: 2.1,
     };
 
-    let dst = LightFieldGeometry{
+    let dst = LightFieldGeometry {
         geom: dst_geom,
         plane: plane.clone(),
         to_plane: Optics::translation(&40f32),
     };
-    let src = LightFieldGeometry{
+    let src = LightFieldGeometry {
         geom: src_geom,
         plane: plane.clone(),
         to_plane: lens.optics().then(&Optics::translation(&500f32)).invert(),
@@ -603,8 +600,8 @@ fn test_transport_dirac() {
     let mut back_v = src.geom.zeros();
     queue.read_buffer(&back_v_buf, &mut back_v).unwrap();
 
-    let v1 = proj_u.iter().zip(v.iter()).fold(0f32, |s, (ui, vi)| s + ui*vi);
-    let v2 = back_v.iter().zip(u.iter()).fold(0f32, |s, (vi, ui)| s + ui*vi);
+    let v1 = proj_u.iter().zip(v.iter()).fold(0f32, |s, (ui, vi)| s + ui * vi);
+    let v2 = back_v.iter().zip(u.iter()).fold(0f32, |s, (vi, ui)| s + ui * vi);
     let nrmse = (v1 - v2).abs() / v1.abs().max(v2.abs());
 
     println!("Adjoint NRMSE for Transport-Dirac: {}", nrmse);
@@ -622,7 +619,7 @@ fn test_transport_pillbox() {
     let env = Environment::new_easy().unwrap();
     let queue = &env.queues[0];
 
-    let lens = Lens{
+    let lens = Lens {
         center_s: 1f32,
         center_t: -1.5f32,
         radius_s: 20f32,
@@ -632,7 +629,7 @@ fn test_transport_pillbox() {
     };
     let plane = lens.as_angular_plane(AngularBasis::Pillbox, 20);
 
-    let src_geom = ImageGeometry{
+    let src_geom = ImageGeometry {
         ns: 100,
         nt: 200,
         ds: 1.0,
@@ -640,7 +637,7 @@ fn test_transport_pillbox() {
         offset_s: 0.5,
         offset_t: 0.9,
     };
-    let dst_geom = ImageGeometry{
+    let dst_geom = ImageGeometry {
         ns: 1024,
         nt: 2048,
         ds: 2e-2,
@@ -649,12 +646,12 @@ fn test_transport_pillbox() {
         offset_t: 2.1,
     };
 
-    let dst = LightFieldGeometry{
+    let dst = LightFieldGeometry {
         geom: dst_geom,
         plane: plane.clone(),
         to_plane: Optics::translation(&40f32),
     };
-    let src = LightFieldGeometry{
+    let src = LightFieldGeometry {
         geom: src_geom,
         plane: plane.clone(),
         to_plane: lens.optics().then(&Optics::translation(&500f32)).invert(),
@@ -680,8 +677,8 @@ fn test_transport_pillbox() {
     let mut back_v = src.geom.zeros();
     queue.read_buffer(&back_v_buf, &mut back_v).unwrap();
 
-    let v1 = proj_u.iter().zip(v.iter()).fold(0f32, |s, (ui, vi)| s + ui*vi);
-    let v2 = back_v.iter().zip(u.iter()).fold(0f32, |s, (vi, ui)| s + ui*vi);
+    let v1 = proj_u.iter().zip(v.iter()).fold(0f32, |s, (ui, vi)| s + ui * vi);
+    let v2 = back_v.iter().zip(u.iter()).fold(0f32, |s, (vi, ui)| s + ui * vi);
     let nrmse = (v1 - v2).abs() / v1.abs().max(v2.abs());
 
     println!("Adjoint NRMSE for Transport-Pillbox: {}", nrmse);
@@ -689,4 +686,3 @@ fn test_transport_pillbox() {
     println!("(T'v)'u: {}", v2);
     assert!(nrmse < 1e-4);
 }
-

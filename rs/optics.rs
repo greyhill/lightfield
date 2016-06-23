@@ -30,7 +30,7 @@ pub struct Optics<F: Float> {
 impl<F: Float> Optics<F> {
     /// Optical transformation that does nothing
     pub fn identity() -> Self {
-        Optics{ 
+        Optics {
             ss: F::one(),
             su: F::zero(),
             us: F::zero(),
@@ -50,7 +50,7 @@ impl<F: Float> Optics<F> {
 
     /// Translation normal to the optical plane
     pub fn translation(dist: &F) -> Self {
-        Optics{
+        Optics {
             ss: F::one(),
             su: dist.clone(),
             us: F::zero(),
@@ -70,15 +70,15 @@ impl<F: Float> Optics<F> {
 
     /// Thin lens optics
     pub fn lens(center_s: &F, center_t: &F, focal_length: &F) -> Self {
-        Optics{
+        Optics {
             ss: F::one(),
             su: F::zero(),
-            us: - F::one() / focal_length.clone(),
+            us: -F::one() / focal_length.clone(),
             uu: F::one(),
 
             tt: F::one(),
             tv: F::zero(),
-            vt: - F::one() / focal_length.clone(),
+            vt: -F::one() / focal_length.clone(),
             vv: F::one(),
 
             s: F::zero(),
@@ -89,17 +89,20 @@ impl<F: Float> Optics<F> {
     }
 
     /// Anisotropic thin lens
-    pub fn anisotropic_lens(center_s: &F, center_t: &F, 
-                            focal_length_s: &F, focal_length_t: &F) -> Self {
-        Optics{
+    pub fn anisotropic_lens(center_s: &F,
+                            center_t: &F,
+                            focal_length_s: &F,
+                            focal_length_t: &F)
+                            -> Self {
+        Optics {
             ss: F::one(),
             su: F::zero(),
-            us: - F::one() / focal_length_s.clone(),
+            us: -F::one() / focal_length_s.clone(),
             uu: F::one(),
 
             tt: F::one(),
             tv: F::zero(),
-            vt: - F::one() / focal_length_t.clone(),
+            vt: -F::one() / focal_length_t.clone(),
             vv: F::one(),
 
             s: F::zero(),
@@ -111,23 +114,23 @@ impl<F: Float> Optics<F> {
 
     /// Returns the inverse of this transformation
     pub fn invert(self: &Self) -> Self {
-        let s_det = self.ss*self.uu - self.su*self.us;
+        let s_det = self.ss * self.uu - self.su * self.us;
         let ss = self.uu / s_det;
-        let su = - self.su / s_det;
-        let us = - self.us / s_det;
+        let su = -self.su / s_det;
+        let us = -self.us / s_det;
         let uu = self.ss / s_det;
-        let s = -(ss*self.s + su*self.u);
-        let u = -(us*self.s + uu*self.u);
+        let s = -(ss * self.s + su * self.u);
+        let u = -(us * self.s + uu * self.u);
 
-        let t_det = self.tt*self.vv - self.tv*self.vt;
+        let t_det = self.tt * self.vv - self.tv * self.vt;
         let tt = self.vv / t_det;
-        let tv = - self.tv / t_det;
-        let vt = - self.vt / t_det;
+        let tv = -self.tv / t_det;
+        let vt = -self.vt / t_det;
         let vv = self.tt / t_det;
-        let t = -(tt*self.t + tv*self.v);
-        let v = -(vt*self.t + vv*self.v);
+        let t = -(tt * self.t + tv * self.v);
+        let v = -(vt * self.t + vv * self.v);
 
-        Optics{
+        Optics {
             ss: ss,
             su: su,
             us: us,
@@ -147,22 +150,22 @@ impl<F: Float> Optics<F> {
 
     /// Apply this transformation after the given one
     pub fn compose(self: &Self, rhs: &Self) -> Self {
-        let ss = self.ss*rhs.ss + self.su*rhs.us;
-        let su = self.ss*rhs.su + self.su*rhs.uu;
-        let us = self.us*rhs.ss + self.uu*rhs.us;
-        let uu = self.us*rhs.su + self.uu*rhs.uu;
+        let ss = self.ss * rhs.ss + self.su * rhs.us;
+        let su = self.ss * rhs.su + self.su * rhs.uu;
+        let us = self.us * rhs.ss + self.uu * rhs.us;
+        let uu = self.us * rhs.su + self.uu * rhs.uu;
 
-        let tt = self.tt*rhs.tt + self.tv*rhs.vt;
-        let tv = self.tt*rhs.tv + self.tv*rhs.vv;
-        let vt = self.vt*rhs.tt + self.vv*rhs.vt;
-        let vv = self.vt*rhs.tv + self.vv*rhs.vv;
+        let tt = self.tt * rhs.tt + self.tv * rhs.vt;
+        let tv = self.tt * rhs.tv + self.tv * rhs.vv;
+        let vt = self.vt * rhs.tt + self.vv * rhs.vt;
+        let vv = self.vt * rhs.tv + self.vv * rhs.vv;
 
-        let s = self.s + self.ss*rhs.s + self.su*rhs.u;
-        let u = self.u + self.us*rhs.s + self.uu*rhs.u;
-        let t = self.t + self.tt*rhs.t + self.tv*rhs.v;
-        let v = self.v + self.vt*rhs.t + self.vv*rhs.v;
-    
-        Optics{
+        let s = self.s + self.ss * rhs.s + self.su * rhs.u;
+        let u = self.u + self.us * rhs.s + self.uu * rhs.u;
+        let t = self.t + self.tt * rhs.t + self.tv * rhs.v;
+        let v = self.v + self.vt * rhs.t + self.vv * rhs.v;
+
+        Optics {
             ss: ss,
             su: su,
             us: us,
@@ -187,22 +190,21 @@ impl<F: Float> Optics<F> {
 
     /// Returns the (s,t) focused distances
     pub fn focused_distance(self: &Self) -> (F, F) {
-        let focused_s = - self.su / self.uu;
-        let focused_t = - self.tv / self.vv;
+        let focused_s = -self.su / self.uu;
+        let focused_t = -self.tv / self.vv;
         (focused_s, focused_t)
     }
 
     /// Returns the appropriate translation distance for focusing
-    pub fn focus_at_distance(pre_optics: &Optics<F>,
-                             post_optics: &Optics<F>) -> (F, F) {
+    pub fn focus_at_distance(pre_optics: &Optics<F>, post_optics: &Optics<F>) -> (F, F) {
         // s/u
-        let distance_s = - (post_optics.ss * pre_optics.su + post_optics.su * pre_optics.uu) 
-            / (post_optics.ss * pre_optics.uu);
+        let distance_s = -(post_optics.ss * pre_optics.su + post_optics.su * pre_optics.uu) /
+                         (post_optics.ss * pre_optics.uu);
 
         // t/v
-        let distance_t = - (post_optics.tt * pre_optics.tv + post_optics.tv * pre_optics.vv) 
-            / (post_optics.tt * pre_optics.vv);
-        
+        let distance_t = -(post_optics.tt * pre_optics.tv + post_optics.tv * pre_optics.vv) /
+                         (post_optics.tt * pre_optics.vv);
+
         (distance_s, distance_t)
     }
 }
@@ -224,14 +226,12 @@ impl<F: Float + FromPrimitive + ToPrimitive> Serialize for Optics<F> {
         let u = map.get("u");
         let v = map.get("v");
 
-        match (ss, su, us, uu,
-               tt, tv, vt, vv,
-               s, t, u, v) {
+        match (ss, su, us, uu, tt, tv, vt, vv, s, t, u, v) {
             (Some(&Value::Float(ss)),
              Some(&Value::Float(su)),
              Some(&Value::Float(us)),
              Some(&Value::Float(uu)),
-             
+
              Some(&Value::Float(tt)),
              Some(&Value::Float(tv)),
              Some(&Value::Float(vt)),
@@ -240,22 +240,24 @@ impl<F: Float + FromPrimitive + ToPrimitive> Serialize for Optics<F> {
              Some(&Value::Float(s)),
              Some(&Value::Float(t)),
              Some(&Value::Float(u)),
-             Some(&Value::Float(v))) => Some(Optics{
-                ss: F::from_f64(ss).unwrap(),
-                su: F::from_f64(su).unwrap(),
-                us: F::from_f64(us).unwrap(),
-                uu: F::from_f64(uu).unwrap(),
+             Some(&Value::Float(v))) => {
+                Some(Optics {
+                    ss: F::from_f64(ss).unwrap(),
+                    su: F::from_f64(su).unwrap(),
+                    us: F::from_f64(us).unwrap(),
+                    uu: F::from_f64(uu).unwrap(),
 
-                tt: F::from_f64(tt).unwrap(),
-                tv: F::from_f64(tv).unwrap(),
-                vt: F::from_f64(vt).unwrap(),
-                vv: F::from_f64(vv).unwrap(),
+                    tt: F::from_f64(tt).unwrap(),
+                    tv: F::from_f64(tv).unwrap(),
+                    vt: F::from_f64(vt).unwrap(),
+                    vv: F::from_f64(vv).unwrap(),
 
-                s: F::from_f64(s).unwrap(),
-                t: F::from_f64(t).unwrap(),
-                u: F::from_f64(u).unwrap(),
-                v: F::from_f64(v).unwrap(),
-            }),
+                    s: F::from_f64(s).unwrap(),
+                    t: F::from_f64(t).unwrap(),
+                    u: F::from_f64(u).unwrap(),
+                    v: F::from_f64(v).unwrap(),
+                })
+            }
             _ => None,
         }
     }
@@ -344,7 +346,7 @@ fn test_ulens() {
 
     let d_det_array = thread_rng().next_f64().abs();
     let d_array_lens = thread_rng().next_f64().abs();
-    let d_lens_scene = 500f64*thread_rng().next_f64().abs();
+    let d_lens_scene = 500f64 * thread_rng().next_f64().abs();
 
     let cu_s = thread_rng().next_f64();
     let cu_t = thread_rng().next_f64();
@@ -421,4 +423,3 @@ fn test_optics_serialize() {
     assert_eq!(x.u, y.u);
     assert_eq!(x.v, y.v);
 }
-

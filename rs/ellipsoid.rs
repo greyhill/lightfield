@@ -34,7 +34,7 @@ pub struct Ellipsoid<F: Float> {
 
 impl<F: Float> Ellipsoid<F> {
     pub fn sphere(x: F, y: F, z: F, radius: F, value: F) -> Self {
-        Ellipsoid{
+        Ellipsoid {
             xx: F::one(),
             xy: F::zero(),
             xz: F::zero(),
@@ -80,15 +80,39 @@ impl<F: Float + FromPrimitive + ToPrimitive> Serialize for Ellipsoid<F> {
 
         let value = map.get("value");
 
-        match (xx, xy, xz, xr, xc,
-               yx, yy, yz, yr, yc,
-               zx, zy, zz, zr, zc,
+        match (xx,
+               xy,
+               xz,
+               xr,
+               xc,
+               yx,
+               yy,
+               yz,
+               yr,
+               yc,
+               zx,
+               zy,
+               zz,
+               zr,
+               zc,
                value) {
-            (Some(&Value::Float(xx)), Some(&Value::Float(xy)), Some(&Value::Float(xz)), Some(&Value::Float(xr)), Some(&Value::Float(xc)),
-             Some(&Value::Float(yx)), Some(&Value::Float(yy)), Some(&Value::Float(yz)), Some(&Value::Float(yr)), Some(&Value::Float(yc)),
-             Some(&Value::Float(zx)), Some(&Value::Float(zy)), Some(&Value::Float(zz)), Some(&Value::Float(zr)), Some(&Value::Float(zc)),
-             Some(&Value::Float(value))) => 
-                Some(Ellipsoid{
+            (Some(&Value::Float(xx)),
+             Some(&Value::Float(xy)),
+             Some(&Value::Float(xz)),
+             Some(&Value::Float(xr)),
+             Some(&Value::Float(xc)),
+             Some(&Value::Float(yx)),
+             Some(&Value::Float(yy)),
+             Some(&Value::Float(yz)),
+             Some(&Value::Float(yr)),
+             Some(&Value::Float(yc)),
+             Some(&Value::Float(zx)),
+             Some(&Value::Float(zy)),
+             Some(&Value::Float(zz)),
+             Some(&Value::Float(zr)),
+             Some(&Value::Float(zc)),
+             Some(&Value::Float(value))) => {
+                Some(Ellipsoid {
                     xx: F::from_f64(xx).unwrap(),
                     xy: F::from_f64(xy).unwrap(),
                     xz: F::from_f64(xz).unwrap(),
@@ -108,7 +132,8 @@ impl<F: Float + FromPrimitive + ToPrimitive> Serialize for Ellipsoid<F> {
                     zc: F::from_f64(zc).unwrap(),
 
                     value: F::from_f64(value).unwrap(),
-                }),
+                })
+            }
             _ => None,
         }
     }
@@ -133,7 +158,8 @@ impl<F: Float + FromPrimitive + ToPrimitive> Serialize for Ellipsoid<F> {
         tr.insert("zr".to_string(), Value::Float(F::to_f64(&self.zr).unwrap()));
         tr.insert("zc".to_string(), Value::Float(F::to_f64(&self.zc).unwrap()));
 
-        tr.insert("value".to_string(), Value::Float(F::to_f64(&self.value).unwrap()));
+        tr.insert("value".to_string(),
+                  Value::Float(F::to_f64(&self.value).unwrap()));
 
         tr
     }
@@ -298,4 +324,3 @@ fn test_read_phantom() {
         assert!(false);
     }
 }
-

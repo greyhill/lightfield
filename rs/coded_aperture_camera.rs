@@ -40,16 +40,23 @@ impl<F: Float + FromPrimitive + ToPrimitive> Serialize for CodedApertureCamera<F
         let distance_detector_mask = map.get("distance_detector_mask");
         let mask_path = map.get("mask_path");
 
-        match (lens, detector, mask_geometry, distance_lens_mask, distance_detector_mask, mask_path) {
+        match (lens,
+               detector,
+               mask_geometry,
+               distance_lens_mask,
+               distance_detector_mask,
+               mask_path) {
             (Some(&Value::Table(ref lens_tab)),
              Some(&Value::Table(ref det_tab)),
              Some(&Value::Table(ref mask_tab)),
              Some(&Value::Float(distance_lens_mask)),
              Some(&Value::Float(distance_detector_mask)),
              Some(&Value::String(ref mask_path))) => {
-                match (Lens::from_map(lens_tab), Detector::from_map(det_tab), ImageGeometry::from_map(mask_tab)) {
+                match (Lens::from_map(lens_tab),
+                       Detector::from_map(det_tab),
+                       ImageGeometry::from_map(mask_tab)) {
                     (Some(lens), Some(det), Some(mask_geom)) => {
-                        Some(CodedApertureCamera{
+                        Some(CodedApertureCamera {
                             lens: lens,
                             detector: det,
                             mask_geometry: mask_geom,
@@ -58,10 +65,10 @@ impl<F: Float + FromPrimitive + ToPrimitive> Serialize for CodedApertureCamera<F
                             mask_path: mask_path.clone(),
                             mask: None,
                         })
-                    },
+                    }
                     _ => None,
                 }
-            },
+            }
             _ => None,
         }
     }
@@ -69,11 +76,16 @@ impl<F: Float + FromPrimitive + ToPrimitive> Serialize for CodedApertureCamera<F
     fn into_map(self: &Self) -> Table {
         let mut tr = Table::new();
         tr.insert("lens".to_string(), Value::Table(self.lens.into_map()));
-        tr.insert("detector".to_string(), Value::Table(self.detector.into_map()));
-        tr.insert("mask_geometry".to_string(), Value::Table(self.mask_geometry.into_map()));
-        tr.insert("distance_lens_mask".to_string(), Value::Float(F::to_f64(&self.distance_lens_mask).unwrap()));
-        tr.insert("distance_detector_mask".to_string(), Value::Float(F::to_f64(&self.distance_detector_mask).unwrap()));
-        tr.insert("mask_path".to_string(), Value::String(self.mask_path.clone()));
+        tr.insert("detector".to_string(),
+                  Value::Table(self.detector.into_map()));
+        tr.insert("mask_geometry".to_string(),
+                  Value::Table(self.mask_geometry.into_map()));
+        tr.insert("distance_lens_mask".to_string(),
+                  Value::Float(F::to_f64(&self.distance_lens_mask).unwrap()));
+        tr.insert("distance_detector_mask".to_string(),
+                  Value::Float(F::to_f64(&self.distance_detector_mask).unwrap()));
+        tr.insert("mask_path".to_string(),
+                  Value::String(self.mask_path.clone()));
         tr
     }
 
@@ -86,8 +98,8 @@ impl<F: Float + FromPrimitive + ToPrimitive> Serialize for CodedApertureCamera<F
                 Ok(m) => {
                     self.mask = Some(m);
                     Ok(())
-                },
-                Err(_) => Err(())
+                }
+                Err(_) => Err(()),
             }
         } else {
             Ok(())
@@ -154,4 +166,3 @@ fn test_coded_aperture() {
     assert_eq!(camera.lens.focal_length_s, 12.0);
     assert_eq!(camera.lens.focal_length_t, 24.0);
 }
-

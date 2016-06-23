@@ -21,7 +21,7 @@ pub type Rotation<F> = Rotation3<F>;
 pub fn rotation_x<F: Float + FromPrimitive + BaseFloat>(x_deg: F) -> Rotation<F> {
     let x_rad = F::pi() * x_deg / F::from_f32(180f32).unwrap();
 
-    let m = Matrix3{
+    let m = Matrix3 {
         m11: F::one(),
         m12: F::zero(),
         m13: F::zero(),
@@ -41,7 +41,7 @@ pub fn rotation_x<F: Float + FromPrimitive + BaseFloat>(x_deg: F) -> Rotation<F>
 pub fn rotation_y<F: Float + FromPrimitive + BaseFloat>(y_deg: F) -> Rotation<F> {
     let y_rad = F::pi() * y_deg / F::from_f32(180f32).unwrap();
 
-    let m = Matrix3{
+    let m = Matrix3 {
         m21: F::zero(),
         m22: F::one(),
         m23: F::zero(),
@@ -61,7 +61,7 @@ pub fn rotation_y<F: Float + FromPrimitive + BaseFloat>(y_deg: F) -> Rotation<F>
 pub fn rotation_z<F: Float + FromPrimitive + BaseFloat>(z_deg: F) -> Rotation<F> {
     let z_rad = F::pi() * z_deg / F::from_f32(180f32).unwrap();
 
-    let m = Matrix3{
+    let m = Matrix3 {
         m31: F::zero(),
         m32: F::zero(),
         m33: F::one(),
@@ -78,7 +78,10 @@ pub fn rotation_z<F: Float + FromPrimitive + BaseFloat>(z_deg: F) -> Rotation<F>
     unsafe { Rotation::new_with_matrix(m) }
 }
 
-pub fn rotation_from_euler_angles<F: Float + FromPrimitive + BaseFloat>(x_deg: F, y_deg: F, z_deg: F) -> Rotation<F> {
+pub fn rotation_from_euler_angles<F: Float + FromPrimitive + BaseFloat>(x_deg: F,
+                                                                        y_deg: F,
+                                                                        z_deg: F)
+                                                                        -> Rotation<F> {
     rotation_z(z_deg) * rotation_y(y_deg) * rotation_x(x_deg)
 }
 
@@ -110,7 +113,7 @@ impl<F: Float + BaseFloat + ApproxEq<F>> ShearDecomposition<F> {
         let yx_tilde = from.m21;
         let yy_tilde = from.m22;
         let yz_tilde = from.m23;
-        let y_tilde = Matrix3{
+        let y_tilde = Matrix3 {
             m11: F::one(),
             m12: F::zero(),
             m13: F::zero(),
@@ -130,7 +133,7 @@ impl<F: Float + BaseFloat + ApproxEq<F>> ShearDecomposition<F> {
         let xy_tilde = tmp.m12;
         let xz_tilde = tmp.m13;
 
-        let x_tilde = Matrix3{
+        let x_tilde = Matrix3 {
             m11: xx_tilde,
             m12: xy_tilde,
             m13: xz_tilde,
@@ -150,7 +153,7 @@ impl<F: Float + BaseFloat + ApproxEq<F>> ShearDecomposition<F> {
         let zy_tilde = tmp.m32;
         let zz_tilde = tmp.m33;
 
-        ShearDecomposition{
+        ShearDecomposition {
             sx: xx_tilde,
             sy: yy_tilde,
             sz: zz_tilde,
@@ -167,7 +170,7 @@ impl<F: Float + BaseFloat + ApproxEq<F>> ShearDecomposition<F> {
     }
 
     pub fn shear_x(self: &Self) -> Matrix3<F> {
-        Matrix3{
+        Matrix3 {
             m11: F::one(),
             m12: self.xy,
             m13: self.xz,
@@ -183,7 +186,7 @@ impl<F: Float + BaseFloat + ApproxEq<F>> ShearDecomposition<F> {
     }
 
     pub fn shear_y(self: &Self) -> Matrix3<F> {
-        Matrix3{
+        Matrix3 {
             m11: F::one(),
             m12: F::zero(),
             m13: F::zero(),
@@ -199,7 +202,7 @@ impl<F: Float + BaseFloat + ApproxEq<F>> ShearDecomposition<F> {
     }
 
     pub fn shear_z(self: &Self) -> Matrix3<F> {
-        Matrix3{
+        Matrix3 {
             m11: F::one(),
             m12: F::zero(),
             m13: F::zero(),
@@ -215,7 +218,7 @@ impl<F: Float + BaseFloat + ApproxEq<F>> ShearDecomposition<F> {
     }
 
     pub fn scale(self: &Self) -> Matrix3<F> {
-        Matrix3{
+        Matrix3 {
             m11: self.sx,
             m12: F::zero(),
             m13: F::zero(),
@@ -277,11 +280,15 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> Serialize for Isometry<
         let origin = map.get("origin");
 
         match (axes, origin) {
-            (Some(&Value::Table(ref axes_tab)), 
-             Some(&Value::Table(ref origin_tab))) => match (Rotation::from_map(axes_tab), Vector::from_map(origin_tab)) {
-                (Some(axes), Some(origin)) => Some(Isometry::new_with_rotation_matrix(origin, axes)),
-                _ => None,
-            },
+            (Some(&Value::Table(ref axes_tab)),
+             Some(&Value::Table(ref origin_tab))) => {
+                match (Rotation::from_map(axes_tab), Vector::from_map(origin_tab)) {
+                    (Some(axes), Some(origin)) => {
+                        Some(Isometry::new_with_rotation_matrix(origin, axes))
+                    }
+                    _ => None,
+                }
+            }
             _ => None,
         }
     }
@@ -289,7 +296,8 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> Serialize for Isometry<
     fn into_map(self: &Self) -> Table {
         let mut tr = Table::new();
         tr.insert("axes".to_string(), Value::Table(self.rotation.into_map()));
-        tr.insert("origin".to_string(), Value::Table(self.translation.into_map()));
+        tr.insert("origin".to_string(),
+                  Value::Table(self.translation.into_map()));
         tr
     }
 }
@@ -301,13 +309,14 @@ impl<F: Float + FromPrimitive + ToPrimitive> Serialize for Vector<F> {
         let z = map.get("z");
 
         match (x, y, z) {
-            (Some(&Value::Float(x)), 
+            (Some(&Value::Float(x)),
              Some(&Value::Float(y)),
-             Some(&Value::Float(z))) => Some(Vector3::new(
-                 F::from_f64(x).unwrap(),
-                 F::from_f64(y).unwrap(),
-                 F::from_f64(z).unwrap())),
-            _ => None
+             Some(&Value::Float(z))) => {
+                Some(Vector3::new(F::from_f64(x).unwrap(),
+                                  F::from_f64(y).unwrap(),
+                                  F::from_f64(z).unwrap()))
+            }
+            _ => None,
         }
     }
 
@@ -343,12 +352,11 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> Serialize for Rotation<
             (Some(&Value::Float(rot_x)),
              Some(&Value::Float(rot_y)),
              Some(&Value::Float(rot_z))) => {
-                return Some(rotation_from_euler_angles(
-                    F::from_f64(rot_x).unwrap(),
-                    F::from_f64(rot_y).unwrap(),
-                    F::from_f64(rot_z).unwrap()))
-            },
-            _ => {},
+                return Some(rotation_from_euler_angles(F::from_f64(rot_x).unwrap(),
+                                                       F::from_f64(rot_y).unwrap(),
+                                                       F::from_f64(rot_z).unwrap()))
+            }
+            _ => {}
         };
 
         match (xx, yx, zx, xy, yy, zy, xz, yz, zz) {
@@ -363,12 +371,18 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> Serialize for Rotation<
              Some(&Value::Float(xz)),
              Some(&Value::Float(yz)),
              Some(&Value::Float(zz))) => {
-                let mtx = Matrix3::new(F::from_f64(xx).unwrap(), F::from_f64(xy).unwrap(), F::from_f64(xz).unwrap(),
-                                       F::from_f64(yx).unwrap(), F::from_f64(yy).unwrap(), F::from_f64(yz).unwrap(),
-                                       F::from_f64(zx).unwrap(), F::from_f64(zy).unwrap(), F::from_f64(zz).unwrap());
+                let mtx = Matrix3::new(F::from_f64(xx).unwrap(),
+                                       F::from_f64(xy).unwrap(),
+                                       F::from_f64(xz).unwrap(),
+                                       F::from_f64(yx).unwrap(),
+                                       F::from_f64(yy).unwrap(),
+                                       F::from_f64(yz).unwrap(),
+                                       F::from_f64(zx).unwrap(),
+                                       F::from_f64(zy).unwrap(),
+                                       F::from_f64(zz).unwrap());
                 Some(unsafe { Rotation::new_with_matrix(mtx) })
-            },
-            _ => None
+            }
+            _ => None,
         }
     }
 
@@ -427,4 +441,3 @@ fn test_read_vector() {
     assert_eq!(vec.y, 1.2);
     assert_eq!(vec.z, -15.0);
 }
-

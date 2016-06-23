@@ -34,7 +34,7 @@ impl<F: Float + FromPrimitive> Geometry<F> for Detector<F> {
 
 impl<F: Float> Detector<F> {
     pub fn image_geometry(self: &Self) -> ImageGeometry<F> {
-        ImageGeometry{
+        ImageGeometry {
             ns: self.ns,
             nt: self.nt,
             ds: self.ds,
@@ -55,19 +55,21 @@ impl<F: Float + FromPrimitive + ToPrimitive> Serialize for Detector<F> {
         let offset_t = map.get("offset_t");
 
         match (ns, nt, ds, dt, offset_s, offset_t) {
-            (Some(&Value::Integer(ns)), 
+            (Some(&Value::Integer(ns)),
              Some(&Value::Integer(nt)),
              Some(&Value::Float(ds)),
              Some(&Value::Float(dt)),
              Some(&Value::Float(offset_s)),
-             Some(&Value::Float(offset_t))) => Some(Detector{
-                ns: ns as usize,
-                nt: nt as usize,
-                ds: F::from_f64(ds).unwrap(),
-                dt: F::from_f64(dt).unwrap(),
-                offset_s: F::from_f64(offset_s).unwrap(),
-                offset_t: F::from_f64(offset_t).unwrap(),
-            }),
+             Some(&Value::Float(offset_t))) => {
+                Some(Detector {
+                    ns: ns as usize,
+                    nt: nt as usize,
+                    ds: F::from_f64(ds).unwrap(),
+                    dt: F::from_f64(dt).unwrap(),
+                    offset_s: F::from_f64(offset_s).unwrap(),
+                    offset_t: F::from_f64(offset_t).unwrap(),
+                })
+            }
             _ => None,
         }
     }
@@ -78,8 +80,10 @@ impl<F: Float + FromPrimitive + ToPrimitive> Serialize for Detector<F> {
         tr.insert("nt".to_string(), Value::Integer(self.nt as i64));
         tr.insert("ds".to_string(), Value::Float(F::to_f64(&self.ds).unwrap()));
         tr.insert("dt".to_string(), Value::Float(F::to_f64(&self.dt).unwrap()));
-        tr.insert("offset_s".to_string(), Value::Float(F::to_f64(&self.offset_s).unwrap()));
-        tr.insert("offset_t".to_string(), Value::Float(F::to_f64(&self.offset_t).unwrap()));
+        tr.insert("offset_s".to_string(),
+                  Value::Float(F::to_f64(&self.offset_s).unwrap()));
+        tr.insert("offset_t".to_string(),
+                  Value::Float(F::to_f64(&self.offset_t).unwrap()));
         tr
     }
 }
@@ -106,4 +110,3 @@ fn test_read_detector() {
     assert_eq!(det.offset_s, 0.1);
     assert_eq!(det.offset_t, 0.2);
 }
-
