@@ -1,45 +1,90 @@
+/// Light transport API
+
 #pragma once
 
-#include <stdint.h>
-#include <math.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include <stdio.h>
-#include <string.h>
-#include <assert.h>
 
-#include "CL/cl.h"
+enum LFAngularBasis {
+    LFPillbox,
+    LFDirac,
+};
 
-// Error checking
-#include "lightfield_error.h"
+/// Optical transformation
+struct LFOpticalX {
+    float ss;
+    float us;
+    float su;
+    float uu;
 
-// Thin lens
-#include "lightfield_lens.h"
+    float tt;
+    float vt;
+    float tv;
+    float vv;
 
-// Affine optics
-#include "lightfield_optics.h"
+    float s;
+    float t;
+    float u;
+    float v;
+};
 
-// Angular plane
-#include "lightfield_angular_plane.h"
+/// Angular plane
+struct LFAngularPlane {
+    float ds;
+    float dt;
+    enum LFAngularBasis basis;
 
-// Plane geometry
-#include "lightfield_plane_geometry.h"
+    // owned
+    size_t num_points;
+    float* points_s;
+    float* points_t;
+    float* points_w;
+};
 
-// Light field pixels
-#include "lightfield_lixel.h"
+/// Image (plane) geometry
+struct LFImageGeometry {
+    size_t ns;
+    size_t nt;
 
-// Geometric vectors
-#include "lightfield_vec3.h"
+    /// Pixel size
+    float ds;
+    /// Pixel size
+    float dt;
 
-// Planes in space
-#include "lightfield_flat.h"
+    /// Unitless (pixel fractions)
+    float offset_s;
+    /// Unitless (pixel fractions)
+    float offset_t;
+};
 
-// OpenCL utilities
-#include "lightfield_cl.h"
+/// Light field geometry
+struct LFGeometry {
+    struct LFImageGeometry geom;
+    struct LFOpticalX to_optical_plane;
+};
 
-// Light transport
-#include "lightfield_transport.h"
+/// Opaque environment type
+struct LFEnvironment;
 
-// Simple camera
-#include "lightfield_camera.h"
+/// Opaque light field transport type
+struct LFTransport;
+
+extern struct LFEnvironment*
+LFEnvironment_new();
+
+extern void 
+LFEnvironment_del(struct LFEnvironment* env);
+
+extern struct LFTransport* 
+LFTransport_new(
+        const struct LFGeometry* source, 
+        const struct LFGeometry* dest, 
+        struct LFEnvironment* env);
+
+extern bool
+LFTransport_forw_view(
+        struct LFTransport* xport,
+        const float* src,
+        float* dst,
+        size_t angle);
 

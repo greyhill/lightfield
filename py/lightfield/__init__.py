@@ -1,11 +1,23 @@
-import lightfield_base
-from lightfield_base import simple_init
-from lightfield_lens import Lens
-from lightfield_optics import LFOptics, Optics
-from lightfield_angular_plane import AngularPlane
-from lightfield_plane_geometry import PlaneGeometry
-from lightfield_geometry import LightFieldGeometry
-from lightfield_vec3 import Vec3
-from lightfield_flat import FlatGeometry
-from lightfield_transport import Transport
+import ctypes as ct
+
+class Implementation(object):
+    def __init__(self, path):
+        self.env = None
+        self.lib = ct.CDLL(path)
+
+        self._setup_calls()
+        self._setup_environment()
+
+    def __del__(self):
+        if self.env is not None:
+            self.lib.LFEnvironment_del(self.env)
+
+    def _setup_calls(self):
+        self.lib.LFEnvironment_new.restype = ct.c_voidp
+
+    def _setup_environment(self):
+        env = self.lib.LFEnvironment_new()
+        if env is None:
+            raise RuntimeError("Error creating environment")
+        self.env = env
 
