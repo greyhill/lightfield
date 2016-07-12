@@ -1,12 +1,12 @@
 [package]
 name = 'lightfield'
 version = '0.0.1'
-authors = ['Madison McGaffin <greyhill@gmailcom>']
+authors = ['Madison McGaffin <greyhill@gmail.com>']
 
 [lib]
 name = 'lightfield'
 path = 'rs/lib.rs'
-crate-type = ['rlib']
+crate-type = ['rlib', 'dylib']
 
 [dependencies.num]
 version = '0.1.32'
