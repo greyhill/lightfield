@@ -28,6 +28,28 @@ struct LFOpticalX {
     float v;
 };
 
+extern void
+LFOpticalX_identity(struct LFOpticalX* x);
+
+extern void
+LFOpticalX_compose(const struct LFOpticalX* lhs, 
+                   const struct LFOpticalX* rhs,
+                   struct LFOpticalX* out);
+
+extern void
+LFOpticalX_translation(struct LFOpticalX* x,
+                       const float distance);
+
+extern void 
+LFOpticalX_lens(struct LFOpticalX* x,
+                const float center_x,
+                const float center_y,
+                const float focal_length);
+
+extern void
+LFOpticalX_invert(const struct LFOpticalX* x,
+                  struct LFOpticalX* out);
+
 /// Angular plane
 struct LFAngularPlane {
     float ds;
