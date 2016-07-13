@@ -26,6 +26,27 @@ impl<F: Float + FromPrimitive> PlenopticCamera<F> {
         let (distance_s, distance_t) = Optics::focus_at_distance(&pre_optics, &post_optics);
         self.distance_lens_array = (distance_s + distance_t) / (F::one() + F::one());
     }
+
+    pub fn describe(self: &Self) -> String {
+        let main_lens_optics = Optics::translation(&self.distance_lens_array).then(&self.lens.optics());
+        let (dms, dmt) = main_lens_optics.focused_distance();
+        let mut ulens_focus = Vec::new();
+
+        if let Some(ref array) = self.array {
+            for lens in array.iter() {
+                let ulens_optics = Optics::translation(&self.distance_detector_array).then(&lens.optics());
+                let total_optics = ulens_optics.then(&main_lens_optics);
+                let (us, ut) = total_optics.focused_distance();
+                ulens_focus.push(F::to_f32(&us).unwrap());
+                ulens_focus.push(F::to_f32(&ut).unwrap());
+            }
+        } else {
+            panic!("Must call describe() with a loaded microlens array");
+        }
+
+        format!("Plenoptic camera with microlens array focused at ({}, {}); Microlenses focused at: {:?}",
+            F::to_f32(&dms).unwrap(), F::to_f32(&dmt).unwrap(), ulens_focus)
+    }
 }
 
 impl<F: Float + FromPrimitive + ToPrimitive> Serialize for PlenopticCamera<F> {

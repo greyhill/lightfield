@@ -29,6 +29,13 @@ impl<F: Float + FromPrimitive> CodedApertureCamera<F> {
         let (distance_s, distance_t) = Optics::focus_at_distance(&pre_optics, &post_optics);
         self.distance_lens_mask = (distance_s + distance_t) / (F::one() + F::one());
     }
+
+    pub fn describe(self: &Self) -> String {
+        let optics = Optics::translation(&(self.distance_lens_mask + self.distance_detector_mask)).then(&self.lens.optics());
+        let (ds, dt) = optics.focused_distance();
+        format!("Coded Aperture Camera focused at ({}, {})", 
+                F::to_f32(&ds).unwrap(), F::to_f32(&dt).unwrap())
+    }
 }
 
 impl<F: Float + FromPrimitive + ToPrimitive> Serialize for CodedApertureCamera<F> {

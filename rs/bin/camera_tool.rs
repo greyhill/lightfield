@@ -33,6 +33,9 @@ fn main() {
                 "out",
                 "(Optional) where to save the changed configuration",
                 "FILE");
+    opts.optflag("d",
+                "describe",
+                "Describe the camera");
     opts.optflag("h", "help", "Print help and exit");
 
     // parse options
@@ -65,6 +68,9 @@ fn main() {
                                          .expect("Error parsing focus distance");
         println!("Focusing camera at {}", focus_distance);
         camera.focus_at_distance(focus_distance);
+    }
+    if matches.opt_present("describe") {
+        println!("{}", camera.describe());
     }
 
     // if an output path is given, use it.  otherwise, modify the camera

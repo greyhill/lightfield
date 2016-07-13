@@ -22,6 +22,13 @@ impl<F: Float + FromPrimitive + ToPrimitive> SingleLensCamera<F> {
         let (distance_s, distance_t) = Optics::focus_at_distance(&pre_optics, &post_optics);
         self.distance_detector_lens = (distance_s + distance_t) / (F::one() + F::one());
     }
+
+    pub fn describe(self: &Self) -> String {
+        let optics = Optics::translation(&self.distance_detector_lens).then(&self.lens.optics());
+        let (ds, dt) = optics.focused_distance();
+        format!("Single Lens Camera focused at ({}, {})", 
+                F::to_f32(&ds).unwrap(), F::to_f32(&dt).unwrap())
+    }
 }
 
 impl<F: Float + FromPrimitive + ToPrimitive> Serialize for SingleLensCamera<F> {

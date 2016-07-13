@@ -37,6 +37,15 @@ impl<F: 'static + Float + FromPrimitive + BaseFloat + ApproxEq<F>> CameraConfig<
         }
     }
 
+    /// Returns a human-readable description of the camera
+    pub fn describe(self: &Self) -> String {
+        match self {
+            &CameraConfig::SingleLensCamera(ref slc) => slc.describe(),
+            &CameraConfig::CodedApertureCamera(ref cac) => cac.describe(),
+            &CameraConfig::PlenopticCamera(ref pc) => pc.describe(),
+        }
+    }
+
     pub fn volume_imager(self: &Self,
                          light_volume: LightVolume<F>,
                          camera_position: Vector3<F>,
