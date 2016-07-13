@@ -21,21 +21,10 @@ pub struct PlenopticCamera<F: Float> {
 
 impl<F: Float + FromPrimitive> PlenopticCamera<F> {
     pub fn focus_at_distance(self: &mut Self, focus_distance: F) {
-        let mut distance = F::zero();
-        let mut denom = F::zero();
-        if let Some(ref array) = self.array {
-            for lens in array.iter() {
-                let pre_optics = Optics::translation(&self.distance_detector_array)
-                                     .then(&lens.optics());
-                let post_optics = self.lens.optics().then(&Optics::translation(&focus_distance));
-                let (distance_s, distance_t) = Optics::focus_at_distance(&pre_optics, &post_optics);
-                distance = distance + distance_s + distance_t;
-                denom = denom + F::one() + F::one();
-            }
-        } else {
-            panic!("Must call PlenopticCamera::focus_at_distance with loaded lens array");
-        }
-        self.distance_lens_array = distance / denom;
+        let pre_optics = Optics::identity();
+        let post_optics = self.lens.optics().then(&Optics::translation(&focus_distance));
+        let (distance_s, distance_t) = Optics::focus_at_distance(&pre_optics, &post_optics);
+        self.distance_lens_array = (distance_s + distance_t) / (F::one() + F::one());
     }
 }
 
