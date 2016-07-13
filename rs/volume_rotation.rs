@@ -98,9 +98,9 @@ impl<F: Float + BaseFloat + ApproxEq<F> + FromPrimitive> VolumeRotation<F> {
         let filter_z = try!(program.create_kernel("rotate_filter_z"));
 
         let shear_decomp = ShearDecomposition::new(rotation);
-        let dst_geom = src_geom.scale(F::one() / shear_decomp.sx,
-                                      F::one() / shear_decomp.sy,
-                                      F::one() / shear_decomp.sz);
+        let dst_geom = src_geom.scale(shear_decomp.sx,
+                                      shear_decomp.sy,
+                                      shear_decomp.sz);
 
         let dst_geom_buf = try!(dst_geom.as_cl_buffer(&queue));
         let tmp = try!(src_geom.zeros_buf(&queue));
