@@ -44,6 +44,9 @@ impl<F: Float + FromPrimitive> PlenopticCamera<F> {
             panic!("Must call describe() with a loaded microlens array");
         }
 
+        ulens_focus.sort_by(|a,b| a.partial_cmp(b).unwrap());
+        ulens_focus.dedup();
+
         format!("Plenoptic camera with microlens array focused at ({}, {}); Microlenses focused at: {:?}",
             F::to_f32(&dms).unwrap(), F::to_f32(&dmt).unwrap(), ulens_focus)
     }
