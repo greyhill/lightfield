@@ -1,4 +1,5 @@
 import ctypes as ct
+import numpy as np
 
 class OpticalX(ct.Structure):
     _fields_ = [ \
@@ -66,6 +67,92 @@ class OpticalX(ct.Structure):
                self.u == other.u and \
                self.v == other.v
 
+class ImageGeometry(ct.Structure):
+    _fields_ = [ 
+            ('ns', ct.c_size_t), 
+            ('nt', ct.c_size_t),
+
+            ('ds', ct.c_float),
+            ('dt', ct.c_float),
+
+            ('offset_s', ct.c_float),
+            ('offset_t', ct.c_float) ]
+
+class AngularPlane(ct.Structure):
+    _fields_ = [
+            ('ds', ct.c_float),
+            ('dt', ct.c_float),
+
+            ('basis', ct.c_int),
+
+            ('num_points', ct.c_size_t),
+            ('points_s', ct.POINTER(ct.c_float)),
+            ('points_t', ct.POINTER(ct.c_float)),
+            ('points_w', ct.POINTER(ct.c_float)) ]
+
+    def __init__(self, 
+            ds, dt, basis_str,
+            s_points, t_points, w_points):
+        self._s_points = np.asarray(s_points, dtype='float32')
+        self._t_points = np.asarray(t_points, dtype='float32')
+        self._w_points = np.asarray(w_points, dtype='float32')
+
+        basis_enum = { 'dirac': 1, 'pillbox': 0 }
+        self.basis = basis_enum[basis_str]
+
+        self.ds = ds
+        self.dt = dt
+
+        self.points_s = ct.c_voidp(self._s_points.ctypes.data)
+        self.points_t = ct.c_voidp(self._t_points.ctypes.data)
+        self.points_w = ct.c_voidp(self._w_points.ctypes.data)
+
+class LFGeometry(object):
+    _fields_ = [ 
+            ('geom', ImageGeometry),
+            ('plane', AngularPlane),
+            ('to_plane', OpticalX)
+        ]
+
+class Transport(object):
+    def __init__(self, src, dst, impl):
+        self.src = src
+        self.dst = dst
+        self.ptr = None
+        self.impl = impl
+
+        self.ptr = self.impl.lib.LFTransport_new(
+                ct.pointer(src), ct.pointer(dst),
+                impl.env)
+        if self.ptr is None:
+            raise RuntimeError("Error creating Transport object")
+
+    def __del__(self):
+        if self.ptr is not None:
+            self.impl.lib.LFTransport_del(self.ptr)
+
+    def forw_view(self, src, angle):
+        tr = np.zeros((self.dst.ns, self.dst.nt), dtype='float32', order='f')
+        src = np.asarray(src, dtype='float32', order='f')
+        if not self.impl.lib.LFTransport_forw_view(self.ptr,
+                ct.c_voidp(src.ctypes.data),
+                ct.c_voidp(tr.ctypes.data),
+                ct.c_size_t(angle)):
+            raise RuntimeError('Error in LFTransport_forw_view')
+        else:
+            return tr
+
+    def back_view(self, dst, angle):
+        tr = np.zeros((self.src.ns, self.src.nt), dtype='float32', order='f')
+        dst = np.asarray(dst, dtype='float32', order='f')
+        if not self.impl.lib.LFTransport_back_view(self.ptr,
+                ct.c_voidp(dst.ctypes.data),
+                ct.c_voidp(tr.ctypes.data),
+                ct.c_size_t(angle)):
+            raise RuntimeError('Error in LFTransport_back_view')
+        else:
+            return tr
+
 class Implementation(object):
     def __init__(self, path):
         self.env = None
@@ -81,6 +168,10 @@ class Implementation(object):
     def _setup_calls(self):
         self.lib.LFEnvironment_new.restype = ct.c_voidp
 
+        self.lib.LFTransport_new.restype = ct.c_voidp
+        self.lib.LFTransport_forw_view.restype = ct.c_bool
+        self.lib.LFTransport_back_view.restype = ct.c_bool
+
     def _setup_environment(self):
         env = self.lib.LFEnvironment_new()
         if env is None:
@@ -89,4 +180,7 @@ class Implementation(object):
 
     def OpticalX(self):
         return OpticalX(self.lib)
+
+    def Transport(self, src, dst):
+        return Transport(src, dst, self)
 

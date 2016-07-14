@@ -106,7 +106,7 @@ LFTransport_new(
         struct LFEnvironment* env);
 
 extern void
-LFTransport_del(struct LFTransport
+LFTransport_del(struct LFTransport* xport);
 
 extern bool
 LFTransport_forw_view(
