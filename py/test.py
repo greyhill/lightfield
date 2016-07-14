@@ -1,11 +1,17 @@
 import lightfield
-import numpy as np
+import platform
 
 print("Run this from the python directory")
 
+libSuffix = ""
+if platform.system() == 'Linux':
+    libSuffix = ".so"
+if platform.system() == 'Darwin':
+    libSuffix = ".dylib"
+
 # Rust implementation
 print("Creating Rust handle")
-rust = lightfield.Implementation("../target/release/liblightfield.so")
+rust = lightfield.Implementation("../target/release/liblightfield" + libSuffix)
 
 # C implementation
 print("Creating C handle")
