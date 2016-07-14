@@ -6,8 +6,8 @@
 #include <stdbool.h>
 
 enum LFAngularBasis {
-    LFPillbox,
-    LFDirac,
+    LFPillbox = 0,
+    LFDirac = 1,
 };
 
 /// Optical transformation
@@ -56,11 +56,11 @@ struct LFAngularPlane {
     float dt;
     enum LFAngularBasis basis;
 
-    // owned
+    // borrowed
     size_t num_points;
-    float* points_s;
-    float* points_t;
-    float* points_w;
+    const float* points_s;
+    const float* points_t;
+    const float* points_w;
 };
 
 /// Image (plane) geometry
@@ -82,7 +82,8 @@ struct LFImageGeometry {
 /// Light field geometry
 struct LFGeometry {
     struct LFImageGeometry geom;
-    struct LFOpticalX to_optical_plane;
+    struct LFAngularPlane plane;
+    struct LFOpticalX to_plane;
 };
 
 /// Opaque environment type
@@ -91,6 +92,7 @@ struct LFEnvironment;
 /// Opaque light field transport type
 struct LFTransport;
 
+/// Create a new OpenCL environment, queue, etc.
 extern struct LFEnvironment*
 LFEnvironment_new();
 
@@ -103,10 +105,20 @@ LFTransport_new(
         const struct LFGeometry* dest, 
         struct LFEnvironment* env);
 
+extern void
+LFTransport_del(struct LFTransport
+
 extern bool
 LFTransport_forw_view(
         struct LFTransport* xport,
         const float* src,
         float* dst,
+        size_t angle);
+
+extern bool
+LFTransport_back_view(
+        struct LFTransport* xport,
+        const float* dst,
+        float* src,
         size_t angle);
 

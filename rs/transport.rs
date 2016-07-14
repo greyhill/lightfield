@@ -531,6 +531,30 @@ impl<F: Float + FromPrimitive + ToPrimitive> Transport<F> {
             &AngularBasis::Pillbox => self.back_pillbox(dst, src, ia, wait_for),
         }
     }
+
+    /// Transport from source to destination (all-host utility function)
+    pub fn forw_host(self: &mut Self,
+                     src: &[F],
+                     dst: &mut [F],
+                     ia: usize) -> Result<(), Error> {
+        let src_buf = try!(self.queue.create_buffer_from_slice(src));
+        let mut dst_buf = try!(self.queue.create_buffer_from_slice(dst));
+        try!(try!(self.forw(&src_buf, &mut dst_buf, ia, &[])).wait());
+        try!(self.queue.read_buffer(&dst_buf, dst));
+        Ok(())
+    }
+
+    /// Transport from destion to source (all-host utility function)
+    pub fn back_host(self: &mut Self,
+                     dst: &[F],
+                     src: &mut [F],
+                     ia: usize) -> Result<(), Error> {
+        let mut src_buf = try!(self.queue.create_buffer_from_slice(src));
+        let dst_buf = try!(self.queue.create_buffer_from_slice(dst));
+        try!(try!(self.back(&dst_buf, &mut src_buf, ia, &[])).wait());
+        try!(self.queue.read_buffer(&src_buf, src));
+        Ok(())
+    }
 }
 
 #[test]

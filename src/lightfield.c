@@ -1,8 +1,11 @@
 #include "lightfield/lightfield.h"
 #include <stdlib.h>
+#include "CL/cl.h"
 
 struct LFEnvironment {
-    // TODO
+    cl_context context;
+    cl_command_queue queue;
+    // ... TODO
 };
 
 struct LFTransport {
@@ -79,6 +82,19 @@ bool LFTransport_forw_view(
         struct LFTransport* xport,
         const float* src,
         float* dst,
+        size_t angle) {
+    (void)xport;
+    (void)src;
+    (void)dst;
+    (void)angle;
+
+    return true; // TODO
+}
+
+bool LFTransport_back_view(
+        struct LFTransport* xport,
+        const float* dst,
+        float* src,
         size_t angle) {
     (void)xport;
     (void)src;
