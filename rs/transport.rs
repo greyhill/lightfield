@@ -217,7 +217,7 @@ impl<F: Float + FromPrimitive + ToPrimitive> Transport<F> {
         if !self.onto_detector {
             h = h / self.dst.pixel_volume();
         } else {
-            h = h / self.dst.pixel_area() * self.dst.plane.w[ia];
+            h = h * self.dst.plane.w[ia] / self.dst.pixel_volume().sqrt();
         }
 
         let mut tau0 = (-into_geom.dt / c2 - beta) / alpha;
@@ -374,7 +374,7 @@ impl<F: Float + FromPrimitive + ToPrimitive> Transport<F> {
         if !self.onto_detector {
             h = h / self.dst.pixel_volume();
         } else {
-            h = h / self.dst.pixel_area() * self.dst.plane.w[ia];
+            h = h / self.dst.pixel_volume().sqrt() * self.dst.plane.w[ia];
         }
 
         let mut taus = vec![
