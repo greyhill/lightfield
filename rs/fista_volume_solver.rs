@@ -192,40 +192,30 @@ impl<F: Float + FromPrimitive + ToPrimitive + BaseFloat> FistaVolumeSolver<F> {
         Ok(volume_solver)
     }
 
-    /// Backproject zeros 
+    /// Compute a spherical mask
     pub fn compute_mask3(self: &mut Self) -> Result<(), Error> {
-        let np_geom = self.geom.dimension();
-        try!(try!(self.vecmath.set(np_geom, &mut self.mask3, F::zero(), &[])).wait());
+        let mut mask3 = self.geom.zeros();
+        let c2 = F::one() + F::one();
 
-        for (imager, (proj_buf, (meas, tmp_buffer))) in
-            self.imagers.iter_mut().zip(self.projections
-                                            .iter_mut()
-                                            .zip(self.measurements_host
-                                                     .iter()
-                                                     .zip(self.tmp_buffers.iter_mut()))) {
-            let mut tmp = vec![F::zero(); meas.len()];
-            for (tmp_i, meas_i) in tmp.iter_mut().zip(meas.iter()) {
-                if *meas_i == F::zero() {
-                    *tmp_i = F::one();
+        for iz in 0 .. self.geom.nz {
+            let z = self.geom.iz2z(iz);
+            let rz = z / (F::from_usize(self.geom.nz).unwrap() * self.geom.dz / c2);
+            for iy in 0 .. self.geom.ny {
+                let y = self.geom.iy2y(iy);
+                let ry = y / (F::from_usize(self.geom.ny).unwrap() * self.geom.dy / c2);
+                for ix in 0 .. self.geom.nx {
+                    let x = self.geom.ix2x(ix);
+                    let rx = x / (F::from_usize(self.geom.nx).unwrap() * self.geom.dx / c2);
+                    if rx*rx + ry*ry + rz*rz < F::one() {
+                        mask3[ix + self.geom.nx*(iy + self.geom.ny*iz)] = F::zero();
+                    } else {
+                        mask3[ix + self.geom.nx*(iy + self.geom.ny*iz)] = F::one();
+                    }
                 }
             }
-
-            try!(try!(self.queue.write_buffer(proj_buf, &tmp)).wait());
-            try!(try!(self.vecmath.set(np_geom, tmp_buffer, F::zero(), &[])).wait());
-            try!(try!(imager.back(proj_buf, tmp_buffer, &[])).wait());
         }
 
-        let mut m3_clone = self.mask3.clone();
-        for tmp_buffer in self.tmp_buffers.iter_mut() {
-            try!(try!(self.vecmath.mix(np_geom,
-                                       tmp_buffer,
-                                       &self.mask3,
-                                       F::one(),
-                                       F::one(),
-                                       &mut m3_clone,
-                                       &[]))
-                     .wait());
-        }
+        try!(try!(self.queue.write_buffer(&mut self.mask3, &mask3)).wait());
 
         Ok(())
     }

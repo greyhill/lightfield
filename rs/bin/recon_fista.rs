@@ -37,7 +37,7 @@ fn main() {
                 "subsets",
                 "Number of view subsets for acceleration (default 1)",
                 "INT");
-    opts.optflag("m", "mask", "Use conformal mask");
+    opts.optflag("m", "mask", "Use spherical mask");
     opts.optflag("g", "gain", "Use gain estimation for multiple cameras");
     opts.optopt("d", "device", "OpenCL device to use (default: 0)", "INT");
     opts.optflag("h", "help", "Print help and exit");
@@ -175,8 +175,8 @@ fn main() {
                                  .expect("Error creating FISTA solver");
 
             if matches.opt_present("mask") {
-                println!("Using conformal mask");
-                solver.compute_mask3().expect("Error computing conformal mask");
+                println!("Using spherical mask");
+                solver.compute_mask3().expect("Error computing spherical mask");
             }
 
             // loop iterations
