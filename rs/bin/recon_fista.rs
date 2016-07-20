@@ -1,11 +1,13 @@
 extern crate lightfield;
 extern crate getopts;
 extern crate proust;
+extern crate time;
 
 use self::getopts::Options;
 use std::env;
 use self::lightfield::*;
 use self::proust::*;
+use time::precise_time_s;
 
 // usage example:
 // recon_fista --scene scene.toml --angles 21 --basis dirac
@@ -191,11 +193,14 @@ fn main() {
                 }
 
                 // Run FISTA iteration
+                let time_start = precise_time_s();
                 println!("Starting iteration {}", iter + 1);
                 solver.run_subset(iter % nsubset, &[])
                       .expect("Error running FISTA iteration")
                       .wait()
                       .expect("Error waiting for FISTA iteration to complete");
+                let time_stop = precise_time_s();
+                println!("Iteration {} took {} seconds", iter + 1, time_stop - time_start);
 
                 // Get image
                 if iter % interval == 0 {
