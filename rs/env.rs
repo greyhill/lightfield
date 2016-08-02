@@ -15,7 +15,7 @@ impl Environment {
     pub fn new_easy() -> Result<Environment, Error> {
         let platforms = try!(Platform::platforms());
         let devices = try!(platforms[0].devices());
-        let gpu_devices: Vec<Device> = devices.into_iter()
+        let mut gpu_devices: Vec<Device> = devices.iter().map(|d| d.clone())
                                               .filter(|d| {
                                                   if let DeviceType::GPU = d.device_type()
                                                                             .unwrap() {
@@ -25,6 +25,9 @@ impl Environment {
                                                   }
                                               })
                                               .collect();
+        if gpu_devices.len() == 0 {
+            gpu_devices = devices;
+        }
 
         let context = try!(Context::new(&gpu_devices));
         let mut queues = Vec::new();
