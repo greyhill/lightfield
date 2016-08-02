@@ -31,8 +31,10 @@ fn main() {
     opts.reqopt("p",
                 "pattern",
                 "Pattern for lenses on the plane",
-                "[quad | hex]");
+                "[quad | hex | hex_t]");
     opts.reqopt("o", "out", "Output TOML path", "FILE");
+    opts.optopt("s", "offset_s", "Offset for grid in s direction", "UNITLESS");
+    opts.optopt("t", "offset_t", "Offset for grid in t direction", "UNITLESS");
     opts.optflag("h", "help", "Print help and exit");
 
     // parse options
@@ -65,13 +67,25 @@ fn main() {
         lenses.push(lens);
     }
 
+    // parse offsets
+    let offset_s = match matches.opt_str("s") {
+        Some(s) => s.parse().expect("Error parsing offset_s"),
+        None => 0f32
+    };
+    let offset_t = match matches.opt_str("t") {
+        Some(t) => t.parse().expect("Error parsing offset_t"),
+        None => 0f32,
+    };
+
     // tesselate the plane with lenses
     let lens_array: Vec<Lens<f32>> = match (&matches.opt_str("pattern").unwrap()[..],
                                             lenses.len()) {
-        ("quad", 1) => Lens::tesselate_quad_1(&plane_geom, &lenses[0]),
-        ("quad", 2) => Lens::tesselate_quad_2(&plane_geom, &lenses[0], &lenses[1]),
-        ("hex", 1) => Lens::tesselate_hex_1(&plane_geom, &lenses[0]),
-        ("hex", 3) => Lens::tesselate_hex_3(&plane_geom, &lenses[0], &lenses[1], &lenses[2]),
+        ("quad", 1) => Lens::tesselate_quad_1(offset_s, offset_t, &plane_geom, &lenses[0]),
+        ("quad", 2) => Lens::tesselate_quad_2(offset_s, offset_t, &plane_geom, &lenses[0], &lenses[1]),
+        ("hex", 1) => Lens::tesselate_hex_1(offset_s, offset_t, &plane_geom, &lenses[0]),
+        ("hex", 3) => Lens::tesselate_hex_3(offset_s, offset_t, &plane_geom, &lenses[0], &lenses[1], &lenses[2]),
+        ("hex_t", 1) => Lens::tesselate_hex_t_1(offset_s, offset_t, &plane_geom, &lenses[0]),
+        ("hex_t", 3) => Lens::tesselate_hex_t_3(offset_s, offset_t, &plane_geom, &lenses[0], &lenses[1], &lenses[2]),
         _ => panic!("Unrecognized pattern and number of lenses"),
     };
 

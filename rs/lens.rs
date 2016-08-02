@@ -28,10 +28,13 @@ impl<F: Float + FromPrimitive> Lens<F> {
                                  &self.focal_length_t)
     }
 
-    pub fn tesselate_quad_1(ig: &ImageGeometry<F>, lens: &Self) -> Vec<Self> {
+    pub fn tesselate_quad_1(offset_s: F, offset_t: F, ig: &ImageGeometry<F>, lens: &Self) -> Vec<Self> {
         let mut tr = Vec::new();
 
-        let (s0, s1, t0, t1) = ig.spatial_bounds();
+        let (mut s0, s1, mut t0, t1) = ig.spatial_bounds();
+        s0 = s0 - offset_s * ig.ds;
+        t0 = t0 - offset_t * ig.dt;
+
         let mut t = t0;
 
         loop {
@@ -56,13 +59,15 @@ impl<F: Float + FromPrimitive> Lens<F> {
         tr
     }
 
-    pub fn tesselate_quad_2(ig: &ImageGeometry<F>, lens1: &Self, lens2: &Self) -> Vec<Self> {
+    pub fn tesselate_quad_2(offset_s: F, offset_t: F, ig: &ImageGeometry<F>, lens1: &Self, lens2: &Self) -> Vec<Self> {
         assert!(lens1.radius_s == lens2.radius_s);
         assert!(lens1.radius_t == lens2.radius_t);
 
         let mut tr = Vec::new();
 
-        let (s0, s1, t0, t1) = ig.spatial_bounds();
+        let (mut s0, s1, mut t0, t1) = ig.spatial_bounds();
+        s0 = s0 - offset_s * ig.ds;
+        t0 = t0 - offset_t * ig.dt;
         let mut t = t0;
         let mut it = 0;
 
@@ -95,11 +100,13 @@ impl<F: Float + FromPrimitive> Lens<F> {
         tr
     }
 
-    pub fn tesselate_hex_1(ig: &ImageGeometry<F>, lens: &Self) -> Vec<Self> {
+    pub fn tesselate_hex_1(offset_s: F, offset_t: F, ig: &ImageGeometry<F>, lens: &Self) -> Vec<Self> {
         assert!(lens.radius_s == lens.radius_t);
         let mut tr = Vec::new();
 
-        let (s0, s1, t0, t1) = ig.spatial_bounds();
+        let (mut s0, s1, mut t0, t1) = ig.spatial_bounds();
+        s0 = s0 - offset_s * ig.ds;
+        t0 = t0 - offset_t * ig.dt;
         let mut t = t0;
         let mut it = 0;
 
@@ -134,7 +141,8 @@ impl<F: Float + FromPrimitive> Lens<F> {
         tr
     }
 
-    pub fn tesselate_hex_3(ig: &ImageGeometry<F>,
+    pub fn tesselate_hex_3(offset_s: F, offset_t: F,
+                           ig: &ImageGeometry<F>,
                            lens1: &Self,
                            lens2: &Self,
                            lens3: &Self)
@@ -144,7 +152,9 @@ impl<F: Float + FromPrimitive> Lens<F> {
         assert!(lens3.radius_s == lens1.radius_t);
         let mut tr = Vec::new();
 
-        let (s0, s1, t0, t1) = ig.spatial_bounds();
+        let (mut s0, s1, mut t0, t1) = ig.spatial_bounds();
+        s0 = s0 - offset_s * ig.ds;
+        t0 = t0 - offset_t * ig.dt;
         let mut t = t0;
         let mut it = 0;
 
@@ -185,6 +195,103 @@ impl<F: Float + FromPrimitive> Lens<F> {
         }
         tr
     }
+
+    pub fn tesselate_hex_t_1(offset_s: F, offset_t: F, ig: &ImageGeometry<F>, lens: &Self) -> Vec<Self> {
+        assert!(lens.radius_s == lens.radius_t);
+        let mut tr = Vec::new();
+
+        let (mut s0, s1, mut t0, t1) = ig.spatial_bounds();
+        s0 = s0 - offset_s * ig.ds;
+        t0 = t0 - offset_t * ig.dt;
+        let mut s = s0;
+        let mut is = 0;
+
+        let stride_t = lens.radius_t + lens.radius_t;
+        let stride_s = (F::one() + F::one() + F::one()).sqrt() * lens.radius_t;
+
+        loop {
+            let mut t = t0;
+            if is % 2 == 0 {
+                t = t + stride_t / (F::one() + F::one());
+            }
+
+            loop {
+                let mut li = lens.clone();
+
+                li.center_s = s;
+                li.center_t = t;
+                tr.push(li);
+
+                t = t + stride_t;
+                if t > t1 {
+                    break;
+                }
+            }
+
+            s = s + stride_s;
+            is += 1;
+            if s > s1 {
+                break;
+            }
+        }
+        tr
+    }
+
+    pub fn tesselate_hex_t_3(offset_s: F, offset_t: F, 
+                             ig: &ImageGeometry<F>,
+                           lens1: &Self,
+                           lens2: &Self,
+                           lens3: &Self)
+                           -> Vec<Self> {
+        assert!(lens1.radius_s == lens1.radius_t);
+        assert!(lens2.radius_s == lens1.radius_t);
+        assert!(lens3.radius_s == lens1.radius_t);
+        let mut tr = Vec::new();
+
+        let (mut s0, s1, mut t0, t1) = ig.spatial_bounds();
+        s0 = s0 - offset_s * ig.ds;
+        t0 = t0 - offset_t * ig.dt;
+        let mut s = s0;
+        let mut is = 0;
+
+        let stride_t = lens1.radius_t + lens1.radius_t;
+        let stride_s = (F::one() + F::one() + F::one()).sqrt() * lens1.radius_t;
+
+        loop {
+            let mut t = t0;
+            if is % 2 == 1 {
+                t = t + stride_t / (F::one() + F::one());
+            }
+            let mut it = 0;
+
+            loop {
+                let mut li = match (2 * (is % 2) + it) % 3 {
+                    0 => lens1.clone(),
+                    1 => lens2.clone(),
+                    2 => lens3.clone(),
+                    _ => panic!(), // safe by modulus range
+                };
+
+                li.center_s = s;
+                li.center_t = t;
+                tr.push(li);
+
+                t = t + stride_t;
+                it += 1;
+                if t > t1 {
+                    break;
+                }
+            }
+
+            s = s + stride_s;
+            is += 1;
+            if s > s1 {
+                break;
+            }
+        }
+        tr
+    }
+
 }
 
 impl<F: Float + FromPrimitive> BoundingGeometry<F> for Lens<F> {
