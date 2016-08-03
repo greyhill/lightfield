@@ -13,6 +13,7 @@ use light_field_geom::*;
 use optics::*;
 use vector_math::*;
 use std::cmp::min;
+use image_geom::ImageGeometry;
 
 /// Microlens array operation
 ///
@@ -26,6 +27,39 @@ pub struct LensArray<F: Float + FromPrimitive> {
 }
 
 impl<F: Float + FromPrimitive + ToPrimitive> LensArray<F> {
+    /// Rasterizes the microlens array onto the given geometry for easy lookup of what lens is 
+    /// spatially where
+    pub fn microlens_map(geom: &ImageGeometry<F>, lenses: &[Lens<F>]) -> Vec<Option<usize>> {
+        let mut to_return = vec![None; geom.dimension()];
+
+        for (lens_id, lens) in lenses.iter().enumerate() {
+            // find rectangle of pixels that this lens touches
+            let lens_geom = lens.bounding_geometry(1, 1);
+            let (s0, s1, t0, t1) = lens_geom.spatial_bounds();
+            let (is0, is1, it0, it1) = geom.region_pixels(s0, s1, t0, t1);
+
+            if is1 == is0 || it1 == it0 {
+                continue;
+            }
+
+            // update map
+            for it in it0 .. it1 {
+                for is in is0 .. is1 {
+                    // compute occlusion (overlap) between lens and each pixel
+                    let (ss0, ss1, tt0, tt1) = geom.pixel_bounds(is, it);
+                    let occlusion = lens.rasterize(ss0, ss1, tt0, tt1, 10); // TODO magic number
+
+                    if occlusion > F::zero() {
+                        let mask_index = is + geom.ns * it;
+                        to_return[mask_index] = Some(lens_id);
+                    }
+                }
+            }
+        }
+
+        to_return
+    }
+
     pub fn new(array_lfg: LightFieldGeometry<F>,
                detector: Detector<F>,
                distance_detector_array: F,
