@@ -88,6 +88,16 @@ impl<F: Float + ToPrimitive + FromPrimitive> ImageGeometry<F> {
         t / self.dt + self.wt() + F::from_f32(0.5f32).unwrap()
     }
 
+    pub fn address_linear(self: &Self, is: usize, it: usize) -> usize {
+        is + self.ns * it
+    }
+
+    pub fn address_2d(self: &Self, linear: usize) -> (usize, usize) {
+        let is = linear % self.ns;
+        let it = linear / self.nt;
+        (is, it)
+    }
+
     /// Returns (is0, is1, it0, it1) bounds for the pixel rectangular region
     /// bounding the given spatial coordinates
     pub fn region_pixels(self: &Self, s0: F, s1: F, t0: F, t1: F) -> (usize, usize, usize, usize) {
