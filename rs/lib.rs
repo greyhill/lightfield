@@ -94,6 +94,9 @@ pub use lens_array::*;
 mod plenoptic_camera;
 pub use plenoptic_camera::*;
 
+mod plenoptic_camera_calibration;
+pub use plenoptic_camera_calibration::*;
+
 mod plenoptic_imager;
 pub use plenoptic_imager::*;
 

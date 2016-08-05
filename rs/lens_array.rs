@@ -49,7 +49,7 @@ impl<F: Float + FromPrimitive + ToPrimitive> LensArray<F> {
                     let (ss0, ss1, tt0, tt1) = geom.pixel_bounds(is, it);
                     let occlusion = lens.rasterize(ss0, ss1, tt0, tt1, 10); // TODO magic number
 
-                    if occlusion > F::zero() {
+                    if occlusion == F::zero() {
                         let mask_index = is + geom.ns * it;
                         to_return[mask_index] = Some(lens_id);
                     }

@@ -62,3 +62,7 @@ path = 'rs/bin/recon_fista.rs'
 [[bin]]
 name = 'recon_fbp'
 path = 'rs/bin/recon_fbp.rs'
+
+[[bin]]
+name = 'plenoptic_calibrate'
+path = 'rs/bin/plenoptic_calibrate.rs'
